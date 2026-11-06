@@ -369,7 +369,6 @@
 	"Custom color": "Eigene Farbe",
 	"Save": "Speichern",
 	"Search entries or run a command…": "Einträge suchen oder Befehl ausführen…",
-	"Search or run a command (${hotkey})": "Suchen oder Befehl ausführen (${hotkey})",
 	"Search or run a command…": "Suchen oder Befehl ausführen…",
 	"select": "auswählen",
 	"Server URL": "Server-URL",
@@ -663,5 +662,9 @@
 	"CreateAvailability.Keywords": "neu zeitfenster arbeitszeiten fokus deep work zeitblock planung schattierung",
 	"Hide availability": "Verfügbarkeit ausblenden",
 	"Availability leaves the week view. It stays in its calendars, and busy availability still shows as busy to others.": "Verfügbarkeit verschwindet aus der Wochenansicht. Sie bleibt in ihren Kalendern, und beschäftigte Verfügbarkeit zeigt anderen die Zeit weiterhin als belegt.",
-	"HideAvailabilitySetting.Keywords": "ausblenden verbergen verfügbarkeit arbeitszeiten schattierung fokus aufräumen"
+	"HideAvailabilitySetting.Keywords": "ausblenden verbergen verfügbarkeit arbeitszeiten schattierung fokus aufräumen",
+	"No calendar source yet": "Noch keine Kalenderquelle",
+	"Connect an account or add a calendar stored on this Mitra server to start planning.": "Verbinde ein Konto oder füge einen Kalender hinzu, der auf diesem Mitra-Server gespeichert ist, um mit der Planung zu beginnen.",
+	"Add calendar": "Kalender hinzufügen",
+	"Search": "Suchen"
 }

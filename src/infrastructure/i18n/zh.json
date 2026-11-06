@@ -355,7 +355,6 @@
 	"Custom color": "自定义颜色",
 	"Save": "保存",
 	"Search entries or run a command…": "搜索条目或运行命令…",
-	"Search or run a command (${hotkey})": "搜索或运行命令（${hotkey}）",
 	"Search or run a command…": "搜索或运行命令…",
 	"select": "选择",
 	"Server URL": "服务器 URL",
@@ -648,5 +647,9 @@
 	"CreateAvailability.Keywords": "新建 添加 可用时间 时间段 工作时间 上班时间 专注 深度工作 时间块 安排 阴影 availability focus",
 	"Hide availability": "隐藏可用时间",
 	"Availability leaves the week view. It stays in its calendars, and busy availability still shows as busy to others.": "可用时间不再显示在周视图中。它仍保留在所属的日历里，标为忙碌的可用时间在别人看来依然是忙碌。",
-	"HideAvailabilitySetting.Keywords": "隐藏 可用时间 工作时间 阴影 专注 整理 清爽 availability"
+	"HideAvailabilitySetting.Keywords": "隐藏 可用时间 工作时间 阴影 专注 整理 清爽 availability",
+	"No calendar source yet": "尚未添加日历来源",
+	"Connect an account or add a calendar stored on this Mitra server to start planning.": "连接一个帐户，或添加存储在此 Mitra 服务器上的日历，即可开始规划。",
+	"Add calendar": "添加日历",
+	"Search": "搜索"
 }

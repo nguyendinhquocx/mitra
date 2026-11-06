@@ -24,7 +24,6 @@ import { Planning } from '#features/planning/client/Planning.js'
 import { EntryDetailsComponent } from '#features/entries/client/EventDetails.js'
 import { DialogAbout } from '#features/about/client/DialogAbout.js'
 import { ReleaseNotesComponent } from '#features/about/client/ReleaseNotesComponent.js'
-import { DialogWelcome } from '#features/onboarding/client/DialogWelcome.js'
 import { DialogSourceMigration } from '#features/migration/client/DialogSourceMigration.js'
 import { DialogIcsImport } from '#features/migration/client/DialogIcsImport.js'
 import { DialogKeyboardShortcuts } from '#features/commands/client/DialogKeyboardShortcuts.js'
@@ -123,11 +122,6 @@ export class Mitra extends Application {
 			document.querySelector('mitra-sidebar')?.requestUpdate()
 		} else if (subscribeUrl) {
 			await Mitra.subscribe(subscribeUrl)
-		} else if (!Calendars.integrations.length) {
-			if (await new DialogWelcome().confirm()) {
-				await new DialogIntegration({}).confirm()
-				document.querySelector('mitra-sidebar')?.requestUpdate()
-			}
 		}
 	}
 
@@ -252,7 +246,6 @@ export class Mitra extends Application {
 			${DialogAbout.styles}
 			${ReleaseNotesComponent.styles}
 			${DialogIntegration.styles}
-			${DialogWelcome.styles}
 			${DialogSourceMigration.styles}
 			${DialogIcsImport.styles}
 			${DialogKeyboardShortcuts.styles}

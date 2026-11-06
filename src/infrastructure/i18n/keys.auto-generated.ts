@@ -11,6 +11,7 @@ declare global {
 		"\"${heading}\" could not be copied: ${message}": unknown
 		"\"${heading}\" is closed, but ${count:pluralityNumber} of its subtasks are still open.": unknown
 		"${browser} on ${platform}": unknown
+		"${count:number} min": unknown
 		"${count:number} more": unknown
 		"${count:pluralityNumber} are availability": unknown
 		"${count:pluralityNumber} are marked as free": unknown
@@ -22,6 +23,7 @@ declare global {
 		"${count:pluralityNumber} carry a progress percentage": unknown
 		"${count:pluralityNumber} carry a visibility": unknown
 		"${count:pluralityNumber} copies could not be taken back and are now in both calendars.": unknown
+		"${count:pluralityNumber} days": unknown
 		"${count:pluralityNumber} documentation changes": unknown
 		"${count:pluralityNumber} entries": unknown
 		"${count:pluralityNumber} entries added to ${name}": unknown
@@ -32,6 +34,7 @@ declare global {
 		"${count:pluralityNumber} get a fixed time zone": unknown
 		"${count:pluralityNumber} go back to To Do": unknown
 		"${count:pluralityNumber} have participants": unknown
+		"${count:pluralityNumber} hours": unknown
 		"${count:pluralityNumber} improvements": unknown
 		"${count:pluralityNumber} landed anyway and could not be taken back. Delete them in ${name} by hand.": unknown
 		"${count:pluralityNumber} lose their attachments": unknown
@@ -57,6 +60,7 @@ declare global {
 		"${count:pluralityNumber} selected": unknown
 		"${count:pluralityNumber} stayed in ${name}": unknown
 		"${count:pluralityNumber} stop being all-day": unknown
+		"${count:pluralityNumber} weeks": unknown
 		"${count:pluralityNumber} were left out": unknown
 		"${count:pluralityNumber} yes": unknown
 		"${done:number} of ${total:pluralityNumber} checklist items done": unknown
@@ -88,6 +92,7 @@ declare global {
 		"Add ${name} to a calendar": unknown
 		"Add attachment": unknown
 		"Add Availability": unknown
+		"Add calendar": unknown
 		"Add integration": unknown
 		"Add Integration": unknown
 		"Add participant": unknown
@@ -177,6 +182,7 @@ declare global {
 		"Confidential": unknown
 		"Connect": unknown
 		"Connect an account": unknown
+		"Connect an account or add a calendar stored on this Mitra server to start planning.": unknown
 		"Connecting…": unknown
 		"Connector lines in the month view": unknown
 		"Connector lines in the timeline": unknown
@@ -404,6 +410,7 @@ declare global {
 		"Next Year": unknown
 		"NextPeriod.Keywords": unknown
 		"No access tokens yet.": unknown
+		"No calendar source yet": unknown
 		"No date": unknown
 		"No device is registered for reminders yet.": unknown
 		"No entries in this period": unknown
@@ -511,10 +518,10 @@ declare global {
 		"Sample calendars filled with generated data, rebuilt daily": unknown
 		"Save": unknown
 		"scroll": unknown
+		"Search": unknown
 		"Search entries or run a command…": unknown
 		"Search entries…": unknown
 		"Search for an event or task to link": unknown
-		"Search or run a command (${hotkey})": unknown
 		"Search or run a command…": unknown
 		"Search settings…": unknown
 		"select": unknown

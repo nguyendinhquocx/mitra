@@ -494,7 +494,6 @@
 	"Custom color": "لون مخصص",
 	"Save": "حفظ",
 	"Search entries or run a command…": "البحث في العناصر أو تشغيل أمر…",
-	"Search or run a command (${hotkey})": "البحث أو تشغيل أمر (${hotkey})",
 	"Search or run a command…": "البحث أو تشغيل أمر…",
 	"select": "اختيار",
 	"Server URL": "عنوان URL للخادم",
@@ -1145,5 +1144,9 @@
 	"CreateAvailability.Keywords": "جديد توفر إطار ساعات العمل دوام تركيز عمل عميق كتلة وقت جدولة تظليل",
 	"Hide availability": "إخفاء التوفر",
 	"Availability leaves the week view. It stays in its calendars, and busy availability still shows as busy to others.": "يختفي التوفر من عرض الأسبوع، لكنه يبقى في تقويماته، ويظل التوفر المشغول يظهر للآخرين كوقت مشغول.",
-	"HideAvailabilitySetting.Keywords": "إخفاء توفر ساعات العمل دوام تظليل وقت التركيز ترتيب"
+	"HideAvailabilitySetting.Keywords": "إخفاء توفر ساعات العمل دوام تظليل وقت التركيز ترتيب",
+	"No calendar source yet": "لا يوجد مصدر تقويم بعد",
+	"Connect an account or add a calendar stored on this Mitra server to start planning.": "اربط حسابًا أو أضف تقويمًا محفوظًا على خادم Mitra هذا لبدء التخطيط.",
+	"Add calendar": "إضافة تقويم",
+	"Search": "بحث"
 }

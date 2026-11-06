@@ -315,7 +315,6 @@
 	"Custom color": "Cor personalizada",
 	"Save": "Salvar",
 	"Search entries or run a command…": "Pesquisar entradas ou executar um comando…",
-	"Search or run a command (${hotkey})": "Pesquisar ou executar um comando (${hotkey})",
 	"Search or run a command…": "Pesquisar ou executar um comando…",
 	"select": "selecionar",
 	"Server URL": "URL do servidor",
@@ -648,5 +647,9 @@
 	"CreateAvailability.Keywords": "novo bloco horário de trabalho foco trabalho profundo bloco de tempo planejamento sombreamento",
 	"Hide availability": "Ocultar disponibilidade",
 	"Availability leaves the week view. It stays in its calendars, and busy availability still shows as busy to others.": "A disponibilidade sai da vista de semana. Continua nos seus calendários, e a disponibilidade ocupada continua a aparecer como ocupada para os outros.",
-	"HideAvailabilitySetting.Keywords": "ocultar esconder disponibilidade horário de trabalho sombreamento foco limpar"
+	"HideAvailabilitySetting.Keywords": "ocultar esconder disponibilidade horário de trabalho sombreamento foco limpar",
+	"No calendar source yet": "Ainda não há uma fonte de calendário",
+	"Connect an account or add a calendar stored on this Mitra server to start planning.": "Conecte uma conta ou adicione um calendário armazenado neste servidor Mitra para começar a planejar.",
+	"Add calendar": "Adicionar calendário",
+	"Search": "Pesquisar"
 }

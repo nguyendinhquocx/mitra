@@ -1,5 +1,5 @@
 import { component, html, state, css, eventListener, bind, query, queryAll, choose, type PropertyValues } from '@a11d/lit'
-import { PageComponent, route } from '@a11d/lit-application'
+import { DialogCancelledError, PageComponent, route } from '@a11d/lit-application'
 import { type DateTime } from '@3mo/date-time'
 import { MediaQueryController } from '@3mo/media-query-observer'
 import { windowDragHandle, startedInField, startedInOverlay, type Popover } from '#design'
@@ -13,6 +13,7 @@ import { CreateEntry } from '#features/entries/client/commands.js'
 import { EntryEditorIntent } from '#features/entries/client/EntryEditorIntent.js'
 import { Calendars } from '#features/sources/client/Calendars.js'
 import { DialogSettings, type SettingsParameters } from '#features/settings/client/DialogSettings.js'
+import { DialogIntegration } from '#integrations/client/DialogIntegration.js'
 import { type SettingsPageId } from '#features/settings/client/Setting.js'
 import { KeyPress } from '#features/commands/KeyPress.js'
 import { UrlSyncController } from '#infrastructure/routing/UrlSyncController.js'
@@ -206,6 +207,19 @@ export class PageCalendar extends PageComponent<CalendarParameters> {
 	readonly sourcesRefreshed = () => {
 		this.sidebar?.requestUpdate()
 		this.requestUpdate()
+	}
+
+	private async addCalendar() {
+		try {
+			await new DialogIntegration({}).confirm()
+		} catch (error) {
+			if (!(error instanceof DialogCancelledError)) {
+				throw error
+			}
+		}
+		this.sidebar?.requestUpdate()
+		this.requestUpdate()
+		void this.fetcher.task.run()
 	}
 
 	/** One period on or back: the days move, and the time in view stays. */
@@ -453,39 +467,7 @@ export class PageCalendar extends PageComponent<CalendarParameters> {
 						}
 
 						.search {
-							flex: 0 1 18rem;
-							min-inline-size: 7rem;
-							font-weight: 400;
-
-							&::part(button) {
-								justify-content: flex-start;
-								border-radius: calc(2 * var(--border-radius));
-							}
-
-							span {
-								flex: 1;
-								text-align: start;
-								white-space: nowrap;
-								overflow: hidden;
-								text-overflow: ellipsis;
-								color: var(--color-text-muted);
-							}
-
-							@container (max-width: 52rem) {
-								flex: none;
-								min-inline-size: 0;
-
-								&::part(button) {
-									border-radius: var(--border-radius);
-									aspect-ratio: 1;
-									justify-content: center;
-									padding-inline: 0;
-								}
-
-								span, kbd {
-									display: none;
-								}
-							}
+							flex: none;
 						}
 
 						@container (max-width: 52rem) {
@@ -507,6 +489,36 @@ export class PageCalendar extends PageComponent<CalendarParameters> {
 						mitra-weeks, mitra-months, mitra-days, mitra-timeline, mitra-table {
 							flex: 1;
 							min-height: 0;
+						}
+
+						.empty-state {
+							flex: 1;
+							min-height: 0;
+							display: flex;
+							flex-direction: column;
+							align-items: center;
+							justify-content: center;
+							gap: 0.75rem;
+							padding: 2rem;
+							text-align: center;
+
+							> mitra-icon {
+								font-size: 2rem;
+								color: var(--color-text-muted);
+							}
+
+							h2 {
+								margin: 0;
+								font-size: 1.125rem;
+								font-weight: 600;
+							}
+
+							p {
+								max-inline-size: 28rem;
+								margin: 0;
+								color: var(--color-text-muted);
+								text-wrap: balance;
+							}
 						}
 					}
 				}
@@ -545,11 +557,7 @@ export class PageCalendar extends PageComponent<CalendarParameters> {
 							<mitra-icon-button class="toggle" icon="panel-left" label=${t('Toggle sidebar')} @click=${this.toggleSidebar}></mitra-icon-button>
 							${this.headingTemplate}
 						</div>
-						<mitra-button class="search" title=${t('Search or run a command (${hotkey})', { hotkey: CommandPalette.hotkey })} @click=${() => this.palette.show()}>
-							<mitra-icon icon="search"></mitra-icon>
-							<span>${t('Search or run a command…')}</span>
-							<kbd>${CommandPalette.hotkey}</kbd>
-						</mitra-button>
+						<mitra-icon-button class="search" icon="search" label=${t('Search')} @click=${() => this.palette.show()}></mitra-icon-button>
 						<div class="trailing">
 							<mitra-select class="view" icon="calendar-cog" label=${t('View')} title=${t('View')} .value=${this.view} @change=${(e: CustomEvent<CalendarView>) => this.setView(e.detail)}>
 								${([['year', t('Year'), 'Y'], ['month', t('Month'), 'M'], ['week', t('Week'), 'W'], ['timeline', t('Timeline'), 'L'], ['table', t('Table'), 'S']] as const).map(([view, label, key]) => html`
@@ -565,7 +573,14 @@ export class PageCalendar extends PageComponent<CalendarParameters> {
 						</div>
 					</header>
 					<div class="calendar">
-						${choose(this.view, [
+						${!Calendars.integrations.length ? html`
+							<section class="empty-state" aria-labelledby="calendar-empty-heading">
+								<mitra-icon icon="calendar-days" aria-hidden="true"></mitra-icon>
+								<h2 id="calendar-empty-heading">${t('No calendar source yet')}</h2>
+								<p>${t('Connect an account or add a calendar stored on this Mitra server to start planning.')}</p>
+								<mitra-button variant="primary" @click=${() => void this.addCalendar()}>${t('Add calendar')}</mitra-button>
+							</section>
+						` : choose(this.view, [
 							['week', () => html`
 								<mitra-days
 									.occurrences=${this.store.shown}

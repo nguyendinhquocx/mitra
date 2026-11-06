@@ -333,7 +333,6 @@
 	"Custom color": "رنگ دلخواه",
 	"Save": "ذخیره",
 	"Search entries or run a command…": "جستجوی موارد یا اجرای یک دستور…",
-	"Search or run a command (${hotkey})": "جستجو یا اجرای دستور (${hotkey})",
 	"Search or run a command…": "جستجو یا اجرای دستور…",
 	"select": "انتخاب",
 	"Server URL": "نشانی سرور",
@@ -807,5 +806,9 @@
 	"CreateAvailability.Keywords": "جدید بازه ساعات کاری تمرکز کار عمیق بلوک زمانی برنامه سایه",
 	"Hide availability": "پنهان کردن زمان در دسترس",
 	"Availability leaves the week view. It stays in its calendars, and busy availability still shows as busy to others.": "زمان در دسترس از نمای هفته خارج می‌شود. در تقویم‌های خود می‌ماند و زمان‌های مشغول همچنان برای دیگران مشغول نشان داده می‌شوند.",
-	"HideAvailabilitySetting.Keywords": "پنهان مخفی در دسترس ساعات کاری سایه تمرکز مرتب‌سازی"
+	"HideAvailabilitySetting.Keywords": "پنهان مخفی در دسترس ساعات کاری سایه تمرکز مرتب‌سازی",
+	"No calendar source yet": "هنوز منبع تقویمی وجود ندارد",
+	"Connect an account or add a calendar stored on this Mitra server to start planning.": "برای شروع برنامه‌ریزی، یک حساب را متصل کنید یا تقویمی را که در این سرور Mitra ذخیره شده است اضافه کنید.",
+	"Add calendar": "افزودن تقویم",
+	"Search": "جستجو"
 }

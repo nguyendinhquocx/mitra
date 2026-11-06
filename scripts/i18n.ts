@@ -15,7 +15,7 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const srcDir = path.resolve(here, '../src')
 const i18nDir = path.resolve(srcDir, 'infrastructure/i18n')
 const keysFile = path.join(i18nDir, 'keys.auto-generated.ts')
-const dicts = ['de.json', 'fr.json', 'es.json', 'pt.json', 'it.json', 'fa.json', 'zh.json', 'pl.json', 'nl.json', 'ar.json', 'ru.json']
+const dicts = ['de.json', 'fr.json', 'es.json', 'pt.json', 'it.json', 'fa.json', 'zh.json', 'pl.json', 'nl.json', 'ar.json', 'ru.json', 'vi.json']
 
 const analyzeOnly = process.argv.includes('--analyze')
 
@@ -71,6 +71,16 @@ for (const file of sourceFiles(srcDir)) {
 		app.keys.add(unescape(raw!, quote!))
 	}
 }
+// @3mo/date-time creates these localized strings dynamically; its source is in node_modules and is not scanned above.
+for (const key of [
+	'${count:pluralityNumber} days',
+	'${count:pluralityNumber} hours',
+	'${count:pluralityNumber} weeks',
+	'${count:number} min',
+]) {
+	app.keys.add(key)
+}
+
 const sorted = (keys: Set<string>) => [...keys].sort((a, b) => a.localeCompare(b))
 
 if (!analyzeOnly) {

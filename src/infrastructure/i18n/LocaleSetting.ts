@@ -10,7 +10,7 @@ import './LocalePreview.js'
  */
 @setting()
 export class LocaleSetting extends ChoiceSetting<string> {
-	private static readonly languages: Array<LanguageCode> = ['en', 'de', 'fr', 'es', 'pt', 'it', 'fa', 'zh', 'pl', 'nl', 'ar', 'ru']
+	private static readonly languages: Array<LanguageCode> = ['en', 'de', 'fr', 'es', 'pt', 'it', 'fa', 'zh', 'pl', 'nl', 'ar', 'ru', 'vi']
 
 	/**
 	 * @3mo/localization speaks a `?lang=` link's language (the website's links into the demo carry one), but only while
@@ -34,7 +34,15 @@ export class LocaleSetting extends ChoiceSetting<string> {
 	/** A device shows the language and region chosen for the account, which are chosen once for every device. */
 	static followAccount() {
 		const chosen = LocaleSetting.account.read()
-		if (chosen && chosen !== LocaleSetting.shown) {
+		if (!chosen) {
+			const linked = typeof globalThis.location !== 'undefined' && new URLSearchParams(location.search).has('lang')
+			if (linked && LocaleSetting.languages.includes(Localizer.locales.current.language as LanguageCode)) {
+				return
+			}
+			AppLocale.set('vi', undefined)
+			return
+		}
+		if (chosen !== LocaleSetting.shown) {
 			const locale = new Intl.Locale(chosen)
 			AppLocale.set(locale.language, locale.region)
 		}
@@ -50,9 +58,9 @@ export class LocaleSetting extends ChoiceSetting<string> {
 	readonly icon = 'languages'
 	readonly keywords = t('LocaleSetting.Keywords')
 	readonly page = 'general'
-	readonly fallback = 'en'
+	readonly fallback = 'vi'
 
-	// Kept on the account, so every device and the agents read the one choice; until there is one, the browser's language.
+	// Kept on the account, so every device and the agents read the one choice; until there is one, Vietnamese.
 	protected readonly storage: SettingStorage<string> = {
 		read: () => LocaleSetting.account.read() ?? LocaleSetting.shown,
 		write: async value => {

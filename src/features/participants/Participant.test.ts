@@ -1,3 +1,4 @@
+import '../../infrastructure/i18n/TestLocale.js'
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { Participant, Participants, ParticipantRole, ParticipantStatus } from './Participant.js'
