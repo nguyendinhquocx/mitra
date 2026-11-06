@@ -6,7 +6,7 @@
 # node_modules for the runtime stage, hence `npm prune --omit=dev` at the end.
 # Both stages share one Node (match .nvmrc) so the better-sqlite3 ABI agrees; build tools are present so
 # better-sqlite3 can compile from source if no prebuilt binary exists for this ABI.
-FROM node:26-bookworm-slim AS builder
+FROM node:26-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9 AS builder
 WORKDIR /app
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends python3 make g++ \
@@ -38,7 +38,7 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
-FROM node:26-bookworm-slim AS runtime
+FROM node:26-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
@@ -66,7 +66,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 	CMD node -e "const p=process.env.MITRA_PORT||3000;require('http').get('http://127.0.0.1:'+p+'/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
 # Links the image to its repo on GHCR (README, permissions) and stamps metadata.
-LABEL org.opencontainers.image.source="https://github.com/a11delavar/mitra"
+LABEL org.opencontainers.image.source="https://github.com/nguyendinhquocx/mitra"
 LABEL org.opencontainers.image.description="Mitra: one calendar to plan your events and tasks, self-hostable and synced with the calendars you already use."
 LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
 
