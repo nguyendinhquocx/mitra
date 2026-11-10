@@ -32,6 +32,8 @@ export class Environment {
 	readonly oidc?: { readonly issuer: string, readonly clientId: string, readonly clientSecret?: string, readonly scope: string }
 	/** The OAuth client Google Calendar connects with (`MITRA_GOOGLE_CLIENT_ID`, `MITRA_GOOGLE_CLIENT_SECRET`). */
 	readonly google?: { readonly clientId: string, readonly clientSecret: string }
+	/** Share-link abuse ceilings (`MITRA_SHARE_EXCHANGE_LIMIT`, `MITRA_SHARE_LINK_LIMIT`, `MITRA_SHARE_WRITE_LIMIT`, `MITRA_SHARE_STREAM_LIMIT`), a minute each. */
+	readonly share: { readonly exchange: number, readonly link: number, readonly write: number, readonly stream: number }
 
 	constructor(variables: Variables) {
 		this.port = Number(variables.MITRA_PORT) || 3000
@@ -47,6 +49,12 @@ export class Environment {
 		this.files = { maxSize: Environment.bytesOf(variables.MITRA_FILE_MAX_SIZE), quota: Environment.bytesOf(variables.MITRA_FILE_QUOTA) }
 		this.oidc = this.demo ? undefined : this.oidcOf(variables)
 		this.google = Environment.googleOf(variables)
+		this.share = {
+			exchange: Number(variables.MITRA_SHARE_EXCHANGE_LIMIT) || 10,
+			link: Number(variables.MITRA_SHARE_LINK_LIMIT) || 30,
+			write: Number(variables.MITRA_SHARE_WRITE_LIMIT) || 60,
+			stream: Number(variables.MITRA_SHARE_STREAM_LIMIT) || 20,
+		}
 	}
 
 	/** Whether people sign in, so an agent needs an access token. */

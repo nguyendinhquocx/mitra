@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { type RequestHandler } from 'express'
 import path from 'path'
 import cors from 'cors'
 import '#integrations/server/registerEngines.js'
@@ -14,6 +14,7 @@ import { staleTabs } from '#features/entries/server/staleTabs.js'
 import { googleConnectRouter } from '#integrations/google/server/googleConnect.js'
 import { notionRouter } from '#integrations/notion/server/notion.js'
 import { operationsRouter } from '#infrastructure/operations/server/operationsRouter.js'
+import { sharingRouter, sweepShareOperations } from '#features/sharing/server/sharingRouter.js'
 import { mcpRouter } from '#features/agents/server/mcp.js'
 import './operations.js'
 import { healthRouter } from '#infrastructure/http/health.js'
@@ -31,6 +32,8 @@ const logger = createLogger('API')
 
 synchronizer.start()
 new ReminderScheduler(orm).start()
+void sweepShareOperations().catch(error => logger.warn(`Sweeping old share replay rows failed: ${error instanceof Error ? error.message : error}`))
+setInterval(() => void sweepShareOperations().catch(() => void 0), 60 * 60 * 1000).unref()
 /** The tables holding files, which serving looks a file up in and the disposer keeps the bytes for. */
 const fileTables = [EntryFile]
 new UnusedFileDisposer(orm, fileTables).start()
@@ -66,6 +69,20 @@ app.use('/api/files', authMiddleware, filesRouter)
 // Rehydrate typed JSON into domain model instances.
 const modelConstructor = new ModelValueConstructor()
 app.use(express.json({ reviver: (_key, value) => modelConstructor.shallConstruct(value) ? modelConstructor.construct(value) : value }))
+
+// A calendar is private, so guest share routes mount before the owner auth: a guest signs in by link cookie alone.
+app.use('/s/api', sharingRouter())
+
+// The guest shell and share answers stay out of caches, crawlers and referrers.
+const guestPage: RequestHandler = (req, res, next) => {
+	if (req.path === '/s' || req.path.startsWith('/s/')) {
+		res.setHeader('X-Robots-Tag', 'noindex')
+		res.setHeader('Referrer-Policy', 'no-referrer')
+		res.setHeader('Cache-Control', 'no-store')
+	}
+	next()
+}
+app.use(guestPage)
 
 if (oidc) {
 	app.use('/auth', authRouter)

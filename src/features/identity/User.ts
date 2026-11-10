@@ -165,7 +165,8 @@ export class User {
 		return entries
 	}
 
-	private static inRange({ start, end }: DateTimeRange): FilterQuery<Entry> {
+	/** The window filter guest reads share, so a share scope takes exactly the rows an owner view would. */
+	static inRange({ start, end }: DateTimeRange): FilterQuery<Entry> {
 		// Cast because `_type` is private. No status at all counts as open.
 		const openTask = {
 			_type: EntryType.Task,
@@ -183,7 +184,8 @@ export class User {
 		}
 	}
 
-	private static matching(search: string): FilterQuery<Entry> {
+	/** The word filter guest searches share, so a share scope finds exactly the rows an owner view would. */
+	static matching(search: string): FilterQuery<Entry> {
 		const term = `%${search.trim()}%`
 		return {
 			// Availability is background, not something to search for.

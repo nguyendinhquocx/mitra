@@ -28,7 +28,7 @@ export function operationsRouter(em: () => EntityManager) {
 			const operation = each.fromRequest!(req)
 			const context = { em: manager, user: await manager.findOneOrFail(User, { id: req.user.id }) }
 			const result = await operation.run(context)
-			updates.dispatchFor(operation, context.user)
+			updates.dispatchFor(operation, context.user, result as { sourceId?: string } | undefined)
 			return result === undefined ? res.status(facts.status ?? 204).end() : res.status(facts.status ?? 200).json(result)
 		})
 	}
