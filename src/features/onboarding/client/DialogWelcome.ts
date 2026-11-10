@@ -14,7 +14,7 @@ import { session } from '#infrastructure/http/PageSession.js'
 export class DialogWelcome extends DialogComponent<void, boolean | undefined> {
 	private static get steps() {
 		return [
-			{ icon: 'cable', title: t('Connect an account'), description: t('CalDAV, Google, Apple or Notion, synced in both directions. Or start fresh with calendars stored in Mitra itself.') },
+			{ icon: 'cable', title: t('Connect an account'), description: t('CalDAV, Google, Apple or Notion, synced in both directions. Or start fresh with calendars stored in CalendarX itself.') },
 			{ icon: 'list-checks', title: t('Choose your sources'), description: t('Pick the calendars and task lists to show. Recolor, rename or hide them in the sidebar anytime.') },
 			{ icon: 'calendar-days', title: t('Plan your days'), description: t('Create and move entries right on the grid. Every change syncs back to its source.') },
 		]

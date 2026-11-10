@@ -26,6 +26,21 @@ export const themeStyles = css`
 		&[data-theme=dark] {
 			color-scheme: dark;
 		}
+
+		/* White paper, black ink: every block stays neutral and only the narrow source marker carries color.
+		   Event segments read these fills through --entry-color-fill / --entry-card-base (EventSegment). */
+		&[data-theme=minimalist] {
+			color-scheme: light;
+			--color-background-seed: #ffffff;
+			--color-background: #ffffff;
+			--color-surface: #ffffff;
+			--color-text: #111111;
+			/* 5.7:1 on white; the palette's 45% mix would land below the 4.5:1 floor. */
+			--color-text-muted: #666666;
+			--entry-color-fill: 0%;
+			--entry-color-fill-hover: 8%;
+			--entry-card-base: color-mix(in srgb, #111111 4%, #ffffff);
+		}
 	}
 
 	/* Han characters read in Noto Sans SC only while the app speaks Chinese: a Japanese heading elsewhere keeps its own glyphs. */

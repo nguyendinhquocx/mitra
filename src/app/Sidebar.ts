@@ -256,10 +256,11 @@ export class Sidebar extends Component {
 				}
 
 				/* The brand row: the one place the app names itself (MITRA_NAME can rename it). The mark is
-				   the favicons-generated PNG, so replacing assets/mitra.svg rebrands this too. The version
-				   whisper rides at its end, ellipsized when it's a long git-describe string; clicking the
-				   row opens the About dialog. Sized to the main header's row (0.75rem padding + content =
-				   3.5rem) and pulled up against the nav's own padding, so logo and page title share a line. */
+				   the favicons-generated PNG, so replacing assets/mitra.svg rebrands this too. The update
+				   dot rides at the mark's corner and the news dot at the row's end; clicking the row opens
+				   the About dialog, which carries the version detail. Sized to the main header's row
+				   (0.75rem padding + content = 3.5rem) and pulled up against the nav's own padding, so
+				   logo and page title share a line. */
 				.brand {
 					all: unset;
 					box-sizing: border-box;
@@ -273,16 +274,11 @@ export class Sidebar extends Component {
 					cursor: pointer;
 					border-radius: 0.375rem;
 
-					/* The global button skin's hover/active box is far too loud for a brand mark. The only
-					   affordance is the version whisper waking up. */
+					/* The global button skin's hover/active box is far too loud for a brand mark. */
 					&:not(:disabled) {
 						&:hover, &:active {
 							background: none;
 							box-shadow: none;
-						}
-
-						&:hover .version .label {
-							opacity: 1;
 						}
 					}
 
@@ -323,21 +319,13 @@ export class Sidebar extends Component {
 					.version {
 						margin-inline-start: auto;
 						min-width: 0;
-						flex-shrink: 10; /* the long describe strings give way before the name does */
+						flex-shrink: 10;
 						display: inline-flex;
 						align-items: center;
 						gap: 0.25rem;
 						font-size: 0.625rem;
 						letter-spacing: 0.02em;
 						color: var(--color-text-muted);
-
-						/* Dimmed on the text only, since the news dot inside must keep its full accent. */
-						.label {
-							overflow: hidden;
-							white-space: nowrap;
-							text-overflow: ellipsis;
-							opacity: 0.7;
-						}
 
 						/* The news dot: the instance moved since this user last opened What's New. Quiet by
 						   design: no toast, no auto-opened dialog; it goes out when What's New is opened
@@ -350,9 +338,9 @@ export class Sidebar extends Component {
 							background: var(--color-accent);
 						}
 
-						/* Under Window Controls Overlay the brand row drags the window, making this whisper
+						/* Under Window Controls Overlay the brand row drags the window, making this dot
 						   the row's only click-through to About. It is already live (the handle hands every
-						   element back), so all it needs here is a real hit area and a hover affordance. */
+						   element back), so all it needs here is a real hit area. */
 						@media (display-mode: window-controls-overlay) {
 							cursor: pointer;
 							padding: 0.125rem 0.375rem;
@@ -361,10 +349,6 @@ export class Sidebar extends Component {
 
 							&:hover {
 								background: color-mix(in srgb, var(--color-text) 8%, transparent);
-
-								.label {
-									opacity: 1;
-								}
 							}
 						}
 					}
@@ -820,11 +804,6 @@ export class Sidebar extends Component {
 		this.commitOrder(ids, index, index + delta, () => Calendars.reorderIntegrations(ids))
 	}
 
-	/** Formatted build version label. */
-	private get versionLabel() {
-		return mitra.version === 'dev' || /^v\d.*-\d+-g[0-9a-f]+$/.test(mitra.version) ? 'dev' : mitra.version
-	}
-
 	/** Update availability tooltip text. */
 	private get updateHint() {
 		if (session.instance.stale) {
@@ -919,14 +898,13 @@ export class Sidebar extends Component {
 	private get navTemplate() {
 		return html`
 			<nav>
-				<button class="brand" title=${[`Mitra ${mitra.version}`, this.updateHint].filter(Boolean).join('\n')} @click=${() => new DialogAbout().confirm()}>
+				<button class="brand" title=${this.updateHint} @click=${() => new DialogAbout().confirm()}>
 					<span class="mark">
 						<img src="/android-chrome-192x192.png" alt="">
 						${!this.updateHint ? '' : html`<span class="dot"></span>`}
 					</span>
 					<span class="name">${session.instance.displayName}</span>
 					<span class="version">
-						<span class="label">${this.versionLabel}</span>
 						${this.updateHint || !DialogAbout.hasNews ? html.nothing : html`<span class="news-dot" title=${t('What\'s New')}></span>`}
 					</span>
 				</button>
@@ -946,7 +924,7 @@ export class Sidebar extends Component {
 					`}
 					${!canInstall() ? html.nothing : html`
 						<mitra-button class="action"
-							title=${t('Install mitra as an app. It gets its own window, and notifications appear under its own name and icon')}
+							title=${t('Install CalendarX as an app. It gets its own window, and notifications appear under its own name and icon')}
 							@click=${() => promptInstall()}>
 							<mitra-icon icon="monitor-down"></mitra-icon>
 							${t('Install as an App')}

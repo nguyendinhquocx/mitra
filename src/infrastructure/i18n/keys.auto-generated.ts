@@ -147,14 +147,15 @@ declare global {
 		"Blocks": unknown
 		"Busy": unknown
 		"CalDAV": unknown
-		"CalDAV, Google, Apple or Notion, synced in both directions. Or start fresh with calendars stored in Mitra itself.": unknown
+		"CalDAV, Google, Apple or Notion, synced in both directions. Or start fresh with calendars stored in CalendarX itself.": unknown
 		"Calendar": unknown
 		"Calendar name": unknown
 		"Calendar options": unknown
 		"Calendar Subscription": unknown
 		"Calendar URL": unknown
 		"Calendars": unknown
-		"Calendars stored in Mitra itself, no account needed": unknown
+		"Calendars stored in CalendarX itself, no account needed": unknown
+		"CalendarX": unknown
 		"Cancelled": unknown
 		"Change ${name}…": unknown
 		"Checking what the calendar can take…": unknown
@@ -182,7 +183,7 @@ declare global {
 		"Confidential": unknown
 		"Connect": unknown
 		"Connect an account": unknown
-		"Connect an account or add a calendar stored on this Mitra server to start planning.": unknown
+		"Connect an account or add a calendar stored on this CalendarX server to start planning.": unknown
 		"Connecting…": unknown
 		"Connector lines in the month view": unknown
 		"Connector lines in the timeline": unknown
@@ -334,7 +335,7 @@ declare global {
 		"Improvements": unknown
 		"In progress": unknown
 		"Install as an App": unknown
-		"Install mitra as an app. It gets its own window, and notifications appear under its own name and icon": unknown
+		"Install CalendarX as an app. It gets its own window, and notifications appear under its own name and icon": unknown
 		"Integration options": unknown
 		"Integration Token": unknown
 		"Interval": unknown
@@ -364,8 +365,8 @@ declare global {
 		"Mark as done": unknown
 		"Match the system": unknown
 		"McpSetting.Keywords": unknown
+		"Minimalist": unknown
 		"minutes": unknown
-		"Mitra": unknown
 		"Mitra.Hint": unknown
 		"modified": unknown
 		"Month": unknown
@@ -461,7 +462,7 @@ declare global {
 		"Password (optional)": unknown
 		"Past 30 days": unknown
 		"Patches": unknown
-		"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": unknown
+		"People do not sign in to this CalendarX, so connectors need no token. Anyone who can reach this address can use it.": unknown
 		"Pick the calendars and task lists to show. Recolor, rename or hide them in the sidebar anytime.": unknown
 		"Plan your days": unknown
 		"Planned": unknown

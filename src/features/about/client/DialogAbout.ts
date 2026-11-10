@@ -373,7 +373,7 @@ export class DialogAbout extends DialogComponent {
 		return html`
 			<header class="identity">
 				<img class="logo" src="/android-chrome-192x192.png" alt="">
-				<span class="name">${this.meta?.name ?? t('Mitra')}</span>
+				<span class="name">${this.meta?.name ?? t('CalendarX')}</span>
 				<span class="version" title=${this.version}>
 					${!this.meta?.releaseUrl
 						? this.versionParts.base

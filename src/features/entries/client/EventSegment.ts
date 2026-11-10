@@ -128,7 +128,7 @@ export class EntrySegmentComponent extends Component {
 				gap: 0.125rem;
 				padding: 0.125rem;
 				${entryColors};
-				--segment-bg: color-mix(in srgb, var(--mitra-entry-segment-color) 25%, var(--color-background));
+				--segment-bg: color-mix(in srgb, var(--mitra-entry-segment-color) var(--entry-color-fill, 25%), var(--entry-card-base, var(--color-background)));
 				background-color: var(--segment-bg);
 				border-inline-start: 3px solid var(--mitra-entry-segment-color);
 				border-radius: var(--border-radius);
@@ -154,7 +154,7 @@ export class EntrySegmentComponent extends Component {
 				transition: background-color 0.15s ease, color 0.15s ease;
 
 				&[data-covers] {
-					--segment-bg: color-mix(in srgb, var(--mitra-entry-segment-color) 38%, color-mix(in srgb, var(--color-background) 55%, transparent));
+					--segment-bg: color-mix(in srgb, var(--mitra-entry-segment-color) var(--entry-color-fill-hover, 38%), color-mix(in srgb, var(--color-background) 55%, transparent));
 					background-color: var(--segment-bg);
 					backdrop-filter: blur(6px) saturate(130%);
 					box-shadow: 0 2px 8px rgb(0 0 0 / 0.18);

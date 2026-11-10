@@ -577,7 +577,7 @@ export class PageCalendar extends PageComponent<CalendarParameters> {
 							<section class="empty-state" aria-labelledby="calendar-empty-heading">
 								<mitra-icon icon="calendar-days" aria-hidden="true"></mitra-icon>
 								<h2 id="calendar-empty-heading">${t('No calendar source yet')}</h2>
-								<p>${t('Connect an account or add a calendar stored on this Mitra server to start planning.')}</p>
+								<p>${t('Connect an account or add a calendar stored on this CalendarX server to start planning.')}</p>
 								<mitra-button variant="primary" @click=${() => void this.addCalendar()}>${t('Add calendar')}</mitra-button>
 							</section>
 						` : choose(this.view, [

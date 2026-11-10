@@ -23,9 +23,9 @@ export class Instance {
 		Object.assign(this, init)
 	}
 
-	/** The operator's name, else Mitra's own in the current language. */
+	/** The operator's name, else CalendarX's own in the current language. */
 	get displayName() {
-		return this.name ?? String(t('Mitra'))
+		return this.name ?? String(t('CalendarX'))
 	}
 
 	/** Whether the server runs another release than this page, which a reload catches up with. */

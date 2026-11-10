@@ -27,7 +27,7 @@ export class McpConnection extends Component {
 				</li>
 			</ul>
 			<p class="note">
-				${session.instance.signIn ? html.nothing : t('People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.')}
+				${session.instance.signIn ? html.nothing : t('People do not sign in to this CalendarX, so connectors need no token. Anyone who can reach this address can use it.')}
 				<a href=${docsPage('ai-connectors')} target="_blank" rel="noreferrer">${t('How to connect')}</a>
 			</p>
 		`
