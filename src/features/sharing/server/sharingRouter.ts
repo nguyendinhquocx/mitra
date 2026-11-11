@@ -215,7 +215,7 @@ export function sharingRouter() {
 	}))
 
 	// Writes: rate limited per capability, origin checked, and replay-safe by `x-operation-id`.
-	const writeGuard = async (res: Response, context: GuestContext) => {
+	const writeGuard = (res: Response, context: GuestContext) => {
 		const limit = writeLimiter.take(context.capability.id)
 		if (!limit.allowed) {
 			res.setHeader('Retry-After', String(limit.retryAfterSeconds))
@@ -224,7 +224,7 @@ export function sharingRouter() {
 	}
 
 	router.post('/entries', sameOriginWrites, guest(async (req, res, context) => {
-		await writeGuard(res, context)
+		writeGuard(res, context)
 		if (context.capability.role !== ShareRole.Edit) {
 			throw new ShareAccessError(403, 'This link can only view')
 		}
@@ -243,7 +243,7 @@ export function sharingRouter() {
 	}))
 
 	router.put('/entries/:id', sameOriginWrites, guest(async (req, res, context) => {
-		await writeGuard(res, context)
+		writeGuard(res, context)
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		const body = req.body as { sourceId?: string }
@@ -260,7 +260,7 @@ export function sharingRouter() {
 	}))
 
 	router.delete('/entries/:id', sameOriginWrites, guest(async (req, res, context) => {
-		await writeGuard(res, context)
+		writeGuard(res, context)
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		const operation = DeleteEntry.fromValues({ id: existing.id } as never)
@@ -269,7 +269,7 @@ export function sharingRouter() {
 	}))
 
 	router.put('/entries/:id/occurrences/:occurrence', sameOriginWrites, guest(async (req, res, context) => {
-		await writeGuard(res, context)
+		writeGuard(res, context)
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
@@ -282,7 +282,7 @@ export function sharingRouter() {
 	}))
 
 	router.delete('/entries/:id/occurrences/:occurrence', sameOriginWrites, guest(async (req, res, context) => {
-		await writeGuard(res, context)
+		writeGuard(res, context)
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		const operation = DeleteEntryOccurrence.fromValues({ id: existing.id, occurrence: String(req.params.occurrence), scope: String(req.query.scope ?? 'this') } as never)
@@ -291,7 +291,7 @@ export function sharingRouter() {
 	}))
 
 	router.post('/entries/:id/complete', sameOriginWrites, guest(async (req, res, context) => {
-		await writeGuard(res, context)
+		writeGuard(res, context)
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		const operation = CompleteTask.fromValues({ id: existing.id, occurrence: (req.query.occurrence ?? (req.body as { occurrence?: string } | undefined)?.occurrence) ? String(req.query.occurrence ?? (req.body as { occurrence?: string } | undefined)?.occurrence) : undefined } as never)
@@ -304,7 +304,7 @@ export function sharingRouter() {
 
 	// The file bytes a guest entry claims: uploaded under the owner's account, referenced by the entry's save.
 	router.post('/files', sameOriginWrites, guest(async (req, res, context) => {
-		await writeGuard(res, context)
+		writeGuard(res, context)
 		if (context.capability.role !== ShareRole.Edit) {
 			throw new ShareAccessError(403, 'This link can only view')
 		}

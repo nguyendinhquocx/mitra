@@ -12,6 +12,7 @@ import { DialogDuplicateDays } from './DialogDuplicateDays.js'
 import { EntryDetailsSharing } from './EntryDetailsSharing.js'
 import { editorFieldStyles } from './editorFields.css.js'
 import { AttachmentsField } from './AttachmentsField.js'
+import { DialogShare } from '#features/sharing/client/DialogShare.js'
 
 @component('mitra-entry-details')
 export class EntryDetailsComponent extends Component {
@@ -461,6 +462,11 @@ export class EntryDetailsComponent extends Component {
 		`
 	}
 
+	/** The guest surface (/s) has no share of its own to reach, so its editor hides the owner-only actions. */
+	private get isGuestSurface() {
+		return location.pathname === '/s' || location.pathname.startsWith('/s/')
+	}
+
 	protected override get template() {
 		return !this.segment ? html.nothing : html`
 			<mitra-popover sheet @openChange=${this.handleOpenChange}>
@@ -476,6 +482,11 @@ export class EntryDetailsComponent extends Component {
 									<mitra-popover-container>
 										<mitra-icon-button label=${t('Options')} icon="more-horizontal"></mitra-icon-button>
 										<mitra-menu slot="popover">
+											${this.isGuestSurface ? html.nothing : html`
+												<mitra-menu-item icon="share" @click=${() => void new DialogShare({ entry: this.segment!.entry }).confirm()}>
+													${t('Share…')}
+												</mitra-menu-item>
+											`}
 											${this.externalLinkTemplate}
 											${!this.segment!.entry.copyable ? html.nothing : html`
 												<mitra-menu-item icon="copy" @click=${this.handleDuplicate}>

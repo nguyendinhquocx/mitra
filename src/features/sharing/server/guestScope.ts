@@ -1,6 +1,6 @@
 import type { EntityManager } from '@mikro-orm/sqlite'
 import type { Request } from 'express'
-import { DateTimeRange } from '@3mo/date-time'
+import type { DateTimeRange } from '@3mo/date-time'
 import { User } from '#features/identity'
 import { Source } from '#features/sources'
 import { Entry } from '#features/entries'

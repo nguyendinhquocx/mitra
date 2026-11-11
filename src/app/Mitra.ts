@@ -93,6 +93,11 @@ export class Mitra extends Application {
 
 	protected override async initialized() {
 		Mitra.trackFocusModality()
+		// The guest surface at /s bootstraps itself alone: no owner session, no integrations, no account ever loads here.
+		if (location.pathname === '/s' || location.pathname.startsWith('/s/')) {
+			document.title = 'CalendarX'
+			return super.initialized()
+		}
 		const pendingIntegrationId = Mitra.consumePendingIntegrationParameter()
 		const subscribeUrl = consumeSubscribeParameter()
 		await Promise.all([Calendars.fetch(), session.fetchUser(), session.fetchInstance()])

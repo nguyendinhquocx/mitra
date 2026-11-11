@@ -13,6 +13,7 @@ import { CreateEntry } from '#features/entries/client/commands.js'
 import { EntryEditorIntent } from '#features/entries/client/EntryEditorIntent.js'
 import { Calendars } from '#features/sources/client/Calendars.js'
 import { DialogSettings, type SettingsParameters } from '#features/settings/client/DialogSettings.js'
+import { DialogShare } from '#features/sharing/client/DialogShare.js'
 import { DialogIntegration } from '#integrations/client/DialogIntegration.js'
 import { type SettingsPageId } from '#features/settings/client/Setting.js'
 import { KeyPress } from '#features/commands/KeyPress.js'
@@ -559,6 +560,7 @@ export class PageCalendar extends PageComponent<CalendarParameters> {
 						</div>
 						<mitra-icon-button class="search" icon="search" label=${t('Search')} @click=${() => this.palette.show()}></mitra-icon-button>
 						<div class="trailing">
+							<mitra-icon-button class="share" icon="share" label=${t('Share')} title=${t('Share')} @click=${() => void new DialogShare({}).confirm()}></mitra-icon-button>
 							<mitra-select class="view" icon="calendar-cog" label=${t('View')} title=${t('View')} .value=${this.view} @change=${(e: CustomEvent<CalendarView>) => this.setView(e.detail)}>
 								${([['year', t('Year'), 'Y'], ['month', t('Month'), 'M'], ['week', t('Week'), 'W'], ['timeline', t('Timeline'), 'L'], ['table', t('Table'), 'S']] as const).map(([view, label, key]) => html`
 									<mitra-option .value=${view} label=${label}>${label}<kbd slot="detail">${key}</kbd></mitra-option>

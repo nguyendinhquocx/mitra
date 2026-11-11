@@ -3,7 +3,8 @@ import '@3mo/date-time'
 import '@3mo/date-time-value-constructor'
 // App translations registered after packages to override library dictionary defaults.
 import '#infrastructure/i18n/index.js'
-// Theme setting applied at module scope before UI component imports.
+// Guest share surface registered first: the literal `/s` must win over the calendar's `/:view`.
+import '#features/sharing/client/PageGuest.js'
 import './settings.js'
 import '#design'
 import '#features/entries/client/TaskStatus.js'
@@ -17,6 +18,7 @@ import '#features/time/client/TimeZoneHeader.js'
 import '#features/time/client/TimeZonePicker.js'
 import '#features/entries/client/EntryDetailsWhen.js'
 import '#features/entries/client/EntryDetailsSharing.js'
+import '#features/sharing/client/DialogShare.js'
 import '#design/Dialog.js'
 import '#features/settings/client/SettingRow.js'
 import '#features/calendar/client/Days.js'

@@ -66,7 +66,7 @@ describe('Sharing (guest capability)', () => {
 		return { capability, token }
 	}
 
-	const request = async (path: string, init: RequestInit = {}, cookie?: string) =>
+	const request = (path: string, init: RequestInit = {}, cookie?: string) =>
 		fetch(`${url}/s/api${path}`, {
 			...init,
 			headers: { ...(init.headers ?? {}), ...(cookie ? { cookie } : {}) },
@@ -229,7 +229,9 @@ describe('Sharing (guest capability)', () => {
 		const stream = await request('/stream', {}, cookie)
 		assert.equal(stream.status, 200)
 		const reader = stream.body!.getReader()
-		const revoked = new Promise<boolean>(async resolve => {
+		let resolveRevoked!: (revoked: boolean) => void
+		const revoked = new Promise<boolean>(resolve => resolveRevoked = resolve)
+		void (async () => {
 			let collected = ''
 			for (;;) {
 				const { done, value } = await reader.read()
@@ -238,13 +240,13 @@ describe('Sharing (guest capability)', () => {
 				}
 				collected += new TextDecoder().decode(value)
 				if (collected.includes('revoked')) {
-					resolve(true)
 					reader.cancel().catch(() => void 0)
+					resolveRevoked(true)
 					return
 				}
 			}
-			resolve(collected.includes('revoked'))
-		})
+			resolveRevoked(collected.includes('revoked'))
+		})()
 		await new RevokeShareLink({ id: capability.id }).run({ em: em.fork(), user })
 		assert.ok(await Promise.race([revoked, new Promise<boolean>(resolve => setTimeout(() => resolve(false), 3000))]))
 		assert.equal((await request('/entries', {}, cookie)).status, 410)
