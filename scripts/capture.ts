@@ -58,7 +58,7 @@ export type Theme = 'light' | 'dark'
 export type View = 'week' | 'month' | 'year' | 'timeline' | 'table'
 
 /** Each layer hides the app and shows one part again; `visibility` keeps every frame on the same pixels. */
-const captureCss = `
+export const captureCss = `
 	/* A blinking caret stood in some captures of a focused field and not in others. */
 	* { caret-color: transparent !important; }
 

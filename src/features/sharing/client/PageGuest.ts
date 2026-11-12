@@ -144,6 +144,9 @@ export class PageGuest extends PageComponent {
 
 	private readonly canEdit = () => this.phase === 'ready' && this.guestRole === 'edit'
 
+	// The app's stylesheet lives in the document; a shadow root would wall the guest surface off from it.
+	protected override createRenderRoot() { return this }
+
 	static override get styles() {
 		return css`
 			calendarx-page-guest {
@@ -203,6 +206,18 @@ export class PageGuest extends PageComponent {
 						align-items: center;
 						justify-content: flex-end;
 						gap: 0.75rem;
+						min-inline-size: 0;
+
+						h1 {
+							min-inline-size: 0;
+							overflow: hidden;
+							text-overflow: ellipsis;
+							white-space: nowrap;
+							margin: 0;
+							font-size: 1.125rem;
+							font-weight: 700;
+							letter-spacing: -0.01em;
+						}
 					}
 
 					.period {
@@ -215,6 +230,32 @@ export class PageGuest extends PageComponent {
 					flex: 1;
 					min-height: 0;
 					position: relative;
+				}
+			}
+
+			/* The guest surface owns the whole viewport, so its wrapping answers the window, not a container. */
+			@media (max-width: 40rem) {
+				calendarx-page-guest {
+					> header {
+						flex-wrap: wrap;
+						gap: 0.5rem;
+						padding: 0.75rem 1rem;
+
+						.scope {
+							flex: 1;
+							min-inline-size: 0;
+						}
+
+						.trailing {
+							flex-basis: 100%;
+							flex-wrap: wrap;
+
+							h1 {
+								flex-basis: 100%;
+								font-size: 1rem;
+							}
+						}
+					}
 				}
 			}
 
@@ -253,7 +294,7 @@ export class PageGuest extends PageComponent {
 			case 'revoked':
 				return html`
 					<div class="guest-center">
-						<mitra-icon icon="link-off" size="32"></mitra-icon>
+						<mitra-icon icon="unlink" size="32"></mitra-icon>
 						<h2>${t('This link is no longer active')}</h2>
 						<p>${t('The owner has revoked it, or the shared calendar is gone. Ask for a new link to continue.')}</p>
 					</div>
@@ -272,8 +313,8 @@ export class PageGuest extends PageComponent {
 		}
 		const { navigatingDate: date } = this
 		const heading = this.view === 'week'
-			? `${date.weekStart.format('D MMMM')} – ${date.weekEnd.format('D MMMM yyyy')}`
-			: date.format('MMMM yyyy')
+			? `${date.weekStart.format({ weekday: 'short', day: 'numeric', month: 'short' })} – ${date.weekEnd.format({ day: 'numeric', month: 'short', year: 'numeric' })}`
+			: date.format({ month: 'long', year: 'numeric' })
 		return html`
 			<header>
 				<span class="brand">

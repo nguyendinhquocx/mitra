@@ -19,6 +19,8 @@ import { EntrySegmentComponent } from '#features/entries/client/EventSegment.js'
 import { AvailabilitySegment } from '#features/availability/client/AvailabilitySegment.js'
 import { EntryConnections } from '#features/relations/client/EntryConnections.js'
 import { PageCalendar } from '#features/calendar/client/PageCalendar.js'
+import { PageGuest } from '#features/sharing/client/PageGuest.js'
+import { DialogShare } from '#features/sharing/client/DialogShare.js'
 import { CommandPalette } from '#features/commands/client/CommandPalette.js'
 import { Planning } from '#features/planning/client/Planning.js'
 import { EntryDetailsComponent } from '#features/entries/client/EventDetails.js'
@@ -275,6 +277,8 @@ export class Mitra extends Application {
 			${AttachmentsField.styles}
 			${RelationsField.styles}
 			${TimeZoneHeader.styles}
+			${PageGuest.styles}
+			${DialogShare.styles}
 		`
 	}
 }

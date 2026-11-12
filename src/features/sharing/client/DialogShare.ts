@@ -237,7 +237,7 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 						`}
 						<div class="row">
 							<mitra-icon icon="key-round"></mitra-icon>
-							<mitra-select label=${t('Permission')} title=${t('Permission')} .value=${this.role}
+							<mitra-select label=${t('Permission')} title=${t('Permission')} .value=${this.linkRole}
 								@change=${(e: CustomEvent<ShareRole>) => this.linkRole = e.detail}
 							>
 								<mitra-option .value=${'view' as const}>${t('View only')}</mitra-option>
@@ -247,7 +247,7 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 						${!this.allSources.length ? html.nothing : html`
 							<div class="overlays">
 								${this.allSources.map(source => html`
-									<mitra-checkbox label=${t('Also visible to the guest (read-only)')}
+									<mitra-checkbox title=${t('Also visible to the guest (read-only)')}
 										.checked=${live(this.overlays.has(source.id))}
 										@change=${(e: CustomEvent<boolean>) => {
 											if (e.detail) {

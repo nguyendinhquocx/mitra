@@ -82,6 +82,8 @@ declare global {
 		"${setting}: ${value}": unknown
 		"${span} before": unknown
 		"${status}. Click to toggle, Alt-click for options": unknown
+		"A Google calendar is shared whole: every event inside it lies within the link, yours included. Check it is the calendar to share.": unknown
+		"A removed calendar": unknown
 		"About": unknown
 		"About.Keywords": unknown
 		"Access": unknown
@@ -118,6 +120,7 @@ declare global {
 		"All time zones": unknown
 		"Allow": unknown
 		"Allowed": unknown
+		"Also visible to the guest (read-only)": unknown
 		"Alt+click to show only this one": unknown
 		"Alt+click to show the previously visible ones": unknown
 		"Amount": unknown
@@ -158,6 +161,7 @@ declare global {
 		"CalendarX": unknown
 		"Cancelled": unknown
 		"Change ${name}…": unknown
+		"Check the link and your connection, then try again.": unknown
 		"Checking what the calendar can take…": unknown
 		"Checking what would be copied…": unknown
 		"Checking what would move…": unknown
@@ -191,6 +195,7 @@ declare global {
 		"ConnectorLines.Keywords": unknown
 		"Continue with Google": unknown
 		"Contributors": unknown
+		"Copied": unknown
 		"Copied to ${name}": unknown
 		"Copy": unknown
 		"Copy ${count:pluralityNumber} entries": unknown
@@ -212,6 +217,7 @@ declare global {
 		"Create": unknown
 		"Create and move entries right on the grid. Every change syncs back to its source.": unknown
 		"Create Entry": unknown
+		"Create link": unknown
 		"CreateAvailability.Keywords": unknown
 		"created ${date}": unknown
 		"CreateEntry.Keywords": unknown
@@ -399,6 +405,7 @@ declare global {
 		"never used": unknown
 		"New calendar": unknown
 		"New dev build: ${count:pluralityNumber} commits ahead": unknown
+		"New Google calendar": unknown
 		"New task": unknown
 		"New token": unknown
 		"Next": unknown
@@ -422,6 +429,7 @@ declare global {
 		"No status": unknown
 		"None": unknown
 		"Nothing from the file was added.": unknown
+		"Nothing here yet": unknown
 		"Nothing is deleted here until its copy has landed": unknown
 		"Nothing planned yet. Draw a task on the row below": unknown
 		"Nothing was added": unknown
@@ -449,6 +457,7 @@ declare global {
 		"Open in ${provider}": unknown
 		"Open in Google Maps": unknown
 		"Open link": unknown
+		"Opening the shared calendar…": unknown
 		"OpenSettings.Keywords": unknown
 		"Optional": unknown
 		"Options": unknown
@@ -463,11 +472,13 @@ declare global {
 		"Past 30 days": unknown
 		"Patches": unknown
 		"People do not sign in to this CalendarX, so connectors need no token. Anyone who can reach this address can use it.": unknown
+		"Permission": unknown
 		"Pick the calendars and task lists to show. Recolor, rename or hide them in the sidebar anytime.": unknown
 		"Plan your days": unknown
 		"Planned": unknown
 		"Planning": unknown
 		"Plus ${link} on GitHub: tests, builds and chores.": unknown
+		"Previous": unknown
 		"Previous month": unknown
 		"Previous Month": unknown
 		"Previous Week": unknown
@@ -514,7 +525,9 @@ declare global {
 		"Reset columns": unknown
 		"Reset to calendar color": unknown
 		"Reset to default color": unknown
+		"Revoke": unknown
 		"Revoke this token": unknown
+		"Revoked": unknown
 		"Same time everywhere": unknown
 		"Sample calendars filled with generated data, rebuilt daily": unknown
 		"Save": unknown
@@ -533,6 +546,11 @@ declare global {
 		"Server URL": unknown
 		"Set as the default for new entries": unknown
 		"Settings": unknown
+		"Share": unknown
+		"Share calendar": unknown
+		"Share event": unknown
+		"Share…": unknown
+		"Shared calendar": unknown
 		"Show all calendars": unknown
 		"Show as busy or free": unknown
 		"Show calendar": unknown
@@ -579,9 +597,15 @@ declare global {
 		"The calendars of your Google account": unknown
 		"The calendars of your iCloud account": unknown
 		"The file stays exactly as it is": unknown
+		"The full link is copied to the clipboard. Anyone holding it works with this scope until the link is revoked.": unknown
 		"The hours you book on Jira issues": unknown
 		"the last ${weekday}": unknown
+		"The link could not be opened": unknown
+		"The link opens the whole shared calendar on this event. Anyone holding it may work inside that calendar, and nothing beyond it.": unknown
 		"The originals stay exactly where they are": unknown
+		"The owner has revoked it, or the shared calendar is gone. Ask for a new link to continue.": unknown
+		"The shared calendar cannot be reached right now. Your last view stays as it was.": unknown
+		"The shared calendar is empty for now.": unknown
 		"The step dragging and resizing land on": unknown
 		"The task databases of your workspace": unknown
 		"The tasks of your Todoist projects": unknown
@@ -597,8 +621,11 @@ declare global {
 		"this device": unknown
 		"This entry": unknown
 		"This file could not be uploaded": unknown
+		"This link is no longer active": unknown
 		"This relationship could not be saved": unknown
 		"This relationship is not possible": unknown
+		"This share session has ended. Reopen the link": unknown
+		"This shared calendar is empty. Create the first entry.": unknown
 		"Time": unknown
 		"Time zone": unknown
 		"Time zone names": unknown
@@ -622,6 +649,7 @@ declare global {
 		"ToggleSidebar.Keywords": unknown
 		"Token": unknown
 		"Tomorrow": unknown
+		"Try again": unknown
 		"Type": unknown
 		"unchanged": unknown
 		"Unit": unknown
@@ -637,7 +665,9 @@ declare global {
 		"Username": unknown
 		"Username (optional)": unknown
 		"View": unknown
+		"View and edit": unknown
 		"View on GitHub": unknown
+		"View only": unknown
 		"Views": unknown
 		"Visibility": unknown
 		"Week": unknown
@@ -660,6 +690,7 @@ declare global {
 		"Year View": unknown
 		"YearView.Keywords": unknown
 		"Yesterday": unknown
+		"You are offline": unknown
 		"Zoom the view": unknown
 	}
 }
