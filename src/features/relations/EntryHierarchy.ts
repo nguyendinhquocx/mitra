@@ -1,7 +1,7 @@
 // By file, not the barrel: Entry imports this class, and TypeScript 7 drops the member from Entry in a file that also imports this one directly.
 import type { Entry } from '#features/entries/Entry.js'
 import type { EntryShift } from '#features/entries/EntryShift.js'
-import { TaskStatus } from '#features/entries/TaskStatus.js'
+import { EntryStatus } from '#features/entries/EntryStatus.js'
 import { RelationGraph } from './RelationGraph.js'
 import { ShiftStrategy } from './ShiftStrategy.js'
 import { EntryPlan, type PlannedWrite, type SkippedEntry } from './EntryPlan.js'
@@ -62,6 +62,12 @@ export class EntryHierarchy {
 		return rollup?.total ? rollup.progress : this.entry.progress
 	}
 
+	/** Whether it is partly done: some of it, by its subtasks and checklist or its own progress, and not all. */
+	get partlyDone() {
+		const { progress } = this
+		return progress !== undefined && progress > 0 && progress < 1
+	}
+
 	/** Whether this one can block `dependent`: both saved, the dependent's calendar keeping relations, and no dependency between the two yet, either way, direct or through others. */
 	canBlock(dependent: Entry) {
 		const predecessor = this.entry
@@ -104,7 +110,7 @@ export class EntryHierarchy {
 	}
 
 	/** Its open subtasks closed as `status`, as closing it offers. */
-	planClosing(status: TaskStatus) {
+	planClosing(status: EntryStatus) {
 		return EntryPlan.of({
 			writes: this.children.filter(child => child.open).map(child => ({
 				entry: child,
@@ -118,7 +124,7 @@ export class EntryHierarchy {
 		return EntryPlan.of({
 			writes: this.completedAncestors.map(parent => ({
 				entry: parent,
-				mutate: (target: Entry) => { target.status = TaskStatus.Done },
+				mutate: (target: Entry) => { target.status = EntryStatus.Done },
 			})),
 		})
 	}

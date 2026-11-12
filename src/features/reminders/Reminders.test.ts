@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { type DateTime } from '@3mo/date-time'
-import { EntryType, Entry, TaskStatus } from '#features/entries'
+import { EntryType, Entry, EntryStatus } from '#features/entries'
 import { EntryTimeZone } from '#features/time/EntryTimeZone.js'
 import { TimeZone } from '#features/time/TimeZone.js'
 import { Recurrence, RecurrenceFrequency } from '#features/recurrence'
@@ -79,9 +79,15 @@ describe('Reminders', () => {
 
 		it('says nothing about a task the user already closed', () => {
 			const start = D('2026-07-06T09:31:00Z')
-			assert.equal(DueReminder.within([task({ start, reminders: EntryReminders.normalize([30]), status: TaskStatus.Done })], watermark, now).length, 0)
-			assert.equal(DueReminder.within([task({ start, reminders: EntryReminders.normalize([30]), status: TaskStatus.Cancelled })], watermark, now).length, 0)
-			assert.equal(DueReminder.within([task({ start, reminders: EntryReminders.normalize([30]), status: TaskStatus.Doing })], watermark, now).length, 1)
+			assert.equal(DueReminder.within([task({ start, reminders: EntryReminders.normalize([30]), status: EntryStatus.Done })], watermark, now).length, 0)
+			assert.equal(DueReminder.within([task({ start, reminders: EntryReminders.normalize([30]), status: EntryStatus.Cancelled })], watermark, now).length, 0)
+			assert.equal(DueReminder.within([task({ start, reminders: EntryReminders.normalize([30]), status: EntryStatus.Doing })], watermark, now).length, 1)
+		})
+
+		it('says nothing about a cancelled event either: it is not happening', () => {
+			const start = D('2026-07-06T09:31:00Z')
+			assert.equal(DueReminder.within([entry({ start, reminders: EntryReminders.normalize([30]), status: EntryStatus.Cancelled })], watermark, now).length, 0)
+			assert.equal(DueReminder.within([entry({ start, reminders: EntryReminders.normalize([30]), status: EntryStatus.Confirmed })], watermark, now).length, 1)
 		})
 
 		it('builds the notification of the occurrence it is due for', () => {
@@ -103,13 +109,13 @@ describe('Reminders', () => {
 			const floating = () => entry({ start: D('2026-07-06T09:31:00Z'), reminders: EntryReminders.normalize([30]), timeZone: EntryTimeZone.floating })
 
 			it('resolves the wall clock in the observer zone', () => {
-				const due = DueReminder.within([floating()], new Date('2026-07-06T07:00:00Z'), new Date('2026-07-06T07:01:00Z'), () => TimeZone.of('Europe/Berlin'))
+				const due = DueReminder.within([floating()], new Date('2026-07-06T07:00:00Z'), new Date('2026-07-06T07:01:00Z'), TimeZone.of('Europe/Berlin'))
 				assert.equal(due.length, 1)
 				assert.equal(due[0]!.fireAt, Date.parse('2026-07-06T07:01:00Z'))
 			})
 
 			it('does not fire at the stored instant for that observer', () => {
-				assert.equal(DueReminder.within([floating()], watermark, now, () => TimeZone.of('Europe/Berlin')).length, 0)
+				assert.equal(DueReminder.within([floating()], watermark, now, TimeZone.of('Europe/Berlin')).length, 0)
 			})
 
 			it('falls back to the stored instant when no zone is known', () => {
@@ -118,7 +124,7 @@ describe('Reminders', () => {
 
 			it('leaves an all-day span alone, since those are floating DAYS, not wall clocks', () => {
 				const allDay = entry({ start: D('2026-07-06T09:31:00Z'), reminders: EntryReminders.normalize([30]), timeZone: EntryTimeZone.floating, allDay: true })
-				assert.equal(DueReminder.within([allDay], watermark, now, () => TimeZone.of('Europe/Berlin')).length, 1)
+				assert.equal(DueReminder.within([allDay], watermark, now, TimeZone.of('Europe/Berlin')).length, 1)
 			})
 		})
 	})

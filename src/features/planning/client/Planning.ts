@@ -1,12 +1,11 @@
 import { Component, component, html, css, repeat, unsafeCSS, eventListener } from '@a11d/lit'
 import { ReorderabilityController, ReorderabilityState } from '@3mo/reorderability'
-import type { Source } from '#features/sources'
 import { EntryType, Entry, EntryRank } from '#features/entries'
 import { Calendars } from '#features/sources/client/Calendars.js'
 import { EntryStore } from '#features/entries/client/EntryStore.js'
 import { EntryEditorIntent } from '#features/entries/client/EntryEditorIntent.js'
 import { EntrySegments } from '#features/entries/client/EntrySegments.js'
-import { EntryDragController } from '#features/entries/client/EntryDragController.js'
+import { EntryGestureController } from '#features/entries/client/gestures/EntryGestureController.js'
 import type { EntryOccurrence } from '#features/recurrence'
 import type { EntrySegmentComponent } from '#features/entries/client/EventSegment.js'
 
@@ -29,7 +28,7 @@ export class Planning extends Component {
 	 */
 	static get overdue(): ReadonlyArray<EntryOccurrence> {
 		return EntryStore.shown
-			.filter(occurrence => occurrence.overdue && !EntryStore.previewing(occurrence.entry))
+			.filter(occurrence => occurrence.overdue && !EntryStore.pending.previewing(occurrence.entry))
 			.sort((a, b) => a.lastDay!.valueOf() - b.lastDay!.valueOf())
 	}
 
@@ -56,21 +55,17 @@ export class Planning extends Component {
 		return entry.open && entry.persisted
 	}
 
-	private static get target(): Source | undefined {
-		return Calendars.getPrimary(EntryType.Task)
-	}
-
 	static get canAdd() {
-		return !!Planning.target
+		return !!Calendars.taskTarget
 	}
 
 	static add() {
-		const source = Planning.target
+		const source = Calendars.taskTarget
 		if (!source) {
 			return
 		}
 		const draft = source.draft({ type: EntryType.Task })
-		EntryStore.upsertDraft(draft)
+		EntryStore.pending.upsertDraft(draft)
 		EntryEditorIntent.openDraft(draft)
 	}
 
@@ -79,7 +74,7 @@ export class Planning extends Component {
 			return
 		}
 		const target = e.target as HTMLElement
-		if (target.closest('mitra-entry-details') || target.closest('mitra-task-status')) {
+		if (target.closest('mitra-entry-details') || target.closest('mitra-entry-status')) {
 			return
 		}
 		const segment = target.closest('mitra-entry-segment') as EntrySegmentComponent | null
@@ -94,7 +89,7 @@ export class Planning extends Component {
 			this.held = { occurrence, segment, bounds: section.getBoundingClientRect() }
 			return
 		}
-		EntryDragController.beginExternal(EntryStore.editable(occurrence), segment, this, e)
+		EntryGestureController.beginExternal(EntryStore.editable(occurrence), segment, this, e)
 	}
 
 	/** `from` and `to` index into {@link unscheduled}. */
@@ -120,7 +115,7 @@ export class Planning extends Component {
 		}
 		this.held = undefined
 		this.reorder.abandon()
-		EntryDragController.beginExternal(EntryStore.editable(held.occurrence), held.segment, this, e, { held: true })
+		EntryGestureController.beginExternal(EntryStore.editable(held.occurrence), held.segment, this, e, { held: true })
 	}
 
 	private static near(bounds: DOMRect, e: PointerEvent) {

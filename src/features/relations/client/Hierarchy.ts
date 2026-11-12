@@ -40,10 +40,9 @@ export class Hierarchy {
 	}
 
 	/** Resolves recurrence scope without hierarchy options for single-entry mutations. */
-	resolveRecurrenceScope(entry: Entry, intent: 'edit' | 'delete'): Promise<EntryOccurrenceChangeScope | undefined> {
-		return new DialogEntryScope({ entry, intent, series: true, subtasks: 0 })
-			.confirm()
-			.then(scope => scope?.recurrence)
+	async resolveRecurrenceScope(entry: Entry, intent: 'edit' | 'delete'): Promise<EntryOccurrenceChangeScope | undefined> {
+		const scope = await new DialogEntryScope({ entry, intent, series: true, subtasks: 0 }).confirm()
+		return scope?.recurrence
 	}
 
 	/** Applies shift strategy to downstream entries, excluding entries already modified. */
@@ -69,7 +68,7 @@ export class Hierarchy {
 
 	/** Offers what closing a task leads to: closing its open subtasks, then completing the parents it completes. */
 	async offerFollowUps(entry: Entry) {
-		const id = entry.recurringEntryId ?? entry.id
+		const id = entry.masterId
 		if (!id || !entry.type.isTask || this.offering.has(id)) {
 			return
 		}

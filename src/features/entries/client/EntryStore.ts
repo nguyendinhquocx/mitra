@@ -8,6 +8,8 @@ import { ApiError } from '#infrastructure/http/Api.js'
 import { type Entry } from '../Entry.js'
 import { EntryRank } from '../EntryRank.js'
 import { EntryPatch, type EntryPatchField } from '../EntryPatch.js'
+import { PendingEntries } from './PendingEntries.js'
+import { EntryLenses } from './EntryLenses.js'
 
 export const reportSaveError = (error: unknown) =>
 	console.error('Persisting the entry failed. The edit is kept locally and retried on the next change:', error)
@@ -18,15 +20,17 @@ export class EntryStore extends Controller {
 
 	private static readonly workingById = new Map<string, Entry>()
 	private static readonly canonicalById = new Map<string, Entry>()
-	private static draft?: Entry
-	private static preview?: Entry
-	private static readonly duplicates = new Set<Entry>()
 	private static readonly inflight = new Map<Entry, Promise<void>>()
+
+	/** What a gesture lays over the stored entries: the draft, a drag's preview and the entry it holds, copies on their way. */
+	static readonly pending = new PendingEntries({ moved: (...entries) => EntryStore.notifyMoved(...entries), changed: () => EntryStore.notify() })
+
+	/** What keeps occurrences off every surface, as the hide-done setting does; search and rollups still see them. */
+	static readonly lenses = new EntryLenses()
 
 	private static merged?: ReadonlyArray<Entry>
 	private static composed?: ReadonlyArray<EntryOccurrence>
 	private static graphOf?: { readonly entries: ReadonlyArray<Entry>, readonly graph: RelationGraph }
-	private static dragging?: Entry
 	/** The window the entries were fetched for, whose dates the recurring ones yield; none for every entry once. */
 	private static window?: DateTimeRange
 
@@ -35,7 +39,7 @@ export class EntryStore extends Controller {
 		create: (entry: Entry) => CreateEntry.call(EntryPatch.creating(entry)),
 		/** Writes `fields` of the entry, or of every occurrence of a repeating one: those they all share, unless told otherwise. */
 		update: (entry: Entry, fields: ReadonlyArray<EntryPatchField> = entry.recurringEntryId ? EntryPatch.shared : EntryPatch.fields) =>
-			UpdateEntry.call({ ...EntryPatch.of(entry, fields), id: entry.recurringEntryId ?? entry.id! }),
+			UpdateEntry.call({ ...EntryPatch.of(entry, fields), id: entry.masterId! }),
 		delete: (id: string) => DeleteEntry.call({ id }),
 		/** The date `occurrence` stands for, by the date its entry stores it under, with how far the change reaches. */
 		editOccurrence: (occurrence: EntryOccurrence, scope: EntryOccurrenceChangeScope) =>
@@ -46,18 +50,8 @@ export class EntryStore extends Controller {
 		reorder: (ranks: ReadonlyArray<readonly [string, EntryRank]>) => RankTasks.call({ ranks }),
 	}
 
-	/** A drag only ever moves the span, so a ghost occupying the source's is a second copy of it, even when both are dateless. */
-	private static get shownPreview(): Entry | undefined {
-		return this.preview && this.dragging && this.preview.span.equals(this.dragging.span) ? undefined : this.preview
-	}
-
 	static get entries(): ReadonlyArray<Entry> {
-		return this.merged ??= [
-			...this.workingById.values(),
-			...this.duplicates,
-			...(this.draft ? [this.draft] : []),
-			...(this.shownPreview ? [this.shownPreview] : []),
-		]
+		return this.merged ??= [...this.workingById.values(), ...this.pending.entries]
 	}
 
 	/**
@@ -68,16 +62,9 @@ export class EntryStore extends Controller {
 		return this.composed ??= this.compose()
 	}
 
-	/** What the surfaces draw of the occurrences: every one, but what a registered lens keeps out ({@link EntryStore.showing}). */
+	/** What the surfaces draw of the occurrences: every one, but what a lens keeps out ({@link EntryStore.lenses}). */
 	static get shown(): ReadonlyArray<EntryOccurrence> {
-		return this.lens(this.occurrences)
-	}
-
-	private static lens = (occurrences: ReadonlyArray<EntryOccurrence>) => occurrences
-
-	/** Registers what keeps occurrences out of every surface, as the hide-done setting does; search and rollups still see them. */
-	static showing(lens: (occurrences: ReadonlyArray<EntryOccurrence>) => ReadonlyArray<EntryOccurrence>) {
-		this.lens = lens
+		return this.lenses.apply(this.occurrences)
 	}
 
 	/** The relations among every entry held, which each entry's hierarchy reads; rebuilt once the entries change. */
@@ -113,11 +100,16 @@ export class EntryStore extends Controller {
 
 	/**
 	 * What keeps an occurrence the same chip across renders: a date its rule yields by its key, which an override taking the
-	 * date over keeps, anything else by its entry, whose dates a drag changes. The drag's preview is a chip of its own.
+	 * date over keeps, and so does the entry it becomes on leaving the recurring entry; anything else by its entry, whose
+	 * dates a drag changes. The drag's preview is a chip of its own.
 	 */
 	static identityOf(occurrence: EntryOccurrence): unknown {
-		return occurrence.recurring && !this.isPreview(occurrence.entry) ? occurrence.key : occurrence.entry
+		return this.tookOver.get(occurrence.entry)
+			?? (occurrence.recurring && !this.pending.isPreview(occurrence.entry) ? occurrence.key : occurrence.entry)
 	}
+
+	/** The key of the date each entry that left its recurring entry took over, whose chip it keeps, with an editor open on it. */
+	private static readonly tookOver = new WeakMap<Entry, string>()
 
 	/** The occurrence `entry` shows: its own, or for an override the date of its recurring entry it takes over. */
 	static occurrenceOf(entry: Entry) {
@@ -174,7 +166,7 @@ export class EntryStore extends Controller {
 	}
 
 	private static tracks(entry: Entry) {
-		return this.draft === entry || (entry.id !== undefined && this.workingById.get(entry.id) === entry)
+		return this.pending.draft === entry || (entry.id !== undefined && this.workingById.get(entry.id) === entry)
 	}
 
 	static resolveScope: (entry: Entry, intent: 'edit' | 'delete') => Promise<EntryOccurrenceChangeScope | undefined> =
@@ -186,6 +178,14 @@ export class EntryStore extends Controller {
 	static whenTaskCloses(listener: (entry: Entry) => void) {
 		this.closings.add(listener)
 		return () => void this.closings.delete(listener)
+	}
+
+	/** Saves an entry the store does not hold, as a linked one outside the window is, telling who listens once it closed. */
+	static async saveUntracked(entry: Entry) {
+		await EntryStore.persistence.update(entry)
+		if (entry.closed) {
+			this.closings.forEach(listener => listener(entry))
+		}
 	}
 
 	/** Persists local changes, chaining in-flight updates and resolving recurrence scope. */
@@ -220,7 +220,7 @@ export class EntryStore extends Controller {
 						: await EntryStore.persistence.update(entry, entry.recurringEntryId ? [...EntryPatch.shared, 'recurrence'] : undefined)
 					if (!entry.persisted) {
 						entry.id = saved.id
-						this.draft = this.draft === entry ? undefined : this.draft
+						this.pending.settled(entry)
 						this.workingById.set(entry.id!, entry)
 					} else if (!entry.recurringEntryId && saved.id !== undefined && saved.id !== entry.id) {
 						if (this.workingById.get(entry.id!) === entry) {
@@ -252,8 +252,8 @@ export class EntryStore extends Controller {
 				this.inflight.delete(entry)
 				this.notify()
 			}
-			// Successful transition into closed state; runs outside finally so failed saves never prompt.
-			if (!wasClosed && entry.closed && this.tracks(entry)) {
+			// A task's transition into closed state; runs outside finally so failed saves never prompt.
+			if (!wasClosed && entry.closed && entry.type.isTask && this.tracks(entry)) {
 				this.closings.forEach(listener => listener(entry))
 			}
 		})()
@@ -272,7 +272,7 @@ export class EntryStore extends Controller {
 		const before = owner.relations
 		mutate()
 		this.notify()
-		const id = owner.recurringEntryId ?? owner.id
+		const id = owner.masterId
 		if (!id) {
 			return
 		}
@@ -304,25 +304,8 @@ export class EntryStore extends Controller {
 		}
 	}
 
-	/** Whether only task progress or status changed, which commits as 'this' without asking for a scope. */
-	private static completionOnlyChanged(entry: Entry) {
-		const canonical = this.canonicalById.get(entry.id!)
-		if (!canonical) {
-			return false
-		}
-		const probe = entry.clone()
-		probe.status = canonical.status
-		probe.percentComplete = canonical.percentComplete
-		return probe.equals(canonical) && !entry.equals(canonical)
-	}
-
-	/** Whether an unscheduled occurrence just got its start. Only that one is being planned, so it goes without asking. */
-	private static schedulesOccurrence(entry: Entry) {
-		return !!entry.start && !this.canonicalById.get(entry.id!)?.start
-	}
-
 	private static async commitOccurrence(entry: Entry, sent: Entry, preset?: EntryOccurrenceChangeScope): Promise<boolean> {
-		const scope = preset ?? (this.completionOnlyChanged(entry) || this.schedulesOccurrence(entry) ? EntryOccurrenceChangeScope.This : await EntryStore.resolveScope(entry, 'edit'))
+		const scope = preset ?? (entry.editsOnlyThisOccurrence(this.canonicalById.get(entry.id!)) ? EntryOccurrenceChangeScope.This : await EntryStore.resolveScope(entry, 'edit'))
 		if (!this.tracks(entry)) {
 			return false
 		}
@@ -330,7 +313,8 @@ export class EntryStore extends Controller {
 			this.revert(entry)
 			return false
 		}
-		const saved = await EntryStore.persistence.editOccurrence(this.occurrenceOf(entry), scope)
+		const occurrence = this.occurrenceOf(entry)
+		const saved = await EntryStore.persistence.editOccurrence(occurrence, scope)
 		if (!this.tracks(entry)) {
 			return false
 		}
@@ -339,11 +323,12 @@ export class EntryStore extends Controller {
 				this.workingById.delete(entry.id!)
 				this.canonicalById.delete(entry.id!)
 			}
-			entry.id = saved.id
-			entry.recurringEntryId = undefined
-			entry.recurrenceId = undefined
-			entry.recurrence = undefined
-			entry.uid = saved.uid
+			// As the server did: the rule yields the date no more, and the entry keeps the chip the date had.
+			const recurringEntryId = entry.recurringEntryId!
+			this.workingById.get(recurringEntryId)?.exclude(occurrence.recurrenceId!)
+			this.canonicalById.get(recurringEntryId)?.exclude(occurrence.recurrenceId!)
+			this.tookOver.set(entry, occurrence.key!)
+			entry.leaveSeries(saved)
 			this.workingById.set(entry.id!, entry)
 			this.canonicalById.set(entry.id!, saved.clone())
 			if (entry.equals(sent)) {
@@ -357,21 +342,16 @@ export class EntryStore extends Controller {
 	}
 
 	/** Creates a standalone copy of an entry and persists it. */
-	static async duplicate(entry: Entry, span = entry.span): Promise<Entry> {
+	static duplicate(entry: Entry, span = entry.span) {
 		const duplicate = entry.duplicate()
 		duplicate.adopt(span)
-		this.duplicates.add(duplicate)
-		this.notify()
-		try {
+		return this.pending.holding(duplicate, async () => {
 			const saved = await EntryStore.persistence.create(duplicate)
 			duplicate.assign(saved)
 			this.workingById.set(duplicate.id!, duplicate)
 			this.canonicalById.set(duplicate.id!, saved.clone())
 			return duplicate
-		} finally {
-			this.duplicates.delete(duplicate)
-			this.notify()
-		}
+		})
 	}
 
 	/** Deletes an entry or scoped series occurrences optimistically with rollback on error. */
@@ -494,15 +474,10 @@ export class EntryStore extends Controller {
 	}
 
 	private static drop(entry: Entry) {
-		if (this.draft === entry) {
-			this.draft = undefined
-		}
+		this.pending.forget(entry)
 		if (entry.id !== undefined && this.workingById.get(entry.id) === entry) {
 			this.workingById.delete(entry.id)
 			this.canonicalById.delete(entry.id)
-		}
-		if (this.dragging === entry) {
-			this.dragging = undefined
 		}
 		this.notify()
 	}
@@ -571,69 +546,14 @@ export class EntryStore extends Controller {
 		}
 	}
 
-	static upsertDraft(entry: Entry) {
-		const previous = this.draft
-		this.draft = entry
-		this.notifyMoved(previous, entry)
-	}
-
-	static discardDraft() {
-		if (this.draft?.blank) {
-			this.draft = undefined
-			this.notify()
-		}
-	}
-
-	static setDragging(entry: Entry | undefined) {
-		if (this.dragging !== entry) {
-			const previous = this.dragging
-			this.dragging = entry
-			this.notifyMoved(previous, entry, this.preview)
-		}
-	}
-
-	/** Whether this exact preview is the one on screen. */
-	static previewing(entry: Entry) {
-		return this.preview === entry
-	}
-
-	static setPreview(entry: Entry | undefined) {
-		// Re-notifies even for the same instance, which drags mutate in place; nothing to nothing can't.
-		if (this.preview === undefined && entry === undefined) {
-			return
-		}
-		const previous = this.preview
-		this.preview = entry
-		this.notifyMoved(previous, entry, this.dragging)
-	}
-
-	static isDragging(entry: Entry) {
-		return this.dragging === entry && this.preview === undefined
-	}
-
-	static get dragSource(): Entry | undefined {
-		return this.shownPreview === undefined ? undefined : this.dragging
-	}
-
-	static isDragSource(entry: Entry) {
-		return this.dragSource === entry
-	}
-
-	static isPreview(entry: Entry) {
-		return this.shownPreview !== undefined && this.shownPreview === entry
-	}
-
 	static reset() {
 		this.workingById.clear()
 		this.canonicalById.clear()
 		this.inflight.clear()
-		this.duplicates.clear()
-		this.draft = undefined
-		this.preview = undefined
+		this.pending.reset()
 		this.merged = undefined
 		this.composed = undefined
 		this.window = undefined
-		this.dragging = undefined
 	}
 
 	get entries() {
@@ -648,16 +568,8 @@ export class EntryStore extends Controller {
 		return EntryStore.shown
 	}
 
-	isDragging(entry: Entry) {
-		return EntryStore.isDragging(entry)
-	}
-
-	isDragSource(entry: Entry) {
-		return EntryStore.isDragSource(entry)
-	}
-
-	isPreview(entry: Entry) {
-		return EntryStore.isPreview(entry)
+	get pending() {
+		return EntryStore.pending
 	}
 
 	constructor(host: ReactiveControllerHost, private readonly options: {

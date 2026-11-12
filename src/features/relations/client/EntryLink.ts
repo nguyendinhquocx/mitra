@@ -1,12 +1,11 @@
 import { Component, component, html, css, property, event, type PropertyValues } from '@a11d/lit'
 import { type DateTime } from '@3mo/date-time'
 import { pressable } from '#design'
-import { type Entry } from '#features/entries'
+import { type Entry, EntryStatus } from '#features/entries'
 import { EntryEditorIntent } from '#features/entries/client/EntryEditorIntent.js'
 import { EntryStore, reportSaveError } from '#features/entries/client/EntryStore.js'
 import { Calendars } from '#features/sources/client/Calendars.js'
-import '#features/entries/client/TaskStatus.js'
-import { hierarchy } from './Hierarchy.js'
+import '#features/entries/client/EntryStatus.js'
 
 /**
  * Another entry, named where one entry points at it: a task's status, which can be changed right here,
@@ -51,12 +50,7 @@ export class EntryLink extends Component {
 			tracked.percentComplete = target.percentComplete
 			EntryStore.notify()
 		}
-		const saved = tracked ?? target
-		await (tracked ? EntryStore.commit(tracked) : EntryStore.persistence.update(target)).catch(reportSaveError)
-		// A target the store does not hold is written past it, so no one listening hears it close: the follow-ups are offered here.
-		if (!tracked && saved.closed) {
-			hierarchy.offerFollowUps(saved).catch(() => void 0)
-		}
+		await (tracked ? EntryStore.commit(tracked) : EntryStore.saveUntracked(target)).catch(reportSaveError)
 		this.requestUpdate()
 	}
 
@@ -68,7 +62,7 @@ export class EntryLink extends Component {
 				gap: 0.375rem;
 				min-width: 0;
 
-				> mitra-task-status {
+				> mitra-entry-status {
 					font-size: 0.85rem;
 					inline-size: 0.85rem;
 					block-size: 0.85rem;
@@ -122,8 +116,8 @@ export class EntryLink extends Component {
 
 	protected override get template() {
 		return html`
-			${this.entry.type.isTask ? html`
-				<mitra-task-status style=${this.entry.effectiveColor ? `color: ${this.entry.effectiveColor};` : ''} .entry=${this.entry} @change=${() => this.handleStatusChange()}></mitra-task-status>
+			${this.entry.type.isTask || (this.entry.status && this.entry.status !== EntryStatus.Confirmed) ? html`
+				<mitra-entry-status style=${this.entry.effectiveColor ? `color: ${this.entry.effectiveColor};` : ''} .entry=${this.entry} @change=${() => this.handleStatusChange()}></mitra-entry-status>
 			` : html`
 				<mitra-icon class="glyph" icon="calendar" style=${this.entry.effectiveColor ? `color: ${this.entry.effectiveColor};` : ''}></mitra-icon>
 			`}

@@ -128,23 +128,6 @@ function maskFor(path: string): string {
  */
 @component('mitra-entry-connections')
 export class EntryConnections extends Component {
-	static isEnabledFor(view: 'week' | 'month' | 'timeline') {
-		return localStorage.getItem(`Mitra.Connections.${view}`) !== 'false'
-	}
-
-	/** `undefined` FORGETS the choice rather than writing the current default: an explicit `true` would
-	 * pin the lines on for good, and the day this default changes it would have to change for the people
-	 * who never chose (see Setting.set: only deviations are stored). */
-	static setEnabledFor(view: 'week' | 'month' | 'timeline', enabled: boolean | undefined) {
-		const key = `Mitra.Connections.${view}`
-		if (enabled === undefined) {
-			localStorage.removeItem(key)
-		} else {
-			localStorage.setItem(key, String(enabled))
-		}
-		EntryStore.notify()
-	}
-
 	/** True if the platform supports scroll-driven animation timelines for cross-realm shifts. */
 	private static readonly canShift = typeof CSS !== 'undefined' && CSS.supports('animation-timeline', '--probe')
 
@@ -206,7 +189,7 @@ export class EntryConnections extends Component {
 
 	private get connectorEdges(): Array<ConnectorEdge> {
 		const segments = this.segments.filter(segment =>
-			segment.entry.persisted && !!segment.entry.uid && segment.dayValue !== undefined && !EntryStore.isPreview(segment.entry))
+			segment.entry.persisted && !!segment.entry.uid && segment.dayValue !== undefined && !EntryStore.pending.isPreview(segment.entry))
 		const byEntry = new Map<Entry, Array<EntrySegment>>()
 		const byUid = new Map<string, Array<Entry>>()
 		for (const segment of segments) {
@@ -564,7 +547,7 @@ export class EntryConnections extends Component {
 
 	private get handleSegment(): EntrySegment | undefined {
 		const entry = this.draft?.from.entry ?? this.hovered?.entry
-		if (!entry?.relatable || EntryStore.isDragging(entry)) {
+		if (!entry?.relatable || EntryStore.pending.isDragging(entry)) {
 			return undefined
 		}
 		const end = this.endSliceOf(entry)

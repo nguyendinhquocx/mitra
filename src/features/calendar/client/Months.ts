@@ -3,7 +3,7 @@ import { DateTime } from '@3mo/date-time'
 import type { EntryOccurrence } from '#features/recurrence'
 import { EntrySegments } from '#features/entries/client/EntrySegments.js'
 import { EntryStore } from '#features/entries/client/EntryStore.js'
-import { EntryDragController } from '#features/entries/client/EntryDragController.js'
+import { EntryGestureController } from '#features/entries/client/gestures/EntryGestureController.js'
 import { Routines } from '#features/routines/client/Routines.js'
 import { Availability } from '#features/availability/client/Availability.js'
 import { CalendarDatesController, type CalendarMonth } from './CalendarDatesController.js'
@@ -21,8 +21,8 @@ export class Months extends Component {
 	@property({ type: Object }) navigatingDate = new DateTime()
 	@property({ type: Array }) occurrences = new Array<EntryOccurrence>()
 
-	private readonly buffer: CalendarDatesController = new CalendarDatesController(this, { radiusDays: 300, shiftDays: 28, triggerWeeks: 52, bufferWeeks: 520 })
-	protected readonly entryDrag = new EntryDragController(this, 'year')
+	private readonly buffer: CalendarDatesController = new CalendarDatesController(this, { radiusDays: 300, shiftDays: 28, triggerWeeks: 52, bufferWeeks: 520, rows: 'month' })
+	protected readonly entryGestures = new EntryGestureController(this, 'year')
 	protected readonly density = new MonthsDensityController(this)
 
 	@query('.corner') private readonly corner?: HTMLElement
@@ -251,7 +251,7 @@ export class Months extends Component {
 		const { days: windowDays } = this.buffer.window
 		const firstValue = windowDays[0]?.dayStart.valueOf() ?? 0
 		const lastValue = windowDays.at(-1)?.dayStart.valueOf() ?? 0
-		const todayValue = new DateTime().dayStart.valueOf()
+		const todayValue = CalendarDatesController.today.valueOf()
 		const week = CalendarDatesController.sampleWeek
 
 		return html`

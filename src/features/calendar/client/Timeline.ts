@@ -8,8 +8,8 @@ import { EntrySegments } from '#features/entries/client/EntrySegments.js'
 import { Availability } from '#features/availability/client/Availability.js'
 import { type EntrySegment } from '#features/entries/client/EntrySegment.js'
 import { EntryStore } from '#features/entries/client/EntryStore.js'
-import { EntryConnections } from '#features/relations/client/EntryConnections.js'
-import { EntryDragController } from '#features/entries/client/EntryDragController.js'
+import { ConnectorLinesSetting } from '#features/relations/client/ConnectorLinesSetting.js'
+import { EntryGestureController } from '#features/entries/client/gestures/EntryGestureController.js'
 import { CalendarDatesController } from './CalendarDatesController.js'
 import { CalendarScrollController } from './CalendarScrollController.js'
 import { TimelineDensityController } from './TimelineDensityController.js'
@@ -45,7 +45,7 @@ export class Timeline extends Component {
 	@property({ type: Array }) occurrences = new Array<EntryOccurrence>()
 
 	private readonly dates: CalendarDatesController = new CalendarDatesController(this, { radiusDays: 120, shiftDays: 21 })
-	protected readonly entryDrag = new EntryDragController(this, 'timeline')
+	protected readonly entryGestures = new EntryGestureController(this, 'timeline')
 	protected readonly density = new TimelineDensityController(this)
 
 	private get days(): Array<DateTime> { return this.dates.days }
@@ -423,7 +423,7 @@ export class Timeline extends Component {
 							overflow: visible !important;
 						}
 
-						mitra-task-status {
+						mitra-entry-status {
 							display: inline-flex !important;
 						}
 					}
@@ -480,7 +480,7 @@ export class Timeline extends Component {
 			${this.headerTemplate(events)}
 			${this.backdropTemplate(events)}
 			${this.entriesTemplate(rows, placed)}
-			${!Calendars.getPrimary(EntryType.Task) ? html.nothing : html`
+			${!Calendars.taskTarget ? html.nothing : html`
 				<div class="create" title=${t('New task')}>
 					<div class="row"></div>
 				</div>
@@ -492,7 +492,7 @@ export class Timeline extends Component {
 		const { entry } = occurrence
 		return entry.uid
 			? `${entry.uid}:${occurrence.recurrenceId?.valueOf() ?? ''}`
-			: occurrence.key ?? (EntryStore.isPreview(entry) ? 'preview' : 'draft')
+			: occurrence.key ?? (EntryStore.pending.isPreview(entry) ? 'preview' : 'draft')
 	}
 
 	private static withinRoutineHorizon(occurrences: ReadonlyArray<EntryOccurrence>): Array<EntryOccurrence> {
@@ -549,15 +549,7 @@ export class Timeline extends Component {
 		if (!first || !last) {
 			return []
 		}
-		const lastValue = last.dayStart.valueOf()
-		const columnByDay = new Map(days.map((day, index) => [day.dayStart.valueOf(), index]))
-		const columnOf = (dayValue?: number) => columnByDay.get(dayValue ?? -1) ?? 0
-		return this.segments.runsIn(first, last, accept).map(segment => {
-			const startColumn = columnOf(segment.dayValue)
-			const clippedRight = segment.runEnd.dayValue! > lastValue
-			const endColumn = clippedRight ? days.length - 1 : columnOf(segment.runEnd.dayValue)
-			return { segment, startColumn, span: endColumn - startColumn + 1, clippedRight }
-		})
+		return this.segments.runsAcross(days, accept)
 	}
 
 	private barTemplate(bar: TimelineBar, row?: number) {
@@ -574,7 +566,7 @@ export class Timeline extends Component {
 
 	private headerTemplate(events: Array<TimelineBar>) {
 		const { days, offset } = this.dates.window
-		const todayValue = new DateTime().dayStart.valueOf()
+		const todayValue = CalendarDatesController.today.valueOf()
 		const weekStart = CalendarDatesController.sampleWeek[0]!.dayOfWeek
 		const months = new Array<{ column: number, span: number, label: string }>()
 		for (const [index, day] of days.entries()) {
@@ -608,7 +600,7 @@ export class Timeline extends Component {
 
 	private backdropTemplate(events: Array<TimelineBar>) {
 		const { days, offset } = this.dates.window
-		const todayValue = new DateTime().dayStart.valueOf()
+		const todayValue = CalendarDatesController.today.valueOf()
 		return html`
 			<div class="backdrop">
 				${repeat(days, day => day.dayStart.toISOString(), (day, index) => html`
@@ -641,7 +633,7 @@ export class Timeline extends Component {
 					</div>
 				`)}
 				${repeat(placed, bar => bar.segment.id, bar => this.barTemplate(bar, bar.row))}
-				${!EntryConnections.isEnabledFor('timeline') ? html.nothing : html`
+				${!ConnectorLinesSetting.showsIn('timeline') ? html.nothing : html`
 					<mitra-entry-connections
 						.segments=${placed.map(bar => bar.segment)}
 						.placement=${new Map(placed.map(bar => [bar.segment, { start: bar.startColumn, end: bar.startColumn + bar.span - 1, rank: bar.row }] as const))}

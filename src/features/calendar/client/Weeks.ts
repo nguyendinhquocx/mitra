@@ -3,8 +3,8 @@ import { DateTime } from '@3mo/date-time'
 import type { EntryOccurrence } from '#features/recurrence'
 import { EntrySegments, type MonthWeek } from '#features/entries/client/EntrySegments.js'
 import { EntryStore } from '#features/entries/client/EntryStore.js'
-import { EntryConnections } from '#features/relations/client/EntryConnections.js'
-import { EntryDragController } from '#features/entries/client/EntryDragController.js'
+import { ConnectorLinesSetting } from '#features/relations/client/ConnectorLinesSetting.js'
+import { EntryGestureController } from '#features/entries/client/gestures/EntryGestureController.js'
 import { Routines, type RoutineRun } from '#features/routines/client/Routines.js'
 import { Availability } from '#features/availability/client/Availability.js'
 import { CalendarDatesController } from './CalendarDatesController.js'
@@ -24,8 +24,8 @@ export class Weeks extends Component {
 	@property({ type: Object }) navigatingDate = new DateTime()
 	@property({ type: Array }) occurrences = new Array<EntryOccurrence>()
 
-	private readonly buffer: CalendarDatesController = new CalendarDatesController(this, { radiusDays: 77, shiftDays: 14 })
-	protected readonly entryDrag = new EntryDragController(this, 'month')
+	private readonly buffer: CalendarDatesController = new CalendarDatesController(this, { radiusDays: 77, shiftDays: 14, rows: 'week' })
+	protected readonly entryGestures = new EntryGestureController(this, 'month')
 	protected readonly density = new WeeksDensityController(this)
 
 	private get bufferNavigatingDate(): DateTime { return this.buffer.navigatingDate }
@@ -300,7 +300,7 @@ export class Weeks extends Component {
 	protected override createRenderRoot() { return this }
 
 	protected override get template() {
-		const today = new DateTime().dayStart
+		const today = CalendarDatesController.today
 		const todayValue = today.valueOf()
 		const monthValue = this.bufferNavigatingDate.monthStart.dayStart.valueOf()
 		const daysInWeek = this.navigatingDate.daysInWeek
@@ -343,7 +343,7 @@ export class Weeks extends Component {
 						${repeat(rendered, item => item.week[0]!.dayStart.toISOString(), item =>
 							guard([item, todayValue, monthValue], () => this.weekTemplate(item, today)))}
 						${!weeks.length ? html.nothing : html`<div style="grid-row: ${weeks.length};"></div>`}
-						${!EntryConnections.isEnabledFor('month') ? html.nothing : html`
+						${!ConnectorLinesSetting.showsIn('month') ? html.nothing : html`
 							<mitra-entry-connections draft-host
 								.segments=${rendered.flatMap(item => item.bars.map(bar => bar.segment))}
 								.placement=${new Map(rendered.flatMap(item => item.bars.map(bar => [bar.segment, {

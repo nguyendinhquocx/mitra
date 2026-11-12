@@ -9,8 +9,9 @@ import { EntrySegments } from '#features/entries/client/EntrySegments.js'
 import { type EntrySegment } from '#features/entries/client/EntrySegment.js'
 import { EntryStore } from '#features/entries/client/EntryStore.js'
 import { Availability } from '#features/availability/client/Availability.js'
-import { EntryConnections, type SegmentPlacement } from '#features/relations/client/EntryConnections.js'
-import { EntryDragController } from '#features/entries/client/EntryDragController.js'
+import { type SegmentPlacement } from '#features/relations/client/EntryConnections.js'
+import { ConnectorLinesSetting } from '#features/relations/client/ConnectorLinesSetting.js'
+import { EntryGestureController } from '#features/entries/client/gestures/EntryGestureController.js'
 import { TimeZoneLaneController } from '#features/time/client/TimeZoneLaneController.js'
 import { TimeZones } from '#features/time/client/TimeZones.js'
 import { CalendarDatesController } from './CalendarDatesController.js'
@@ -61,7 +62,7 @@ export class Days extends Component {
 		suspended: () => this.zoneLane.moving,
 		// Today is arrived at at the time it is now, any other day at its middle.
 		arrival: date => {
-			const target = date.dayStart.equals(new DateTime().dayStart)
+			const target = date.dayStart.equals(CalendarDatesController.today)
 				? this.renderRoot.querySelector('.overlays > .now')
 				: this.renderRoot.querySelector(`[data-date="${date.dayStart.toISOString()}"]`)
 			const box = target?.getBoundingClientRect()
@@ -69,7 +70,7 @@ export class Days extends Component {
 		},
 	})
 
-	protected readonly entryDrag = new EntryDragController(this)
+	protected readonly entryGestures = new EntryGestureController(this)
 	protected readonly density = new DayDensityController(this)
 	protected readonly zoneLane: TimeZoneLaneController = new TimeZoneLaneController(this, settled => void this.scrolling.anchor().then(() => settled && this.updateLaneHeight()))
 	private get segments() { return EntrySegments.of(Availability.outside(this.occurrences), this.dates.window.days) }
@@ -242,7 +243,7 @@ export class Days extends Component {
 				align-content: start;
 				--_days-strip-width: 100cqi;
 				--_ideal-day-width: 10rem;
-				--_visible-days: max(3, round(down, tan(atan2(var(--_days-strip-width) - var(--time-axis-width), var(--_ideal-day-width))), 1));
+				--_visible-days: max(1, round(down, tan(atan2(var(--_days-strip-width) - var(--time-axis-width), var(--_ideal-day-width))), 1));
 				--_day-width: max(4rem, calc((var(--_days-strip-width) - var(--time-axis-width) + 1px) / var(--_visible-days) - 1px));
 				grid-template-columns: auto repeat(var(--_tz-count, 1), auto) repeat(var(--_days-length, 1), var(--_day-width));
 				gap: 1px;
@@ -516,7 +517,7 @@ export class Days extends Component {
 	}
 
 	private get connectionsTemplate() {
-		return !EntryConnections.isEnabledFor('week') ? html.nothing : html`
+		return !ConnectorLinesSetting.showsIn('week') ? html.nothing : html`
 			<mitra-entry-connections draft-host
 				.segments=${[...this.laneSegments, ...this.dates.window.days.flatMap(day => this.segments.timedOn(day))]}
 				.placement=${this.lanePlacement}
@@ -533,23 +534,16 @@ export class Days extends Component {
 		if (!first || !last) {
 			return html.nothing
 		}
-		const runs = this.segments.runsIn(first, last, occurrence => occurrence.allDay)
+		const bars = this.segments.runsAcross(days, occurrence => occurrence.allDay, offset)
+		const runs = bars.map(bar => bar.segment)
 		const slots = this.segments.allDaySlots
-		const laneCount = runs.reduce((count, segment) => EntryStore.isPreview(segment.entry) ? count : Math.max(count, (slots.get(segment.occurrence) ?? -1) + 1), 0)
+		const laneCount = runs.reduce((count, segment) => EntryStore.pending.isPreview(segment.entry) ? count : Math.max(count, (slots.get(segment.occurrence) ?? -1) + 1), 0)
 		const laneOf = (occurrence: EntryOccurrence) => Math.min(slots.get(occurrence) ?? laneCount, laneCount)
 		this.allDayPlacements = runs
-			.filter(segment => !EntryStore.isPreview(segment.entry))
+			.filter(segment => !EntryStore.pending.isPreview(segment.entry))
 			.map(segment => ({ lane: laneOf(segment.occurrence), start: segment.dayValue!, end: segment.runEnd.dayValue! }))
 		this.style.setProperty('--_all-day-window-rows', `${laneCount + 1}`)
 		const lastValue = last.dayStart.valueOf()
-		const columnByDay = new Map(days.map((day, index) => [day.dayStart.valueOf(), offset + index]))
-		const columnOf = (dayValue?: number) => columnByDay.get(dayValue ?? -1) ?? 0
-		const bars = runs.map(segment => {
-			const startColumn = columnOf(segment.dayValue)
-			const clippedRight = segment.runEnd.dayValue! > lastValue
-			const endColumn = clippedRight ? offset + days.length - 1 : columnOf(segment.runEnd.dayValue)
-			return { segment, startColumn, endColumn, clippedRight }
-		})
 		const placements = new Map(runs.map(segment => [segment, {
 			start: Math.round(segment.dayValue! / 86_400_000),
 			end: Math.round(Math.min(segment.runEnd.dayValue ?? segment.dayValue!, lastValue) / 86_400_000),
@@ -563,14 +557,14 @@ export class Days extends Component {
 				${days.map((_, index) => html`<div class="day" style="grid-column: ${offset + index + 1};"></div>`)}
 				${repeat(bars, bar => EntryStore.identityOf(bar.segment.occurrence), bar => html`
 					<mitra-entry-segment
-						style=${styleMap({ gridColumn: `${bar.startColumn + 1} / span ${bar.endColumn - bar.startColumn + 1}`, gridRow: `${laneOf(bar.segment.occurrence) + 1}` })}
+						style=${styleMap({ gridColumn: `${bar.startColumn + 1} / span ${bar.span}`, gridRow: `${laneOf(bar.segment.occurrence) + 1}` })}
 						resize="inline"
 						?has-previous=${bar.segment.hasPrevious}
 						?has-next=${bar.clippedRight}
 						.segment=${bar.segment}
 					></mitra-entry-segment>
 				`)}
-				${!EntryConnections.isEnabledFor('week') ? html.nothing : html`
+				${!ConnectorLinesSetting.showsIn('week') ? html.nothing : html`
 					<mitra-entry-connections .segments=${runs} .placement=${placements}></mitra-entry-connections>
 				`}
 			</div>
@@ -640,7 +634,7 @@ export class Days extends Component {
 	}
 
 	private get dateTemplate() {
-		const todayValue = new DateTime().dayStart.valueOf()
+		const todayValue = CalendarDatesController.today.valueOf()
 		const { days, offset } = this.dates.window
 		return html`
 			${repeat(days, day => day.dayStart.toISOString(), (day, index) => html`

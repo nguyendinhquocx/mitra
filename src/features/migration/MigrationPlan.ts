@@ -1,32 +1,134 @@
+import { converter, type Converter } from '@a11d/converter'
+import { z } from 'zod'
 import type { Source } from '#features/sources'
-import { type Entry, TaskStatus, Transparency } from '#features/entries'
-import { TimeZone } from '#features/time/TimeZone.js'
+import { Entry, EntryStatus, whereUnsupported, type UnsupportedField } from '#features/entries'
 import { model } from '#infrastructure/model'
 
-/** What keeps an entry out of a calendar altogether. */
-export type MigrationBlocker = 'availability' | 'recurrence' | 'occurrence' | 'participants' | 'transparency' | 'visibility' | 'percentComplete'
+/** Each by its name on the wire, one instance a name, so a tally counts them by identity. */
+const named = <T extends { readonly name: string }>(all: () => ReadonlyArray<T>): Converter<ReadonlyArray<string> | undefined, Array<T> | undefined> => ({
+	schema: z.array(z.string()),
+	construct: names => names?.flatMap(name => all().filter(each => each.name === name)),
+	deconstruct: values => values?.map(value => value.name),
+})
 
-/** What an entry loses on arriving in a calendar that does not keep it. */
-export type MigrationLoss = 'reminders' | 'location' | 'description' | 'attachments' | 'end' | 'due' | 'estimate' | 'timeZone' | 'floating' | 'allDay' | 'doingStatus' | 'cancelledStatus' | 'type'
+/** What keeps an entry out of a calendar altogether, told as how many it keeps out. */
+export class MigrationBlocker {
+	static readonly Availability = new MigrationBlocker('availability')
+	static readonly Recurrence = new MigrationBlocker('recurrence')
+	static readonly Occurrence = new MigrationBlocker('occurrence')
+	static readonly Participants = new MigrationBlocker('participants')
+	static readonly Transparency = new MigrationBlocker('transparency')
+	static readonly Visibility = new MigrationBlocker('visibility')
+	static readonly PercentComplete = new MigrationBlocker('percentComplete')
+
+	static readonly all: ReadonlyArray<MigrationBlocker> = [
+		MigrationBlocker.Availability, MigrationBlocker.Recurrence, MigrationBlocker.Occurrence, MigrationBlocker.Participants,
+		MigrationBlocker.Transparency, MigrationBlocker.Visibility, MigrationBlocker.PercentComplete,
+	]
+
+	static readonly converter = named(() => MigrationBlocker.all)
+
+	/** The blocker a field a calendar does not support declares, by its name. */
+	static of(field: UnsupportedField) {
+		return MigrationBlocker.all.find(blocker => blocker.name === field.name)!
+	}
+
+	private constructor(readonly name: string) { }
+
+	format(count: number) {
+		return String(this.phrase(count))
+	}
+
+	private phrase(count: number) {
+		switch (this) {
+			case MigrationBlocker.Availability: return t('${count:pluralityNumber} are availability', { count })
+			case MigrationBlocker.Recurrence: return t('${count:pluralityNumber} repeat', { count })
+			case MigrationBlocker.Occurrence: return t('${count:pluralityNumber} belong to a series with edited occurrences', { count })
+			case MigrationBlocker.Participants: return t('${count:pluralityNumber} have participants', { count })
+			case MigrationBlocker.Transparency: return t('${count:pluralityNumber} are marked as free', { count })
+			case MigrationBlocker.Visibility: return t('${count:pluralityNumber} carry a visibility', { count })
+			case MigrationBlocker.PercentComplete: return t('${count:pluralityNumber} carry a progress percentage', { count })
+			default: return this.name
+		}
+	}
+
+	toString() {
+		return this.name
+	}
+}
+
+/** What an entry loses on arriving in a calendar that does not keep it, told as how many lose it there. */
+export class MigrationLoss {
+	static readonly Reminders = new MigrationLoss('reminders')
+	static readonly Location = new MigrationLoss('location')
+	static readonly Description = new MigrationLoss('description')
+	static readonly Attachments = new MigrationLoss('attachments')
+	static readonly End = new MigrationLoss('end')
+	static readonly Due = new MigrationLoss('due')
+	static readonly Estimate = new MigrationLoss('estimate')
+	static readonly TimeZone = new MigrationLoss('timeZone')
+	static readonly Floating = new MigrationLoss('floating')
+	static readonly AllDay = new MigrationLoss('allDay')
+	static readonly DoingStatus = new MigrationLoss('doingStatus')
+	static readonly CancelledStatus = new MigrationLoss('cancelledStatus')
+	static readonly Type = new MigrationLoss('type')
+
+	static readonly all: ReadonlyArray<MigrationLoss> = [
+		MigrationLoss.Reminders, MigrationLoss.Location, MigrationLoss.Description, MigrationLoss.Attachments, MigrationLoss.End,
+		MigrationLoss.Due, MigrationLoss.Estimate, MigrationLoss.TimeZone, MigrationLoss.Floating, MigrationLoss.AllDay,
+		MigrationLoss.DoingStatus, MigrationLoss.CancelledStatus, MigrationLoss.Type,
+	]
+
+	static readonly converter = named(() => MigrationLoss.all)
+
+	/** The loss a field a calendar does not support declares, by its name. */
+	static of(field: UnsupportedField) {
+		return MigrationLoss.all.find(loss => loss.name === field.name)!
+	}
+
+	private constructor(readonly name: string) { }
+
+	/** How many lose it in `target`, whose default type a converted entry takes. */
+	format(count: number, target: Source) {
+		return String(this.phrase(count, target))
+	}
+
+	private phrase(count: number, target: Source) {
+		switch (this) {
+			case MigrationLoss.Reminders: return t('${count:pluralityNumber} lose their reminders', { count })
+			case MigrationLoss.Location: return t('${count:pluralityNumber} lose their location', { count })
+			case MigrationLoss.Description: return t('${count:pluralityNumber} lose their description', { count })
+			case MigrationLoss.Attachments: return t('${count:pluralityNumber} lose their attachments', { count })
+			case MigrationLoss.End: return t('${count:pluralityNumber} lose their end date', { count })
+			case MigrationLoss.Due: return t('${count:pluralityNumber} lose their due date', { count })
+			case MigrationLoss.Estimate: return t('${count:pluralityNumber} lose their estimate', { count })
+			case MigrationLoss.TimeZone: return t('${count:pluralityNumber} lose their time zone', { count })
+			case MigrationLoss.Floating: return t('${count:pluralityNumber} get a fixed time zone', { count })
+			case MigrationLoss.AllDay: return t('${count:pluralityNumber} stop being all-day', { count })
+			case MigrationLoss.DoingStatus: return t('${count:pluralityNumber} go back to To Do', { count })
+			case MigrationLoss.CancelledStatus: return t('${count:pluralityNumber} lose their cancelled status', { count })
+			case MigrationLoss.Type: return t('${count:pluralityNumber} become ${type}', { count, type: target.defaultEntryType.formatPlural() })
+			default: return this.name
+		}
+	}
+
+	toString() {
+		return this.name
+	}
+}
 
 /** What moving one entry into a calendar would do to it: what blocks it, what it loses there. */
 @model('MigrationVerdict')
 export class MigrationVerdict {
 	entryId = ''
 	heading = ''
-	blockers = new Array<MigrationBlocker>()
-	losses = new Array<MigrationLoss>()
-	/** Number of single occurrences if flattened; null if unexpandable. */
-	occurrences: number | null = null
+	@converter(MigrationBlocker.converter) blockers = new Array<MigrationBlocker>()
+	@converter(MigrationLoss.converter) losses = new Array<MigrationLoss>()
+	/** How many dates a flattened series would become; none where it cannot be expanded. */
+	occurrences?: number
 
 	constructor(init?: Partial<MigrationVerdict>) {
 		Object.assign(this, init)
-	}
-
-	/** The days an all-day span covers, counted where its days are kept. */
-	private static daysOf(start: Date, end: Date) {
-		const zone = TimeZone.localOrDefault
-		return zone.dayOf(start).until(zone.dayOf(end)).days
 	}
 
 	/**
@@ -35,73 +137,38 @@ export class MigrationVerdict {
 	 * only where its recurrence blocks.
 	 */
 	static of(entry: Entry, target: Source, { occurrence = false, occurrences }: { occurrence?: boolean, occurrences?: () => number | null } = {}) {
-		const { capabilities, ownership } = target
+		const { capabilities } = target
 		const blockers = new Array<MigrationBlocker>()
 		const losses = new Array<MigrationLoss>()
 
 		if (entry.type.isAvailability && !capabilities.availability) {
-			blockers.push('availability')
+			blockers.push(MigrationBlocker.Availability)
 		}
 		if (occurrence) {
-			blockers.push('occurrence')
+			blockers.push(MigrationBlocker.Occurrence)
 		}
-		if (entry.recurrence?.freq && !ownership.holds('recurrence')) {
-			blockers.push('recurrence')
+		for (const field of whereUnsupported.fieldsOf(Entry)) {
+			if (field.move === 'block' && field.unsupportedIn(target, entry)) {
+				blockers.push(MigrationBlocker.of(field))
+			} else if (field.move === 'drop' && field.unsupportedIn(target, entry)) {
+				losses.push(MigrationLoss.of(field))
+			}
 		}
-		if (entry.participants?.length && !ownership.holds('participants')) {
-			blockers.push('participants')
-		}
-		// Only 'Free' transparency is a blocker; default opaque is preserved implicitly.
-		if (entry.transparency === Transparency.Free && !ownership.holds('transparency')) {
-			blockers.push('transparency')
-		}
-		if (entry.visibility && !ownership.holds('visibility')) {
-			blockers.push('visibility')
-		}
-		if (entry.percentComplete !== undefined && !ownership.holds('percentComplete')) {
-			blockers.push('percentComplete')
-		}
-
-		if (entry.reminders?.length && !ownership.holds('reminders')) {
-			losses.push('reminders')
-		}
-		if (entry.location && !ownership.holds('location')) {
-			losses.push('location')
-		}
-		if (entry.description && !ownership.holds('description')) {
-			losses.push('description')
-		}
-		if (entry.attachments.length && !(ownership.holds('attachments') && capabilities.entries.attach)) {
-			losses.push('attachments')
-		}
-		// Where no length is held, a timed entry becomes a moment and an all-day one its first day.
-		if (entry.start && entry.end && !ownership.holds('end') && (!entry.allDay || MigrationVerdict.daysOf(entry.start, entry.end) > 1)) {
-			losses.push('end')
-		}
-		if (entry.due && !ownership.holds('due')) {
-			losses.push('due')
-		}
-		if (entry.estimate !== undefined && !ownership.holds('estimate')) {
-			losses.push('estimate')
-		}
-		// A floating time is no named zone, so it has no zone loss, but a calendar without wall clocks fixes it to one.
-		if (entry.timeZone && !entry.timeZone.floating && !ownership.holds('timeZone')) {
-			losses.push('timeZone')
+		// A calendar may keep attachments yet drop those written to it, as Google does.
+		if (entry.attachments.length && target.ownership.holds('attachments') && !capabilities.entries.attach) {
+			losses.push(MigrationLoss.Attachments)
 		}
 		if (entry.floating && !capabilities.entries.floating) {
-			losses.push('floating')
+			losses.push(MigrationLoss.Floating)
 		}
-		if (entry.allDay && !ownership.holds('allDay')) {
-			losses.push('allDay')
+		if (entry.status === EntryStatus.Doing && !capabilities.entries.statuses.includes(EntryStatus.Doing)) {
+			losses.push(MigrationLoss.DoingStatus)
 		}
-		if (entry.status === TaskStatus.Doing && !capabilities.entries.statuses.includes(TaskStatus.Doing)) {
-			losses.push('doingStatus')
-		}
-		if (entry.status === TaskStatus.Cancelled && !capabilities.entries.statuses.includes(TaskStatus.Cancelled)) {
-			losses.push('cancelledStatus')
+		if (entry.status === EntryStatus.Cancelled && !capabilities.entries.statuses.includes(EntryStatus.Cancelled)) {
+			losses.push(MigrationLoss.CancelledStatus)
 		}
 		if (!target.supportsEntryType(entry.type)) {
-			losses.push('type')
+			losses.push(MigrationLoss.Type)
 		}
 
 		return new MigrationVerdict({
@@ -109,7 +176,7 @@ export class MigrationVerdict {
 			heading: entry.heading,
 			blockers,
 			losses,
-			occurrences: !blockers.includes('recurrence') ? null : occurrences?.() ?? null,
+			occurrences: !blockers.includes(MigrationBlocker.Recurrence) ? undefined : occurrences?.() ?? undefined,
 		})
 	}
 
@@ -120,11 +187,11 @@ export class MigrationVerdict {
 
 	/** True if entry is blocked only by recurrence and can be flattened. */
 	get flattenable() {
-		return this.occurrences !== null && this.blockers.includes('recurrence')
+		return this.occurrences !== undefined && this.blockers.includes(MigrationBlocker.Recurrence)
 	}
 
 	blockersUnder(flatten: boolean) {
-		return flatten && this.flattenable ? this.blockers.filter(blocker => blocker !== 'recurrence') : this.blockers
+		return flatten && this.flattenable ? this.blockers.filter(blocker => blocker !== MigrationBlocker.Recurrence) : this.blockers
 	}
 
 	moves(flatten: boolean) {
@@ -177,38 +244,6 @@ export class MigrationPlan {
 		return MigrationPlan.tally(this.blocked(flatten).flatMap(verdict => verdict.blockersUnder(flatten)))
 	}
 
-	/** Human-readable label for a field loss count (frontend-only). */
-	static lossLabel(loss: MigrationLoss, count: number, target: Source): string {
-		switch (loss) {
-			case 'reminders': return t('${count:pluralityNumber} lose their reminders', { count })
-			case 'location': return t('${count:pluralityNumber} lose their location', { count })
-			case 'description': return t('${count:pluralityNumber} lose their description', { count })
-			case 'attachments': return t('${count:pluralityNumber} lose their attachments', { count })
-			case 'end': return t('${count:pluralityNumber} lose their end date', { count })
-			case 'due': return t('${count:pluralityNumber} lose their due date', { count })
-			case 'estimate': return t('${count:pluralityNumber} lose their estimate', { count })
-			case 'timeZone': return t('${count:pluralityNumber} lose their time zone', { count })
-			case 'floating': return t('${count:pluralityNumber} get a fixed time zone', { count })
-			case 'allDay': return t('${count:pluralityNumber} stop being all-day', { count })
-			case 'doingStatus': return t('${count:pluralityNumber} go back to To Do', { count })
-			case 'cancelledStatus': return t('${count:pluralityNumber} lose their cancelled status', { count })
-			case 'type': return t('${count:pluralityNumber} become ${type}', { count, type: target.defaultEntryType.formatPlural() })
-		}
-	}
-
-	/** Human-readable label for a blocker count (frontend-only). */
-	static blockerLabel(blocker: MigrationBlocker, count: number): string {
-		switch (blocker) {
-			case 'availability': return t('${count:pluralityNumber} are availability', { count })
-			case 'recurrence': return t('${count:pluralityNumber} repeat', { count })
-			case 'occurrence': return t('${count:pluralityNumber} belong to a series with edited occurrences', { count })
-			case 'participants': return t('${count:pluralityNumber} have participants', { count })
-			case 'transparency': return t('${count:pluralityNumber} are marked as free', { count })
-			case 'visibility': return t('${count:pluralityNumber} carry a visibility', { count })
-			case 'percentComplete': return t('${count:pluralityNumber} carry a progress percentage', { count })
-		}
-	}
-
 	private static tally<T>(values: ReadonlyArray<T>) {
 		return [...Map.groupBy(values, value => value)]
 			.map(([value, group]) => [value, group.length] as const)
@@ -223,14 +258,14 @@ export class MigrationOutcome {
 	created = 0
 	left = 0
 	duplicates = 0
-	failure: string | null = null
-	failedEntry: string | null = null
+	failure?: string
+	failedEntry?: string
 
 	constructor(init?: Partial<MigrationOutcome>) {
 		Object.assign(this, init)
 	}
 
 	get aborted() {
-		return this.failure !== null
+		return this.failure !== undefined
 	}
 }

@@ -10,7 +10,7 @@ import type { ValidationError } from '#infrastructure/validation'
 import { Entry } from './Entry.js'
 import { EntryPatch } from './EntryPatch.js'
 import { EntryType } from './EntryType.js'
-import { TaskStatus } from './TaskStatus.js'
+import { EntryStatus } from './EntryStatus.js'
 import { Transparency } from './Transparency.js'
 import { Visibility } from './Visibility.js'
 import { EntryFiles } from './EntryFiles.js'
@@ -38,10 +38,10 @@ describe('Entry.validate', () => {
 	it('names every fact the calendar cannot store, each with its field', () => {
 		const task = new Entry({ type: EntryType.Task, heading: 'Report', visibility: Visibility.Private, percentComplete: 0, due: start, participants: Participants.normalize([{ email: 'organizer@example.com', organizer: true }]) })
 		assert.deepEqual(refusals(task, calendar({ lacking: ['participants', 'visibility', 'percentComplete', 'due'] })), [
-			['This calendar does not support participants', ['participants']],
-			['This calendar does not support visibility', ['visibility']],
-			['This calendar does not support task progress', ['percentComplete']],
 			['This calendar does not support due dates', ['due']],
+			['This calendar does not support task progress', ['percentComplete']],
+			['This calendar does not support visibility', ['visibility']],
+			['This calendar does not support participants', ['participants']],
 		])
 		assert.deepEqual(refusals(event({ transparency: Transparency.Free }), calendar({ lacking: ['transparency'] })), [['This calendar cannot mark an entry as free', ['transparency']]])
 	})
@@ -49,9 +49,12 @@ describe('Entry.validate', () => {
 	it('refuses a repeating entry where the calendar holds no rule, and a task in a state the calendar has not', () => {
 		const repeating = event({ recurrence: new Recurrence({ freq: RecurrenceFrequency.Daily }) })
 		assert.deepEqual(refusals(repeating, calendar({ lacking: ['recurrence'] })), [['This calendar cannot hold a repeating entry', ['recurrence']]])
-		const doing = new Entry({ type: EntryType.Task, heading: 'Report', status: TaskStatus.Doing })
-		assert.deepEqual(refusals(doing, calendar({ cannot: { statuses: [TaskStatus.ToDo, TaskStatus.Done] } })), [['This calendar cannot hold a task in progress', ['status']]])
+		const doing = new Entry({ type: EntryType.Task, heading: 'Report', status: EntryStatus.Doing })
+		assert.deepEqual(refusals(doing, calendar({ cannot: { statuses: [EntryStatus.ToDo, EntryStatus.Done] } })), [['This calendar cannot hold a task in progress', ['status']]])
 		assert.deepEqual(refusals(doing, calendar()), [])
+		assert.deepEqual(refusals(event({ status: EntryStatus.Doing }), calendar()), [['An event cannot be doing', ['status']]])
+		assert.deepEqual(refusals(event({ status: EntryStatus.Cancelled }), calendar({ cannot: { statuses: [] } })), [['This calendar cannot hold a cancelled event', ['status']]])
+		assert.deepEqual(refusals(event({ status: EntryStatus.Tentative }), calendar()), [])
 	})
 
 	it('refuses an entry ending before it starts, and takes a moment, which ends where it starts', () => {

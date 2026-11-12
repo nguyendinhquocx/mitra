@@ -12,7 +12,7 @@ import { IntegrationOwnership, IntegrationCapabilities } from '#integrations'
 import { revive, wireOf } from '#infrastructure/model/wire.testing.js'
 import { holdLocalIn } from '#features/time/TimeZone.testing.js'
 import { Entry } from './Entry.js'
-import { TaskStatus } from './TaskStatus.js'
+import { EntryStatus } from './EntryStatus.js'
 import { Transparency } from './Transparency.js'
 import { Visibility } from './Visibility.js'
 import { EntryType } from './EntryType.js'
@@ -25,6 +25,47 @@ describe('Entry', () => {
 	/** A calendar whose integration holds what `ownership` says and allows what `capabilities` say, for an entry with `sourceId: 'c'`. */
 	const holding = (ownership: IntegrationOwnership, capabilities = new IntegrationCapabilities()) => Object.assign(new Source({ id: 'c', integrationId: 'i' }), {
 		integration: { id: 'i', ownership, capabilitiesFor: (source: Source) => capabilities.in(source), canHold: (source: Source, type: EntryType) => source.supportsEntryType(type) } as never,
+	})
+
+	describe('as a routine reads it', () => {
+		it('is told by its heading in lower case, without the space around it, in any script, and by none when blank', () => {
+			assert.equal(new Entry({ heading: '  Gym ' }).routineTitle, 'gym')
+			assert.equal(new Entry({ heading: 'ÜBUNG' }).routineTitle, new Entry({ heading: 'Übung' }).routineTitle)
+			assert.equal(new Entry({ heading: '   ' }).routineTitle, undefined)
+		})
+
+		it('falls on the day it starts, or is due, where its person is at home', () => {
+			const berlin = TimeZone.of('Europe/Berlin')
+			const late = new DateTime('2026-03-02T23:30:00Z')
+			assert.equal(String(new Entry({ start: late }).dayIn(berlin)), '2026-03-03')
+			assert.equal(String(new Entry({ start: late }).dayIn(TimeZone.UTC)), '2026-03-02')
+			assert.equal(String(new Entry({ type: EntryType.Task, due: late }).dayIn(berlin)), '2026-03-03')
+			assert.equal(new Entry({ type: EntryType.Task }).dayIn(berlin), undefined)
+		})
+
+		it('falls on the day written where it is a day or a floating time, wherever its person is', () => {
+			const auckland = TimeZone.of('Pacific/Auckland')
+			assert.equal(String(new Entry({ allDay: true, start: new DateTime('2026-03-02T00:00:00Z') }).dayIn(auckland)), '2026-03-02')
+			assert.equal(String(new Entry({ timeZone: EntryTimeZone.floating, start: new DateTime('2026-03-02T23:30:00Z') }).dayIn(auckland)), '2026-03-02')
+		})
+	})
+
+	describe('editsOnlyThisOccurrence', () => {
+		const occurrence = (init?: Partial<Entry>) => new Entry({ id: 'r__1', recurringEntryId: 'r', type: EntryType.Task, heading: 'Water plants', start: day, end: day.add({ hours: 1 }), ...init })
+
+		it('reaches this occurrence alone where only its completion changed', () => {
+			const before = occurrence()
+			assert.equal(occurrence({ status: EntryStatus.Done }).editsOnlyThisOccurrence(before), true)
+		})
+
+		it('reaches this occurrence alone where an unscheduled one got its start', () => {
+			assert.equal(occurrence().editsOnlyThisOccurrence(occurrence({ start: undefined, end: undefined })), true)
+		})
+
+		it('asks where anything else changed, and never of an entry standing alone', () => {
+			assert.equal(occurrence({ heading: 'Water the plants' }).editsOnlyThisOccurrence(occurrence()), false)
+			assert.equal(new Entry({ id: 'e', start: day }).editsOnlyThisOccurrence(new Entry({ id: 'e' })), false)
+		})
 	})
 
 	describe('multiDay', () => {
@@ -251,7 +292,7 @@ describe('Entry', () => {
 				(e: Entry) => e.moveStart(at(1, 9)),
 				(e: Entry) => e.setEnd(at(0, 11)),
 				(e: Entry) => e.setAllDay(true),
-				(e: Entry) => e.status = TaskStatus.Done,
+				(e: Entry) => e.status = EntryStatus.Done,
 			]) {
 				const e = base()
 				edit(e)
@@ -272,7 +313,7 @@ describe('Entry', () => {
 		})
 
 		it('treats a set and an unset optional field as different', () => {
-			assert.equal(base().equals(new Entry({ ...base(), status: TaskStatus.ToDo })), false)
+			assert.equal(base().equals(new Entry({ ...base(), status: EntryStatus.ToDo })), false)
 			assert.equal(base().equals(new Entry({ ...base(), start: undefined, end: undefined })), false)
 		})
 
@@ -307,15 +348,15 @@ describe('Entry', () => {
 		})
 
 		it('keeps the type on a source that supports both: a source holds types, it doesn\'t dictate one', () => {
-			const task = new Entry({ id: 'a', sourceId: 'tasks', type: EntryType.Task, heading: 'Todo', status: TaskStatus.Done })
+			const task = new Entry({ id: 'a', sourceId: 'tasks', type: EntryType.Task, heading: 'Todo', status: EntryStatus.Done })
 			task.migrateTo(both)
 			assert.equal(task.sourceId, 'both')
 			assert.equal(task.type, EntryType.Task)
-			assert.equal(task.status, TaskStatus.Done)
+			assert.equal(task.status, EntryStatus.Done)
 		})
 
 		it('keeps a status only where it makes sense: on a task', () => {
-			const task = new Entry({ id: 'a', sourceId: 'tasks', type: EntryType.Task, heading: 'Todo', status: TaskStatus.Done })
+			const task = new Entry({ id: 'a', sourceId: 'tasks', type: EntryType.Task, heading: 'Todo', status: EntryStatus.Done })
 			task.migrateTo(calendar)
 			assert.equal(task.type, EntryType.Event)
 			assert.equal(task.status, undefined)
@@ -335,7 +376,7 @@ describe('Entry', () => {
 
 	describe('the type setter', () => {
 		it('drops the status when becoming an event, since only a task has one', () => {
-			const task = new Entry({ sourceId: 's', type: EntryType.Task, heading: 'Draft', status: TaskStatus.Doing })
+			const task = new Entry({ sourceId: 's', type: EntryType.Task, heading: 'Draft', status: EntryStatus.Doing })
 			task.type = EntryType.Event
 			assert.equal(task.type, EntryType.Event)
 			assert.equal(task.status, undefined)
@@ -352,6 +393,23 @@ describe('Entry', () => {
 			const event = new Entry({ sourceId: 's', type: EntryType.Event, heading: 'Draft', transparency: Transparency.Free })
 			event.type = EntryType.Task
 			assert.equal(event.transparency, undefined)
+		})
+
+		it('keeps a cancellation across the flip, the one status both kinds share, and drops a status the new kind lacks', () => {
+			const cancelled = new Entry({ sourceId: 's', type: EntryType.Event, heading: 'Draft', status: EntryStatus.Cancelled })
+			cancelled.type = EntryType.Task
+			assert.equal(cancelled.status, EntryStatus.Cancelled)
+			const confirmed = new Entry({ sourceId: 's', type: EntryType.Event, heading: 'Draft', status: EntryStatus.Confirmed })
+			confirmed.type = EntryType.Task
+			assert.equal(confirmed.status, undefined)
+		})
+
+		it('is cancelled with that status whatever its kind, and closed then too', () => {
+			assert.equal(new Entry({ type: EntryType.Event, status: EntryStatus.Cancelled }).cancelled, true)
+			assert.equal(new Entry({ type: EntryType.Event, status: EntryStatus.Cancelled }).closed, true)
+			assert.equal(new Entry({ type: EntryType.Event, status: EntryStatus.Confirmed }).cancelled, false)
+			assert.equal(new Entry({ type: EntryType.Task, status: EntryStatus.Cancelled }).cancelled, true)
+			assert.equal(new Entry({ type: EntryType.Task, status: EntryStatus.Done }).cancelled, false)
 		})
 
 		it('keeps the visibility across the flip both ways, since CLASS is valid on a task too', () => {
@@ -373,7 +431,7 @@ describe('Entry', () => {
 	})
 
 	describe('crossing the API', () => {
-		const entry = new Entry({ id: 'e1', sourceId: 's1', type: EntryType.Task, heading: 'Chore', status: TaskStatus.Doing })
+		const entry = new Entry({ id: 'e1', sourceId: 's1', type: EntryType.Task, heading: 'Chore', status: EntryStatus.Doing })
 
 		it('sends the type under its public name, as a plain value', () => {
 			assert.equal(wireOf(entry).type, 'task')
@@ -385,7 +443,7 @@ describe('Entry', () => {
 
 			assert.ok(revived instanceof Entry)
 			assert.equal(revived.type, EntryType.Task)
-			assert.equal(revived.status, TaskStatus.Doing)
+			assert.equal(revived.status, EntryStatus.Doing)
 		})
 	})
 
@@ -422,7 +480,7 @@ describe('Entry', () => {
 		})
 
 		it('assign clears fields the incoming entry lacks', () => {
-			const e = new Entry({ id: 'a', sourceId: 's', type: EntryType.Task, heading: 'Task', status: TaskStatus.Done, color: Color.parse('#ff0000') })
+			const e = new Entry({ id: 'a', sourceId: 's', type: EntryType.Task, heading: 'Task', status: EntryStatus.Done, color: Color.parse('#ff0000') })
 			e.assign(new Entry({ id: 'a', sourceId: 's', type: EntryType.Task, heading: 'Task' }))
 			assert.equal(e.status, undefined)
 			assert.equal(e.color, undefined)
@@ -460,11 +518,10 @@ describe('Entry', () => {
 			assert.ok(timed('Asia/Calcutta').zone!.equals(TimeZone.of('Asia/Kolkata')))
 		})
 
-		it('is none for an all-day, a floating, a zoneless or an unknown zone', () => {
+		it('is none for an all-day, a floating or a zoneless one', () => {
 			assert.equal(new Entry({ allDay: true, timeZone: EntryTimeZone.parse('Europe/Berlin') }).zone, undefined)
 			assert.equal(timed('floating').zone, undefined)
 			assert.equal(timed(null).zone, undefined)
-			assert.equal(timed('Mars/Olympus').zone, undefined)
 		})
 
 		it('follows a change of zone', () => {
@@ -729,19 +786,6 @@ describe('Entry', () => {
 		})
 	})
 
-	describe('duration', () => {
-		const format = (parts: { days?: number, hours?: number, minutes?: number }) => new Intl.DurationFormat(Localizer.locales.current, { style: 'narrow' }).format(parts)
-
-		it('splits a span into days, hours and minutes', () => {
-			assert.equal(new Entry({ start: at(0, 10), end: at(1, 12, 30) }).duration, format({ days: 1, hours: 2, minutes: 30 }))
-		})
-
-		it('reads an all-day span across a DST change as whole days', () => {
-			const start = DateTime.from(Date.parse('2026-10-23T22:00:00Z'), 'iso8601', 'Europe/Berlin')
-			assert.equal(new Entry({ allDay: true, start, end: start.add({ days: 2 }) }).duration, format({ days: 2 }))
-		})
-	})
-
 	describe('a moment', () => {
 		const point = () => new Entry({ type: EntryType.Task, heading: 'Take the pills', start: at(0, 10) })
 
@@ -949,9 +993,9 @@ describe('Entry', () => {
 
 		it('is false once the outcome is decided', () => {
 			const dates = { start: today.subtract({ days: 3 }), end: today.subtract({ days: 3 }).add({ hours: 1 }) }
-			assert.equal(task({ ...dates, status: TaskStatus.Done }).overdue, false)
-			assert.equal(task({ ...dates, status: TaskStatus.Cancelled }).overdue, false)
-			assert.equal(task({ ...dates, status: TaskStatus.Doing }).overdue, true)
+			assert.equal(task({ ...dates, status: EntryStatus.Done }).overdue, false)
+			assert.equal(task({ ...dates, status: EntryStatus.Cancelled }).overdue, false)
+			assert.equal(task({ ...dates, status: EntryStatus.Doing }).overdue, true)
 		})
 
 		it('counts an all-today task from its last today, not its exclusive end', () => {
@@ -978,15 +1022,15 @@ describe('Entry', () => {
 
 	describe('closed', () => {
 		it('covers both decided outcomes, and only those', () => {
-			assert.equal(new Entry({ type: EntryType.Task, status: TaskStatus.Done }).closed, true)
-			assert.equal(new Entry({ type: EntryType.Task, status: TaskStatus.Cancelled }).closed, true)
-			assert.equal(new Entry({ type: EntryType.Task, status: TaskStatus.Doing }).closed, false)
-			assert.equal(new Entry({ type: EntryType.Task, status: TaskStatus.ToDo }).closed, false)
+			assert.equal(new Entry({ type: EntryType.Task, status: EntryStatus.Done }).closed, true)
+			assert.equal(new Entry({ type: EntryType.Task, status: EntryStatus.Cancelled }).closed, true)
+			assert.equal(new Entry({ type: EntryType.Task, status: EntryStatus.Doing }).closed, false)
+			assert.equal(new Entry({ type: EntryType.Task, status: EntryStatus.ToDo }).closed, false)
 			assert.equal(new Entry({ type: EntryType.Task }).closed, false)
 		})
 
 		it('is never true for an event', () => {
-			const entry = new Entry({ type: EntryType.Task, status: TaskStatus.Done })
+			const entry = new Entry({ type: EntryType.Task, status: EntryStatus.Done })
 			entry.type = EntryType.Event
 			assert.equal(entry.closed, false)
 		})
@@ -1020,9 +1064,9 @@ describe('Entry', () => {
 			assert.equal(task(everything, undefined, { id: undefined }).copyable, false)
 		})
 
-		it('offers the statuses of its calendar to a task alone, and the types the calendar holds beside its own', () => {
-			assert.deepEqual(task().statuses, TaskStatus.all)
-			assert.deepEqual(task(everything, undefined, { type: EntryType.Event }).statuses, [])
+		it('offers its kind\'s share of the statuses of its calendar, and the types the calendar holds beside its own', () => {
+			assert.deepEqual(task().statuses, EntryStatus.forType(EntryType.Task))
+			assert.deepEqual(task(everything, undefined, { type: EntryType.Event }).statuses, [EntryStatus.Confirmed, EntryStatus.Tentative, EntryStatus.Cancelled])
 			assert.deepEqual(task().types, EntryType.all)
 			assert.equal(task().convertible, true)
 			assert.equal(task(everything, undefined, { recurringEntryId: 'r' }).convertible, false)
@@ -1031,62 +1075,62 @@ describe('Entry', () => {
 
 	describe('open', () => {
 		it('is a task not yet closed, never an event', () => {
-			assert.equal(new Entry({ type: EntryType.Task, status: TaskStatus.Doing }).open, true)
-			assert.equal(new Entry({ type: EntryType.Task, status: TaskStatus.Done }).open, false)
-			assert.equal(new Entry({ type: EntryType.Task, status: TaskStatus.Cancelled }).open, false)
+			assert.equal(new Entry({ type: EntryType.Task, status: EntryStatus.Doing }).open, true)
+			assert.equal(new Entry({ type: EntryType.Task, status: EntryStatus.Done }).open, false)
+			assert.equal(new Entry({ type: EntryType.Task, status: EntryStatus.Cancelled }).open, false)
 			assert.equal(new Entry({ type: EntryType.Event }).open, false)
 		})
 	})
 
 	describe('progress', () => {
 		const held = new IntegrationOwnership({ percentComplete: 'upstream' })
-		const task = (init?: Partial<Entry>, capabilities?: IntegrationCapabilities) => new Entry({ type: EntryType.Task, status: TaskStatus.ToDo, sourceId: 'c', source: holding(held, capabilities), ...init })
+		const task = (init?: Partial<Entry>, capabilities?: IntegrationCapabilities) => new Entry({ type: EntryType.Task, status: EntryStatus.ToDo, sourceId: 'c', source: holding(held, capabilities), ...init })
 
 		it('closes a task at full progress', () => {
-			const entry = task({ percentComplete: 40, status: TaskStatus.Doing })
+			const entry = task({ percentComplete: 40, status: EntryStatus.Doing })
 			entry.progress = 1
-			assert.deepEqual([entry.status, entry.percentComplete], [TaskStatus.Done, 100])
+			assert.deepEqual([entry.status, entry.percentComplete], [EntryStatus.Done, 100])
 		})
 
 		it('reopens a done task below full progress, as Doing where the calendar has it, else To Do', () => {
-			const entry = task({ status: TaskStatus.Done, percentComplete: 100 })
+			const entry = task({ status: EntryStatus.Done, percentComplete: 100 })
 			entry.progress = 0.6
-			assert.deepEqual([entry.status, entry.percentComplete], [TaskStatus.Doing, 60])
-			const twoStates = task({ status: TaskStatus.Done, percentComplete: 100 }, new IntegrationCapabilities({ entries: { statuses: [TaskStatus.ToDo, TaskStatus.Done] } }))
+			assert.deepEqual([entry.status, entry.percentComplete], [EntryStatus.Doing, 60])
+			const twoStates = task({ status: EntryStatus.Done, percentComplete: 100 }, new IntegrationCapabilities({ entries: { statuses: [EntryStatus.ToDo, EntryStatus.Done] } }))
 			twoStates.progress = 0.6
-			assert.deepEqual([twoStates.status, twoStates.percentComplete], [TaskStatus.ToDo, 60])
+			assert.deepEqual([twoStates.status, twoStates.percentComplete], [EntryStatus.ToDo, 60])
 		})
 
 		it('clears the progress and reopens a done task as To Do', () => {
-			const entry = task({ status: TaskStatus.Done, percentComplete: 100 })
+			const entry = task({ status: EntryStatus.Done, percentComplete: 100 })
 			entry.progress = undefined
-			assert.deepEqual([entry.status, entry.percentComplete], [TaskStatus.ToDo, undefined])
-			const doing = task({ status: TaskStatus.Doing, percentComplete: 30 })
+			assert.deepEqual([entry.status, entry.percentComplete], [EntryStatus.ToDo, undefined])
+			const doing = task({ status: EntryStatus.Doing, percentComplete: 30 })
 			doing.progress = undefined
-			assert.deepEqual([doing.status, doing.percentComplete], [TaskStatus.Doing, undefined])
+			assert.deepEqual([doing.status, doing.percentComplete], [EntryStatus.Doing, undefined])
 		})
 	})
 
 	describe('status', () => {
-		const task = (ownership: IntegrationOwnership, init?: Partial<Entry>) => new Entry({ type: EntryType.Task, status: TaskStatus.ToDo, sourceId: 'c', source: holding(ownership), ...init })
+		const task = (ownership: IntegrationOwnership, init?: Partial<Entry>) => new Entry({ type: EntryType.Task, status: EntryStatus.ToDo, sourceId: 'c', source: holding(ownership), ...init })
 
 		it('records full progress on done where the provider can hold it', () => {
 			const entry = task(new IntegrationOwnership({ percentComplete: 'upstream' }))
-			entry.status = TaskStatus.Done
-			assert.equal(entry.status, TaskStatus.Done)
+			entry.status = EntryStatus.Done
+			assert.equal(entry.status, EntryStatus.Done)
 			assert.equal(entry.percentComplete, 100)
 		})
 
 		it('leaves progress unstated where the provider cannot', () => {
 			const entry = task(new IntegrationOwnership())
-			entry.status = TaskStatus.Done
+			entry.status = EntryStatus.Done
 			assert.equal(entry.percentComplete, undefined)
 		})
 
 		it('keeps the progress a cancelled task already had', () => {
-			const entry = task(new IntegrationOwnership({ percentComplete: 'upstream' }), { status: TaskStatus.Doing, percentComplete: 40 })
-			entry.status = TaskStatus.Cancelled
-			assert.equal(entry.status, TaskStatus.Cancelled)
+			const entry = task(new IntegrationOwnership({ percentComplete: 'upstream' }), { status: EntryStatus.Doing, percentComplete: 40 })
+			entry.status = EntryStatus.Cancelled
+			assert.equal(entry.status, EntryStatus.Cancelled)
 			assert.equal(entry.percentComplete, 40)
 		})
 	})

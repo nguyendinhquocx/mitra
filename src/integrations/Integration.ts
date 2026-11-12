@@ -82,7 +82,7 @@ export abstract class Integration<TCredentials extends Record<string, any> = any
 
 	/** Manual sidebar display order among user's integrations (sorted asc nulls last). */
 	@equality()
-	@property({ type: 'number', nullable: true }) order?: number | null
+	@property({ type: 'number', nullable: true }) order?: number
 
 	/** Lowercase email addresses representing the user in participant lists (RFC 6638). */
 	@equality()
@@ -249,7 +249,7 @@ export abstract class Integration<TCredentials extends Record<string, any> = any
 				match.entryTypes = source.entryTypes
 			}
 			match.readOnly = source.readOnly
-			if (match.remoteName === null || match.remoteName === undefined) {
+			if (match.remoteName === undefined) {
 				match.remoteName = source.name
 			} else if (source.name !== match.remoteName) {
 				match.name = source.name
@@ -348,6 +348,22 @@ export abstract class Integration<TCredentials extends Record<string, any> = any
 		em.persist(entry)
 		await this.stored(em, entry)
 		return entry
+	}
+
+	/**
+	 * Takes `original` over from `from` as `replacement`, created here first so a failure loses nothing; where the original
+	 * cannot go, the copy goes again rather than leave the entry twice.
+	 */
+	async recreate(em: EntityManager, replacement: Entry, original: Entry, from: Integration) {
+		const created = await this.createEntry(em, replacement)
+		try {
+			await from.deleteEntry(em, original)
+		} catch (error) {
+			await this.deleteEntry(em, created).catch(() => void 0)
+			await em.flush().catch(() => void 0)
+			throw error
+		}
+		return created
 	}
 
 	async updateEntry(em: EntityManager, existing: Entry, incoming: Entry): Promise<void> {

@@ -2,12 +2,14 @@ import { converter } from '@a11d/converter'
 import type { DateTimeRange } from '@3mo/date-time'
 import { NotFoundError, type EntityManager, type FilterQuery } from '@mikro-orm/core'
 import { Source } from '#features/sources'
-import { Entry, EntryType, TaskStatus } from '#features/entries'
+import { Entry, EntryType, EntryStatus } from '#features/entries'
 import { EntryRelation, EntryRelations, RelationGraph } from '#features/relations'
 import { NotificationSubscription } from '#features/reminders/NotificationSubscription.js'
 import { UserSettings } from '#features/settings/UserSettings.js'
 import { ReminderDefaults } from '#features/reminders/ReminderDefaults.js'
 import { UserTimeZones } from '#features/time/UserTimeZones.js'
+import { TimeZone } from '#features/time/TimeZone.js'
+import { Routine } from '#features/routines/Routine.js'
 import { Integration } from '#integrations'
 import { model, entity, primaryKey, property, manyToOne, embedded, unique } from '#infrastructure/model'
 import { ValidationError } from '#infrastructure/validation'
@@ -132,6 +134,18 @@ export class User {
 		return found
 	}
 
+	/** The one local account single-user mode signs every request in as, made on first use. */
+	static async local(em: EntityManager) {
+		const existing = await em.findOne(User, { username: User.default.username })
+		if (existing) {
+			return existing
+		}
+		const user = User.default
+		em.persist(user)
+		await em.flush()
+		return user
+	}
+
 	async getEntry(em: EntityManager, id: string): Promise<Entry> {
 		const entry = await em.findOneOrFail(Entry, { id })
 		await this.getSource(em, entry.sourceId)
@@ -165,11 +179,18 @@ export class User {
 		return entries
 	}
 
+	/** The routines of the user's enabled calendars that were not dissolved, each told how often it comes. */
+	async getRoutines(em: EntityManager) {
+		const routines = await em.find(Routine, { $and: [{ dissolved: null }, this.inCalendars({ enabled: true }) as FilterQuery<Routine>] })
+		await Routine.measure(em, routines, this.timeZones?.home?.zone ?? TimeZone.default)
+		return routines
+	}
+
 	private static inRange({ start, end }: DateTimeRange): FilterQuery<Entry> {
 		// Cast because `_type` is private. No status at all counts as open.
 		const openTask = {
 			_type: EntryType.Task,
-			$or: [{ status: null }, { status: { $nin: [TaskStatus.Done, TaskStatus.Cancelled] } }],
+			$or: [{ status: null }, { status: { $nin: [EntryStatus.Done, EntryStatus.Cancelled] } }],
 		} as unknown as FilterQuery<Entry>
 		return {
 			$or: [

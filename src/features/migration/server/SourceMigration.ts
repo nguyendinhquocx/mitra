@@ -172,7 +172,7 @@ export class SourceMigration {
 		const outcome = new MigrationOutcome({
 			left: left + copied.length + (failed ? 1 : 0),
 			failure: SourceMigration.messageOf(error),
-			failedEntry: failed?.heading ?? null,
+			failedEntry: failed?.heading,
 		})
 		for (const { copies } of copied) {
 			for (const copy of copies) {
@@ -200,6 +200,9 @@ export class SourceMigration {
 			uid: this.keepOriginals ? crypto.randomUUID() : entry.uid,
 			// A copy is a new task, so it starts unranked rather than sharing the original's key.
 			rank: this.keepOriginals ? undefined : entry.rank,
+			// A copy is recognized in its calendar by its title; a move keeps its routine.
+			routineId: this.keepOriginals ? undefined : entry.routineId,
+			routineDeclined: this.keepOriginals ? undefined : entry.routineDeclined,
 			exdates: entry.recurrence?.freq ? entry.occurrences.excluded : undefined,
 			relations: entry.relations,
 		}, overrides)

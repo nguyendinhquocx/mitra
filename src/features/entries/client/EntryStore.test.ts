@@ -1,6 +1,6 @@
 import { beforeEach, describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { DateTime } from '@3mo/date-time'
+import { DateTime, DateTimeRange } from '@3mo/date-time'
 import { Recurrence, RecurrenceFrequency, EntryOccurrenceChangeScope, type EntryOccurrence } from '#features/recurrence'
 import { EntryRelations } from '#features/relations'
 import { EntryReminders } from '#features/reminders/EntryReminders.js'
@@ -8,7 +8,7 @@ import { Color, Source } from '#features/sources'
 import { IntegrationOwnership } from '#integrations'
 import { ApiError } from '#infrastructure/http/Api.js'
 import { Entry } from '../Entry.js'
-import { TaskStatus } from '../TaskStatus.js'
+import { EntryStatus } from '../EntryStatus.js'
 import { EntryType } from '../EntryType.js'
 import { EntryRank } from '../EntryRank.js'
 import { EntryStore } from './EntryStore.js'
@@ -72,7 +72,7 @@ describe('EntryStore', () => {
 			const server = entry()
 			EntryStore.applyServerEntries([server])
 			const draft = entry({ id: undefined, heading: '' })
-			EntryStore.upsertDraft(draft)
+			EntryStore.pending.upsertDraft(draft)
 			assert.deepEqual([...EntryStore.entries], [server, draft])
 		})
 
@@ -176,7 +176,7 @@ describe('EntryStore', () => {
 			const transport = fake()
 			EntryStore.persistence = transport.persistence
 			const draft = entry({ id: undefined })
-			EntryStore.upsertDraft(draft)
+			EntryStore.pending.upsertDraft(draft)
 			const commit = EntryStore.commit(draft)
 			await transport.respond(entry({ id: 'assigned' }))
 			await commit
@@ -189,9 +189,9 @@ describe('EntryStore', () => {
 			const transport = fake()
 			EntryStore.persistence = transport.persistence
 			const draft = entry({ id: undefined })
-			EntryStore.upsertDraft(draft)
+			EntryStore.pending.upsertDraft(draft)
 			const commit = EntryStore.commit(draft)
-			EntryStore.discardDraft()
+			EntryStore.pending.discardDraft()
 			assert.deepEqual([...EntryStore.entries], [draft])
 			await transport.respond(entry({ id: 'assigned' }))
 			await commit
@@ -202,12 +202,12 @@ describe('EntryStore', () => {
 
 		it('discards an untitled placeholder draft, and only that', () => {
 			const untitled = entry({ id: undefined, heading: '  ' })
-			EntryStore.upsertDraft(untitled)
-			EntryStore.discardDraft()
+			EntryStore.pending.upsertDraft(untitled)
+			EntryStore.pending.discardDraft()
 			assert.deepEqual([...EntryStore.entries], [])
 			const titled = entry({ id: undefined })
-			EntryStore.upsertDraft(titled)
-			EntryStore.discardDraft()
+			EntryStore.pending.upsertDraft(titled)
+			EntryStore.pending.discardDraft()
 			assert.deepEqual([...EntryStore.entries], [titled])
 		})
 
@@ -215,10 +215,10 @@ describe('EntryStore', () => {
 			const transport = fake()
 			EntryStore.persistence = transport.persistence
 			const first = entry({ id: undefined, heading: 'First' })
-			EntryStore.upsertDraft(first)
+			EntryStore.pending.upsertDraft(first)
 			const commit = EntryStore.commit(first)
 			const second = entry({ id: undefined, heading: 'Second' })
-			EntryStore.upsertDraft(second)
+			EntryStore.pending.upsertDraft(second)
 			await transport.respond(entry({ id: 'assigned', heading: 'First' }))
 			await commit
 			assert.deepEqual([...EntryStore.entries], [first, second])
@@ -229,7 +229,7 @@ describe('EntryStore', () => {
 			const transport = fake()
 			EntryStore.persistence = transport.persistence
 			const draft = entry({ id: undefined, heading: '  ' })
-			EntryStore.upsertDraft(draft)
+			EntryStore.pending.upsertDraft(draft)
 			await EntryStore.commit(draft)
 			assert.equal(transport.calls.create, 0)
 		})
@@ -348,7 +348,7 @@ describe('EntryStore', () => {
 
 		it('drops a draft, since it only ever existed locally', () => {
 			const draft = entry({ id: undefined })
-			EntryStore.upsertDraft(draft)
+			EntryStore.pending.upsertDraft(draft)
 			EntryStore.revert(draft)
 			assert.deepEqual([...EntryStore.entries], [])
 		})
@@ -370,7 +370,7 @@ describe('EntryStore', () => {
 			const transport = fake()
 			EntryStore.persistence = transport.persistence
 			const draft = entry({ id: undefined })
-			EntryStore.upsertDraft(draft)
+			EntryStore.pending.upsertDraft(draft)
 			EntryStore.commit(draft).catch(() => void 0)
 			const deletion = EntryStore.delete(draft)
 			assert.deepEqual([...EntryStore.entries], [])
@@ -384,7 +384,7 @@ describe('EntryStore', () => {
 			const transport = fake()
 			EntryStore.persistence = transport.persistence
 			const draft = entry({ id: undefined })
-			EntryStore.upsertDraft(draft)
+			EntryStore.pending.upsertDraft(draft)
 			await EntryStore.delete(draft)
 			assert.deepEqual(transport.calls.delete, [])
 		})
@@ -479,47 +479,47 @@ describe('EntryStore', () => {
 		it('renders the ghost alongside the untouched source and derives the gesture states', () => {
 			const source = entry()
 			EntryStore.applyServerEntries([source])
-			EntryStore.setDragging(source)
-			assert.equal(EntryStore.isDragging(source), true)
+			EntryStore.pending.setDragging(source)
+			assert.equal(EntryStore.pending.isDragging(source), true)
 			const ghost = new Entry({ ...source.clone(), id: undefined })
 			ghost.moveStart(at(14))
-			EntryStore.setPreview(ghost)
+			EntryStore.pending.setPreview(ghost)
 			assert.deepEqual([...EntryStore.entries], [source, ghost])
 			assert.equal(ghost.persisted, false)
-			assert.equal(EntryStore.isDragSource(source), true)
-			assert.equal(EntryStore.isDragging(source), false)
-			assert.equal(EntryStore.isPreview(ghost), true)
+			assert.equal(EntryStore.pending.isDragSource(source), true)
+			assert.equal(EntryStore.pending.isDragging(source), false)
+			assert.equal(EntryStore.pending.isPreview(ghost), true)
 			assert.equal(EntryStore.isDirty(source), false)
-			EntryStore.setPreview(undefined)
-			EntryStore.setDragging(undefined)
+			EntryStore.pending.setPreview(undefined)
+			EntryStore.pending.setDragging(undefined)
 			assert.deepEqual([...EntryStore.entries], [source])
 		})
 
 		it('shows nothing pending while the ghost is back over the entry\'s own slot', () => {
 			const source = entry()
 			EntryStore.applyServerEntries([source])
-			EntryStore.setDragging(source)
+			EntryStore.pending.setDragging(source)
 			const ghost = new Entry({ ...source.clone(), id: undefined })
-			EntryStore.setPreview(ghost)
+			EntryStore.pending.setPreview(ghost)
 			assert.deepEqual([...EntryStore.entries], [source])
-			assert.equal(EntryStore.isDragSource(source), false)
-			assert.equal(EntryStore.isDragging(source), false)
-			assert.equal(EntryStore.isPreview(ghost), false)
+			assert.equal(EntryStore.pending.isDragSource(source), false)
+			assert.equal(EntryStore.pending.isDragging(source), false)
+			assert.equal(EntryStore.pending.isPreview(ghost), false)
 			ghost.moveStart(at(14))
-			EntryStore.setPreview(ghost)
+			EntryStore.pending.setPreview(ghost)
 			assert.deepEqual([...EntryStore.entries], [source, ghost])
-			assert.equal(EntryStore.isDragSource(source), true)
+			assert.equal(EntryStore.pending.isDragSource(source), true)
 		})
 
 		it('shows nothing pending while an undated entry hovers the unschedule target', () => {
 			const source = entry({ type: EntryType.Task, start: undefined, end: undefined })
 			EntryStore.applyServerEntries([source])
-			EntryStore.setDragging(source)
+			EntryStore.pending.setDragging(source)
 			const ghost = new Entry({ ...source.clone(), id: undefined })
 			ghost.unschedule() // also clears reminders, so the two are not edit-equal
-			EntryStore.setPreview(ghost)
+			EntryStore.pending.setPreview(ghost)
 			assert.deepEqual([...EntryStore.entries], [source])
-			assert.equal(EntryStore.isPreview(ghost), false)
+			assert.equal(EntryStore.pending.isPreview(ghost), false)
 		})
 	})
 
@@ -594,16 +594,54 @@ describe('EntryStore', () => {
 			const transport = fake()
 			EntryStore.persistence = transport.persistence
 			EntryStore.resolveScope = () => Promise.reject(new Error('must not be asked'))
-			const working = occurrence({ type: EntryType.Task, status: TaskStatus.ToDo })
+			const working = occurrence({ type: EntryType.Task, status: EntryStatus.ToDo })
 			EntryStore.applyServerEntries([working])
-			working.status = TaskStatus.Done
+			working.status = EntryStatus.Done
 			const commit = EntryStore.commit(working)
-			await transport.respond(entry({ id: 'detached', type: EntryType.Task, status: TaskStatus.Done }))
+			await transport.respond(entry({ id: 'detached', type: EntryType.Task, status: EntryStatus.Done }))
 			await commit
 			assert.deepEqual(transport.calls.occurrenceEdits, ['this'])
 			assert.equal(working.recurringEntryId, undefined)
-			assert.equal(working.status, TaskStatus.Done)
+			assert.equal(working.status, EntryStatus.Done)
 			assert.equal(EntryStore.isDirty(working), false)
+		})
+
+		describe('a date ticked off through the views', () => {
+			const tomorrow = at(9).add({ days: 1 })
+			const recurring = () => entry({ id: 'master', uid: 'uid', type: EntryType.Task, status: EntryStatus.ToDo, recurrence: new Recurrence({ freq: RecurrenceFrequency.Daily }) })
+			const onTomorrow = () => EntryStore.occurrences.filter(shown => shown.start?.equals(tomorrow))
+
+			/** Ticks tomorrow's date off as a chip does, answering as the server does: an entry of its own, the date excluded from the rule. */
+			const tick = async () => {
+				const transport = fake()
+				EntryStore.persistence = transport.persistence
+				EntryStore.applyServerEntries([recurring()], new DateTimeRange(day, day.add({ days: 3 })))
+				const [date] = onTomorrow()
+				const identity = EntryStore.identityOf(date!)
+				const working = EntryStore.editable(date!)
+				working.done = true
+				const commit = EntryStore.commit(working)
+				const detached = new Entry({ ...working.clone(), id: 'detached', uid: 'detached-uid', recurringEntryId: undefined, recurrenceId: undefined, recurrence: undefined })
+				await transport.respond(detached)
+				await commit
+				return { identity, working, detached }
+			}
+
+			it('shows the date once, as the entry it became, before the server\'s entries arrive', async () => {
+				const { working } = await tick()
+				assert.deepEqual(onTomorrow().map(shown => shown.entry), [working])
+				assert.equal(EntryStore.isDirty(EntryStore.entries.find(held => held.id === 'master')!), false)
+			})
+
+			it('keeps the chip the date had, so an editor open on it stays, and after the server\'s entries arrive', async () => {
+				const { identity, working, detached } = await tick()
+				assert.equal(EntryStore.identityOf(onTomorrow()[0]!), identity)
+				const excluded = recurring()
+				excluded.exclude(tomorrow)
+				EntryStore.applyServerEntries([excluded, detached], new DateTimeRange(day, day.add({ days: 3 })))
+				assert.deepEqual(onTomorrow().map(shown => shown.entry), [working])
+				assert.equal(EntryStore.identityOf(onTomorrow()[0]!), identity)
+			})
 		})
 
 		it('ticking a task off bypasses the scope dialog even though the closure also writes progress', async () => {
@@ -611,12 +649,12 @@ describe('EntryStore', () => {
 			EntryStore.persistence = transport.persistence
 			let asked = false
 			EntryStore.resolveScope = () => (asked = true, Promise.resolve(EntryOccurrenceChangeScope.All as const))
-			const working = occurrence({ type: EntryType.Task, status: TaskStatus.ToDo })
+			const working = occurrence({ type: EntryType.Task, status: EntryStatus.ToDo })
 			EntryStore.applyServerEntries([working])
 			working.source = Object.assign(new Source({ id: 's', integrationId: 'i' }), { integration: { id: 'i', ownership: new IntegrationOwnership({ percentComplete: 'upstream' }) } as never })
-			working.status = TaskStatus.Done
+			working.status = EntryStatus.Done
 			const commit = EntryStore.commit(working)
-			await transport.respond(entry({ id: 'detached', type: EntryType.Task, status: TaskStatus.Done, percentComplete: 100 }))
+			await transport.respond(entry({ id: 'detached', type: EntryType.Task, status: EntryStatus.Done, percentComplete: 100 }))
 			await commit
 			assert.equal(asked, false)
 			assert.deepEqual(transport.calls.occurrenceEdits, ['this'])
@@ -630,11 +668,11 @@ describe('EntryStore', () => {
 			EntryStore.persistence = transport.persistence
 			let asked = false
 			EntryStore.resolveScope = () => (asked = true, Promise.resolve(EntryOccurrenceChangeScope.All as const))
-			const working = occurrence({ type: EntryType.Task, status: TaskStatus.ToDo })
+			const working = occurrence({ type: EntryType.Task, status: EntryStatus.ToDo })
 			EntryStore.applyServerEntries([working])
 			working.percentComplete = 60
 			const commit = EntryStore.commit(working)
-			await transport.respond(entry({ id: 'detached', type: EntryType.Task, status: TaskStatus.ToDo, percentComplete: 60 }))
+			await transport.respond(entry({ id: 'detached', type: EntryType.Task, status: EntryStatus.ToDo, percentComplete: 60 }))
 			await commit
 			assert.equal(asked, false)
 			assert.deepEqual(transport.calls.occurrenceEdits, ['this'])
@@ -645,12 +683,12 @@ describe('EntryStore', () => {
 			const transport = fake()
 			EntryStore.persistence = transport.persistence
 			EntryStore.resolveScope = () => Promise.resolve(EntryOccurrenceChangeScope.All)
-			const working = occurrence({ type: EntryType.Task, status: TaskStatus.ToDo })
+			const working = occurrence({ type: EntryType.Task, status: EntryStatus.ToDo })
 			EntryStore.applyServerEntries([working])
-			working.status = TaskStatus.Done
+			working.status = EntryStatus.Done
 			working.heading = 'Renamed series'
 			const commit = EntryStore.commit(working)
-			await transport.respond(entry({ id: 'master', type: EntryType.Task, status: TaskStatus.Done, heading: 'Renamed series' }))
+			await transport.respond(entry({ id: 'master', type: EntryType.Task, status: EntryStatus.Done, heading: 'Renamed series' }))
 			await commit
 			assert.deepEqual(transport.calls.occurrenceEdits, ['all'])
 		})
@@ -803,9 +841,9 @@ describe('EntryStore', () => {
 		it('a task status edit follows the same derive-commit cycle', async () => {
 			const transport = fake()
 			EntryStore.persistence = transport.persistence
-			const working = entry({ type: EntryType.Task, status: TaskStatus.ToDo })
+			const working = entry({ type: EntryType.Task, status: EntryStatus.ToDo })
 			EntryStore.applyServerEntries([working])
-			working.status = TaskStatus.Done
+			working.status = EntryStatus.Done
 			assert.equal(EntryStore.isDirty(working), true)
 			const commit = EntryStore.commit(working)
 			await transport.respond()
@@ -815,7 +853,7 @@ describe('EntryStore', () => {
 	})
 
 	describe('whenTaskCloses', () => {
-		const task = (init?: Partial<Entry>) => entry({ type: EntryType.Task, status: TaskStatus.ToDo, ...init })
+		const task = (init?: Partial<Entry>) => entry({ type: EntryType.Task, status: EntryStatus.ToDo, ...init })
 
 		const watch = () => {
 			const closed = new Array<Entry>()
@@ -829,7 +867,7 @@ describe('EntryStore', () => {
 			const closed = watch()
 			const working = task()
 			EntryStore.applyServerEntries([working])
-			working.status = TaskStatus.Done
+			working.status = EntryStatus.Done
 			const commit = EntryStore.commit(working)
 			assert.deepEqual(closed, [])
 			await transport.respond()
@@ -843,7 +881,7 @@ describe('EntryStore', () => {
 			const closed = watch()
 			const working = task()
 			EntryStore.applyServerEntries([working])
-			working.status = TaskStatus.Cancelled
+			working.status = EntryStatus.Cancelled
 			const commit = EntryStore.commit(working)
 			await transport.respond()
 			await commit
@@ -854,7 +892,7 @@ describe('EntryStore', () => {
 			const transport = fake()
 			EntryStore.persistence = transport.persistence
 			const closed = watch()
-			const working = task({ status: TaskStatus.Done })
+			const working = task({ status: EntryStatus.Done })
 			EntryStore.applyServerEntries([working])
 			working.heading = 'Renamed'
 			const commit = EntryStore.commit(working)
@@ -869,7 +907,7 @@ describe('EntryStore', () => {
 			const closed = watch()
 			const working = task()
 			EntryStore.applyServerEntries([working])
-			working.status = TaskStatus.Done
+			working.status = EntryStatus.Done
 			const commit = EntryStore.commit(working).catch(() => void 0)
 			await transport.fail(new Error('nope'))
 			await commit
@@ -911,11 +949,11 @@ describe('EntryStore notifications', () => {
 		const movedChip = connect(() => moved)
 		const otherChips = Array.from({ length: 50 }, () => connect(() => other))
 		const ghost = new Entry({ heading: 'Moved' })
-		EntryStore.setDragging(moved)
-		EntryStore.setPreview(ghost)
-		EntryStore.setPreview(ghost)
-		EntryStore.setPreview(undefined)
-		EntryStore.setDragging(undefined)
+		EntryStore.pending.setDragging(moved)
+		EntryStore.pending.setPreview(ghost)
+		EntryStore.pending.setPreview(ghost)
+		EntryStore.pending.setPreview(undefined)
+		EntryStore.pending.setDragging(undefined)
 		assert.equal(view.updates, 5)
 		assert.equal(movedChip.updates, 5)
 		assert.equal(otherChips.reduce((sum, chip) => sum + chip.updates, 0), 0)
@@ -929,19 +967,19 @@ describe('EntryStore notifications', () => {
 		store.hostUpdate()
 		counter.updates = 0
 		const ghost = new Entry({ heading: 'Ghost' })
-		EntryStore.setPreview(ghost)
+		EntryStore.pending.setPreview(ghost)
 		assert.equal(counter.updates, 0)
 		count = 4
-		EntryStore.setPreview(ghost)
+		EntryStore.pending.setPreview(ghost)
 		assert.equal(counter.updates, 1)
 		store.hostUpdate()
-		EntryStore.setPreview(ghost)
+		EntryStore.pending.setPreview(ghost)
 		assert.equal(counter.updates, 1)
 		count = 3
 		EntryStore.notify()
 		store.hostUpdate()
 		count = 4
-		EntryStore.setPreview(undefined)
+		EntryStore.pending.setPreview(undefined)
 		assert.equal(counter.updates, 3)
 		EntryStore.notify()
 		assert.equal(counter.updates, 4)

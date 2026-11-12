@@ -13,7 +13,7 @@ import { CreateEntry } from '#features/entries/client/commands.js'
 import { EntryEditorIntent } from '#features/entries/client/EntryEditorIntent.js'
 import { Calendars } from '#features/sources/client/Calendars.js'
 import { DialogSettings, type SettingsParameters } from '#features/settings/client/DialogSettings.js'
-import { type SettingsPageId } from '#features/settings/client/Setting.js'
+import { deviceStorage, type SettingsPageId } from '#features/settings/client/Setting.js'
 import { KeyPress } from '#features/commands/KeyPress.js'
 import { UrlSyncController } from '#infrastructure/routing/UrlSyncController.js'
 import { commandInstances, sourceCommands, settingCommands } from '#app/commands.js'
@@ -44,8 +44,10 @@ export class PageCalendar extends PageComponent<CalendarParameters> {
 
 	readonly mediaController = new MediaQueryController(this, '(min-width: 800px)', () => this.sidebarOpen = PageCalendar.preferredSidebarOpen)
 
+	private static readonly keptCollapsed = deviceStorage<boolean>('Mitra.SidebarCollapsed')
+
 	private static get preferredSidebarOpen() {
-		return window.matchMedia('(min-width: 800px)').matches && localStorage.getItem('Mitra.SidebarCollapsed') !== 'true'
+		return window.matchMedia('(min-width: 800px)').matches && !PageCalendar.keptCollapsed.read()
 	}
 
 	/** One edited in the sidebar goes to the view, one left without a start to the planning list, so neither it nor its editor vanishes. */
@@ -63,7 +65,7 @@ export class PageCalendar extends PageComponent<CalendarParameters> {
 	readonly toggleSidebar = () => {
 		this.sidebarOpen = !this.sidebarOpen
 		if (this.mediaController.matches) {
-			localStorage.setItem('Mitra.SidebarCollapsed', String(!this.sidebarOpen))
+			PageCalendar.keptCollapsed.write(!this.sidebarOpen)
 		}
 	}
 
@@ -220,6 +222,15 @@ export class PageCalendar extends PageComponent<CalendarParameters> {
 	goToDate() {
 		this.gotoDate.show(this.querySelector('main > header h1') ?? undefined)
 		this.gotoDate.querySelector('mitra-date-picker')?.focus()
+	}
+
+	/** Ctrl+, opens the settings from anywhere, a field included, unless they are open already. */
+	@eventListener({ target: window, type: 'keydown' })
+	protected handleSettingsKey(e: KeyboardEvent) {
+		if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key === ',' && !this.settingsPage) {
+			e.preventDefault()
+			void this.openSettings()
+		}
 	}
 
 	@eventListener({ target: window, type: 'keydown' })

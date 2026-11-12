@@ -34,7 +34,7 @@ import { NotificationDevices } from '#features/reminders/client/NotificationDevi
 import { DialogNewAccessToken } from '#features/agents/client/DialogNewAccessToken.js'
 import { DialogAccessToken } from '#features/agents/client/DialogAccessToken.js'
 import { offerToolsToBrowserAgents } from '#features/agents/client/webMcp.js'
-import { TaskStatusComponent } from '#features/entries/client/TaskStatus.js'
+import { EntryStatusComponent } from '#features/entries/client/EntryStatus.js'
 import { SourceIcon } from '#features/sources/client/SourceIcon.js'
 import { RepeatField } from '#features/recurrence/client/RepeatField.js'
 import { LocationField } from '#features/locations/client/LocationField.js'
@@ -120,13 +120,11 @@ export class Mitra extends Application {
 		observeFileDrops(files => void Mitra.addCalendarFiles(files))
 		if (pendingIntegrationId) {
 			await new DialogIntegration({ id: pendingIntegrationId, preselectSources: true }).confirm()
-			document.querySelector('mitra-sidebar')?.requestUpdate()
 		} else if (subscribeUrl) {
 			await Mitra.subscribe(subscribeUrl)
 		} else if (!Calendars.integrations.length) {
 			if (await new DialogWelcome().confirm()) {
 				await new DialogIntegration({}).confirm()
-				document.querySelector('mitra-sidebar')?.requestUpdate()
 			}
 		}
 	}
@@ -137,7 +135,6 @@ export class Mitra extends Application {
 			return
 		}
 		await new DialogIntegration({ prefill: new IcsSubscription({ uri: normalized }) }).confirm()
-		document.querySelector('mitra-sidebar')?.requestUpdate()
 	}
 
 	private static async addCalendarFiles(files: ReadonlyArray<File>) {
@@ -268,7 +265,7 @@ export class Mitra extends Application {
 			${DialogCompleteParent.styles}
 			${DialogCloseSubtasks.styles}
 			${DialogRelationFailed.styles}
-			${TaskStatusComponent.styles}
+			${EntryStatusComponent.styles}
 			${SourceIcon.styles}
 			${RepeatField.styles}
 			${LocationField.styles}

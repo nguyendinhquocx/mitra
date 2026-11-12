@@ -9,12 +9,13 @@ import { ReminderDefaults } from '#features/reminders/ReminderDefaults.js'
 import { EntryReminders } from '#features/reminders/EntryReminders.js'
 import { TimeZone } from '#features/time/TimeZone.js'
 import { EntryTimeZone } from '#features/time/EntryTimeZone.js'
+import { Routine } from '#features/routines/Routine.js'
 import type { OwnedField } from '#integrations'
 import { model, Entity, identity, equality, entity, primaryKey, property, enum as enumType, unique, manyToOne, children, include } from '#infrastructure/model'
 import { type Validatable, ValidationError } from '#infrastructure/validation'
 import { ScheduleDefaults } from './ScheduleDefaults.js'
 import { EntryType, type EntryTypeValue } from './EntryType.js'
-import { TaskStatus } from './TaskStatus.js'
+import { EntryStatus } from './EntryStatus.js'
 import { Transparency } from './Transparency.js'
 import { Visibility } from './Visibility.js'
 import { EntryFiles } from './EntryFiles.js'
@@ -25,6 +26,7 @@ import { Checklist } from './Checklist.js'
 import { EntryPatch } from './EntryPatch.js'
 import { EntryChange } from './EntryChange.js'
 import { EntrySpan } from './EntrySpan.js'
+import { whereUnsupported } from './whereUnsupported.js'
 
 export interface EntryTally {
 	readonly done: number
@@ -82,9 +84,12 @@ export class Entry extends Entity implements Validatable {
 		}
 	}
 
-	/** Drops what the type can't hold. */
+	/**
+	 * Drops what the type can't hold. A type without days leaves the dates as they are, as a day read as a time would be a
+	 * midnight, and one without relations leaves them for the write to judge, as unknown relations keep their rows.
+	 */
 	private fitType() {
-		if (!this._type.isTask) {
+		if (this.status && !this.status.appliesTo(this._type)) {
 			this.status = undefined
 		}
 		for (const field of ['transparency', 'percentComplete', 'due', 'estimate', 'participants', 'reminders', 'attachments'] as const) {
@@ -98,9 +103,11 @@ export class Entry extends Entity implements Validatable {
 	@property({ type: 'string' }) heading = ''
 
 	@equality()
+	@whereUnsupported({ save: 'drop', move: 'drop' })
 	@property({ type: 'string' }) description = ''
 
 	@equality()
+	@whereUnsupported({ save: 'drop', move: 'drop' })
 	@property({ type: 'string' }) location = ''
 
 	@equality()
@@ -138,8 +145,8 @@ export class Entry extends Entity implements Validatable {
 		}
 	}
 
-	/** The statuses it can take here: none for an event, and no Doing or Cancelled in a calendar of two states. */
-	get statuses(): ReadonlyArray<TaskStatus> { return this.type.isTask ? this.source.capabilities.entries.statuses : [] }
+	/** The statuses it can take here: its type's that its calendar holds, so no Doing or Cancelled in a calendar of two states, and none for availability. */
+	get statuses(): ReadonlyArray<EntryStatus> { return this.source.capabilities.entries.statuses.filter(status => status.appliesTo(this.type)) }
 
 	/** The types it can take here, its own always, so a type that cannot change still shows. */
 	get types() { return EntryType.all.filter(type => type === this.type || this.source.canHold(type)) }
@@ -157,37 +164,69 @@ export class Entry extends Entity implements Validatable {
 	@Entry.date() start?: DateTime
 
 	@equality()
+	// Where no length is held, a timed entry becomes a moment and an all-day one its first day, which loses nothing of a single day.
+	@whereUnsupported({
+		save: 'drop',
+		move: 'drop',
+		when: entry => {
+			if (!entry.start || !entry.end) {
+				return false
+			}
+			const zone = TimeZone.localOrDefault
+			return !entry.allDay || zone.dayOf(entry.start).until(zone.dayOf(entry.end)).days > 1
+		},
+	})
 	@Entry.date() end?: DateTime
 
 	/** Apart from the schedule. */
 	@equality()
+	@whereUnsupported({ save: { throw: 'This calendar does not support due dates' }, move: 'drop' })
 	@Entry.date() due?: DateTime
 
 	/** A task's length in minutes while it has no start. The end is the same fact once it does, so one of the two is always empty. */
 	@equality()
+	@whereUnsupported({ save: 'drop', move: 'drop' })
 	@property({ type: 'number', nullable: true }) estimate?: number
 
-	@converter({ status: TaskStatus.converter })
-	@enumType({ type: TaskStatus.Mapper, fieldName: 'status', items: TaskStatus.all.map(String), nullable: true }) private _status?: TaskStatus
+	@converter({ status: EntryStatus.converter })
+	@enumType({ type: EntryStatus.Mapper, fieldName: 'status', items: EntryStatus.all.map(String), nullable: true }) private _status?: EntryStatus
 
 	@equality()
 	get status() { return this._status }
 	/** A task ticked off reads as fully done where its calendar keeps progress (RFC 5545 §3.8.1.8); one given a status before it knows its calendar keeps what it was given. */
 	set status(value) {
 		this._status = value
-		if (value === TaskStatus.Done && (this.source as Source | undefined)?.ownership.holds('percentComplete')) {
+		if (value === EntryStatus.Done && (this.source as Source | undefined)?.ownership.holds('percentComplete')) {
 			this.percentComplete = 100
 		}
 	}
 
 	/** Task PERCENT-COMPLETE (RFC 5545 §3.8.1.8), 0-100. */
 	@equality()
+	@whereUnsupported({ save: { throw: 'This calendar does not support task progress' }, move: 'block' })
 	@property({ type: 'number', nullable: true }) percentComplete?: number
 
 	/** Position in the manual order, owned by Mitra and never written to the provider. Only
 	 * `PUT /entries/ranks` changes it, so it is no part of equality. */
 	@converter(EntryRank.converter)
 	@property({ type: EntryRank.Mapper, nullable: true }) rank?: EntryRank
+
+	/** The routine it belongs to, Mitra's own and kept whatever happens to the entry: no part of equality, nor of a copy. */
+	@manyToOne(() => Routine, { mapToPk: true, nullable: true, deleteRule: 'set null' }) routineId?: string
+
+	/** Taken out of every routine by its person, so recognition leaves it in none. */
+	@property({ type: 'boolean', nullable: true }) routineDeclined?: boolean
+
+	/** The title a routine tells it by, which entries of one routine share. */
+	get routineTitle() {
+		return Routine.titleOf(this.heading)
+	}
+
+	/** The day it starts, or is due, in `zone`. An all-day entry's and a floating time's is the one written, wherever it is read. */
+	dayIn(zone: TimeZone) {
+		const date = this.start ?? this.due
+		return date && (this.allDay || this.floating ? TimeZone.localOrDefault : zone).dayOf(date)
+	}
 
 	get progress(): number | undefined {
 		return this.percentComplete === undefined ? undefined : this.percentComplete / 100
@@ -196,9 +235,9 @@ export class Entry extends Entity implements Validatable {
 	set progress(value) {
 		this.percentComplete = value === undefined ? undefined : Math.round(value * 100)
 		if (this.percentComplete === 100) {
-			this.status = TaskStatus.Done
+			this.status = EntryStatus.Done
 		} else if (this.done) {
-			this.status = this.percentComplete && this.statuses.includes(TaskStatus.Doing) ? TaskStatus.Doing : TaskStatus.ToDo
+			this.status = this.percentComplete && this.statuses.includes(EntryStatus.Doing) ? EntryStatus.Doing : EntryStatus.ToDo
 		}
 	}
 
@@ -206,13 +245,20 @@ export class Entry extends Entity implements Validatable {
 		return Checklist.of(this.description)
 	}
 
-	get done() { return this.status === TaskStatus.Done }
-	set done(value) { this.status = value ? TaskStatus.Done : TaskStatus.ToDo }
+	get done() { return this.status === EntryStatus.Done }
+	set done(value) { this.status = value ? EntryStatus.Done : EntryStatus.ToDo }
 
+	/** Nothing left to do or to happen: a done or cancelled task, a cancelled event. No reminder of it fires. */
 	get closed() { return !!this.status?.closed }
+
+	/** Its status as shown: where none was ever set, a task to do and an event confirmed. */
+	get effectiveStatus() { return this.status ?? (this.type?.isTask ? EntryStatus.ToDo : EntryStatus.Confirmed) }
 
 	/** A task still to do: not an event, and not closed. */
 	get open() { return !!this.type?.isTask && !this.closed }
+
+	/** Called off, task or event: it keeps its place, struck through. */
+	get cancelled() { return this.status === EntryStatus.Cancelled }
 
 	/**
 	 * Drops what a calendar can't keep and is no refusal: the estimate, where none is held, and a length, where no end is: a
@@ -231,10 +277,13 @@ export class Entry extends Entity implements Validatable {
 	}
 
 	@equality()
+	// Busy is every calendar's default, so only free counts.
+	@whereUnsupported({ save: { throw: 'This calendar cannot mark an entry as free' }, move: 'block', when: entry => entry.transparency === Transparency.Free })
 	@converter(Transparency.converter)
 	@enumType({ type: Transparency.Mapper, items: Transparency.all.map(String), nullable: true }) transparency?: Transparency
 
 	@equality()
+	@whereUnsupported({ save: { throw: 'This calendar does not support visibility' }, move: 'block' })
 	@converter(Visibility.converter)
 	@enumType({ type: Visibility.Mapper, items: Visibility.all.map(String), nullable: true }) visibility?: Visibility
 
@@ -244,9 +293,12 @@ export class Entry extends Entity implements Validatable {
 	}
 
 	@equality()
+	@whereUnsupported({ save: 'drop', move: 'drop' })
 	@property({ type: 'boolean' }) allDay = false
 
 	@equality()
+	// A floating time names no zone, so it loses none: a calendar without wall clocks fixes it to one instead.
+	@whereUnsupported({ save: 'drop', move: 'drop', when: entry => !!entry.timeZone && !entry.timeZone.floating })
 	@converter(EntryTimeZone.converter)
 	@property({ type: EntryTimeZone.Mapper, nullable: true }) timeZone?: EntryTimeZone
 
@@ -263,6 +315,7 @@ export class Entry extends Entity implements Validatable {
 	@property({ type: 'json', nullable: true }) data?: EntryData
 
 	@equality()
+	@whereUnsupported({ save: 'drop', move: 'drop' })
 	@property({ type: EntryReminders.Mapper, nullable: true })
 	@converter(EntryReminders.converter) reminders?: EntryReminders
 
@@ -275,6 +328,7 @@ export class Entry extends Entity implements Validatable {
 	}
 
 	@equality()
+	@whereUnsupported({ save: { throw: 'This calendar does not support participants' }, move: 'block' })
 	@property({ type: Participants.Mapper, nullable: true })
 	@converter(Participants.converter) participants?: Participants
 
@@ -321,6 +375,7 @@ export class Entry extends Entity implements Validatable {
 	files!: EntryFiles
 
 	/** Its attachments among {@link files}; setting them replaces those and leaves its other files alone. */
+	@whereUnsupported({ save: { throw: 'This calendar does not support attachments' }, move: 'drop' })
 	get attachments(): EntryFiles { return this.files.ofType(EntryFileType.Attachment) }
 
 	/** Takes `file` off the entry, with what the description showed of it: a link or picture of a file no longer here would dangle. */
@@ -353,6 +408,7 @@ export class Entry extends Entity implements Validatable {
 	@property({ type: 'string', nullable: true }) uid?: string
 
 	@equality()
+	@whereUnsupported({ save: { throw: 'This calendar cannot hold a repeating entry' }, move: 'block' })
 	@property({ type: Recurrence.Mapper, nullable: true })
 	@converter(Recurrence.converter) recurrence?: Recurrence
 
@@ -367,6 +423,8 @@ export class Entry extends Entity implements Validatable {
 	@Entry.date() recurrenceId?: DateTime
 
 	/** Unknown while absent, as a provider may not say; none is an empty collection. The lines it owns are saved as rows, those pointing at it a read attaches. */
+	// Only the lines it owns count; a move repoints them rather than judging them.
+	@whereUnsupported({ save: { throw: 'This calendar does not support relations between entries' }, when: entry => !!entry.relations?.writes.length })
 	@converter(EntryRelations.converter)
 	@children(() => EntryRelation, row => row.entryId, {
 		eager: true,
@@ -392,16 +450,6 @@ export class Entry extends Entity implements Validatable {
 	/** The boundary instant for dependency comparisons. All-day ends are stored exclusive. */
 	boundaryOf(which: 'start' | 'end') {
 		return which === 'start' ? this.start : this.end ?? this.start
-	}
-
-	get duration() {
-		if (!this.start || !this.end) {
-			return undefined
-		}
-
-		// Calendar days, so an all-day span across a DST change still reads as whole days.
-		const { days, hours, minutes } = this.start.zonedDateTime.until(this.end.zonedDateTime, { largestUnit: 'days', smallestUnit: 'minutes' })
-		return new Intl.DurationFormat(Localizer.locales.current, { style: 'narrow' }).format({ days, hours, minutes })
 	}
 
 	/**
@@ -503,6 +551,28 @@ export class Entry extends Entity implements Validatable {
 	/** The dates it takes place on, lazily: its own, or each its rule yields. */
 	get occurrences() {
 		return EntryOccurrences.of(this)
+	}
+
+	/**
+	 * Whether an edit of this occurrence since `before` reaches it alone, so no one is asked how far: only its completion
+	 * changed, or an unscheduled one got its start, as only that one is being planned.
+	 */
+	editsOnlyThisOccurrence(before: Entry | undefined) {
+		if (!this.recurringEntryId) {
+			return false
+		}
+		const completed = !!before && before.equals(Object.assign(this.clone(), { status: before.status, percentComplete: before.percentComplete })) && !before.equals(this)
+		const planned = !!this.start && !before?.start
+		return completed || planned
+	}
+
+	/** Becomes `saved`, the entry an edit of this occurrence alone made of it: one of its own, standing in for no date of a recurring entry. */
+	leaveSeries(saved: Entry) {
+		this.id = saved.id
+		this.uid = saved.uid
+		this.recurringEntryId = undefined
+		this.recurrenceId = undefined
+		this.recurrence = undefined
 	}
 
 	/** The row that holds what a whole series shares: its master, or the entry itself when it stands alone. */
@@ -644,32 +714,16 @@ export class Entry extends Entity implements Validatable {
 		if (!source.canHold(this.type)) {
 			yield new ValidationError(`This calendar cannot hold ${this.type.isTask ? 'tasks' : this.type.isAvailability ? 'availability' : 'events'}`, ['type'])
 		}
-		if (this.recurrence?.freq && !source.ownership.holds('recurrence')) {
-			yield new ValidationError('This calendar cannot hold a repeating entry', ['recurrence'])
+		for (const field of whereUnsupported.fieldsOf(Entry)) {
+			const { error } = field
+			if (error && field.unsupportedIn(source, this)) {
+				yield error
+			}
 		}
-		if (this.participants?.length && !source.ownership.holds('participants')) {
-			yield new ValidationError('This calendar does not support participants', ['participants'])
-		}
-		if (this.attachments.length && !source.ownership.holds('attachments')) {
-			yield new ValidationError('This calendar does not support attachments', ['attachments'])
-		}
-		if (this.transparency === Transparency.Free && !source.ownership.holds('transparency')) {
-			yield new ValidationError('This calendar cannot mark an entry as free', ['transparency'])
-		}
-		if (this.visibility && !source.ownership.holds('visibility')) {
-			yield new ValidationError('This calendar does not support visibility', ['visibility'])
-		}
-		if (this.percentComplete !== undefined && !source.ownership.holds('percentComplete')) {
-			yield new ValidationError('This calendar does not support task progress', ['percentComplete'])
-		}
-		if (this.due && !source.ownership.holds('due')) {
-			yield new ValidationError('This calendar does not support due dates', ['due'])
-		}
-		if (this.relations?.writes.length && !source.ownership.holds('relations')) {
-			yield new ValidationError('This calendar does not support relations between entries', ['relations'])
-		}
-		if (this.status && !source.capabilities.entries.statuses.includes(this.status)) {
-			yield new ValidationError(this.status === TaskStatus.Doing ? 'This calendar cannot hold a task in progress' : 'This calendar cannot hold a cancelled task', ['status'])
+		if (this.status && !this.status.appliesTo(this.type)) {
+			yield new ValidationError(`${this.type.isTask ? 'A task' : this.type.isEvent ? 'An event' : 'Availability'} cannot be ${this.status.code}`, ['status'])
+		} else if (this.status && !source.capabilities.entries.statuses.includes(this.status)) {
+			yield new ValidationError(this.status === EntryStatus.Doing ? 'This calendar cannot hold a task in progress' : this.status === EntryStatus.Cancelled ? `This calendar cannot hold a cancelled ${this.type.isTask ? 'task' : 'event'}` : 'This calendar cannot hold an event\'s status', ['status'])
 		}
 		if (this.start && this.end && this.end.valueOf() < this.start.valueOf()) {
 			yield new ValidationError('An entry cannot end before it starts', ['end'])

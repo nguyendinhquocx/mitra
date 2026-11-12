@@ -1,4 +1,5 @@
 import { converter } from '@a11d/converter'
+import type { EntityManager } from '@mikro-orm/core'
 import { User } from '#features/identity'
 import { TimeZone } from '#features/time/TimeZone.js'
 import { model, entity, primaryKey, property, manyToOne, unique, withheld } from '#infrastructure/model'
@@ -10,6 +11,14 @@ type PushKeys = { p256dh: string, auth: string }
 @entity()
 @unique({ properties: ['endpoint'] })
 export class NotificationSubscription {
+	/**
+	 * The subscription at `endpoint`, whoever's it is: a browser signed in to by another user registers the same endpoint,
+	 * which then becomes theirs (`register`).
+	 */
+	static at(em: EntityManager, endpoint: string) {
+		return em.findOne(NotificationSubscription, { endpoint })
+	}
+
 	@primaryKey({ type: 'string' }) id!: string
 	@manyToOne(() => User, { mapToPk: true, deleteRule: 'cascade' }) userId!: string
 	@property({ type: 'string' }) endpoint!: string
@@ -18,23 +27,28 @@ export class NotificationSubscription {
 	@property({ type: 'json' })
 	@converter(withheld<PushKeys>('p256dh', 'auth')) keys!: PushKeys
 
-	@property({ type: 'string', nullable: true }) name?: string | null
+	@property({ type: 'string', nullable: true }) name?: string
 
 	/** The device's zone, which floating reminders resolve in. */
 	@converter(TimeZone.converter)
 	@property({ type: TimeZone.Mapper, nullable: true }) timeZone?: TimeZone
 
 	/** The app's locale on this device (a BCP 47 tag), which its notifications are written and formatted in. */
-	@property({ type: 'string', nullable: true }) locale?: string | null
+	@property({ type: 'string', nullable: true }) locale?: string
 
-	@property({ type: 'string', nullable: true }) platform?: string | null
-	@property({ type: 'string', nullable: true }) browser?: string | null
-	@property({ type: 'boolean', nullable: true }) mobile?: boolean | null
+	@property({ type: 'string', nullable: true }) platform?: string
+	@property({ type: 'string', nullable: true }) browser?: string
+	@property({ type: 'boolean', nullable: true }) mobile?: boolean
 
-	@property({ type: 'Date', nullable: true }) lastSeenAt?: Date | null
+	@property({ type: 'Date', nullable: true }) lastSeenAt?: Date
 
 	constructor(init?: Partial<NotificationSubscription>) {
 		Object.assign(this, init)
+	}
+
+	/** What a device reports, as it is kept: trimmed, at most `max` characters, none when blank. */
+	private static textOf(value: string | undefined, max: number) {
+		return value?.trim().slice(0, max) || undefined
 	}
 
 	/**
@@ -43,15 +57,15 @@ export class NotificationSubscription {
 	 */
 	register(userId: string, registration: DeviceFacts & { keys: PushKeys, timeZone?: string, locale?: string }) {
 		if (this.userId && this.userId !== userId) {
-			this.name = null
+			this.name = undefined
 		}
 		this.userId = userId
 		this.keys = registration.keys
 		this.timeZone = TimeZone.parse(registration.timeZone)
-		this.locale = NotificationSubscription.localeOf(registration.locale) ?? this.locale ?? null
-		this.platform = registration.platform ?? null
-		this.browser = registration.browser ?? null
-		this.mobile = registration.mobile ?? null
+		this.locale = NotificationSubscription.localeOf(registration.locale) ?? this.locale
+		this.platform = NotificationSubscription.textOf(registration.platform, 64)
+		this.browser = NotificationSubscription.textOf(registration.browser, 64)
+		this.mobile = registration.mobile
 		this.lastSeenAt = new Date()
 	}
 
@@ -75,6 +89,6 @@ export class NotificationSubscription {
 
 	/** An empty name falls back to what the browser reports. */
 	rename(name: string | undefined) {
-		this.name = name || null
+		this.name = NotificationSubscription.textOf(name, 60)
 	}
 }
