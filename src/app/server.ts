@@ -40,7 +40,27 @@ new UnusedFileDisposer(orm, fileTables).start()
 updateChecker.start()
 
 const app = express()
+// The reverse proxy (Caddy) terminates TLS on the same host: only its loopback answers may rewrite the client address,
+// so rate limits and origin checks see the real visitor instead of the proxy.
+app.set('trust proxy', 'loopback')
 app.use(cors())
+
+// A public guest edge (`MITRA_PUBLIC_HOST`) reaches the guest surface, its static assets and the health check only;
+// every owner surface answers 404 there, fail-closed, so the open host names nothing else of this instance.
+const publicHostGate: RequestHandler = (req, res, next) => {
+	if (!environment.publicHost) {
+		return next()
+	}
+	const forwarded = req.headers['x-forwarded-host']
+	const host = ((Array.isArray(forwarded) ? forwarded[0] : forwarded) ?? req.hostname).split(',')[0]!.trim().toLowerCase()
+	const guestAllowed = req.path === '/s' || req.path.startsWith('/s/') || req.path === '/api/health'
+		|| (req.method === 'GET' && !req.path.startsWith('/api/') && !req.path.startsWith('/auth/') && req.path.includes('.'))
+	if (host === environment.publicHost && !guestAllowed) {
+		return res.status(404).json({ error: 'Not found' })
+	}
+	return next()
+}
+app.use(publicHostGate)
 app.use(observeInstanceOrigin)
 // Before everything it covers: the API routers below and the static frontend at the bottom.
 app.use(compression())
@@ -84,6 +104,13 @@ const guestPage: RequestHandler = (req, res, next) => {
 }
 app.use(guestPage)
 
+// Static assets the guest shell loads, shared with the owner frontend below.
+const frontendDistPath = path.resolve(import.meta.dirname, '../../dist')
+
+// The guest page opens by link alone, so it is served before the owner sign-in has anything to say about it: under
+// OIDC the SPA fallback sits behind `authMiddleware`, which would redirect `/s` to login and strand every guest.
+app.get('/s', (_req, res) => res.sendFile('index.html', { root: frontendDistPath, headers: { 'Cache-Control': 'no-store' } }))
+
 if (oidc) {
 	app.use('/auth', authRouter)
 	logger.info(`Multi-user mode: OIDC against ${oidc.issuer} (redirect URI ${oidc.redirectUri})`)
@@ -109,7 +136,6 @@ app.use('/api/mcp', mcpRouter)
 app.use('/api', operationsRouter(() => orm.em.fork()))
 
 // Serve frontend SPA dist bundle.
-const frontendDistPath = path.resolve(import.meta.dirname, '../../dist')
 app.use(precompressed(frontendDistPath))
 app.use(express.static(frontendDistPath, { cacheControl: false, setHeaders: (res, file) => res.setHeader('Cache-Control', cacheControlOf(file)) }))
 // The SPA fallback: any non-API path serves the shell, so deep links (/week?date=…) survive a reload.

@@ -18,6 +18,8 @@ export class Instance {
 	signIn?: boolean
 	/** Whether agents may connect over MCP (`MITRA_MCP`). */
 	mcp?: boolean
+	/** The origin a share link names, when guests reach this instance from outside the owner's private network. */
+	shareOrigin?: string
 
 	constructor(init?: Partial<Instance>) {
 		Object.assign(this, init)

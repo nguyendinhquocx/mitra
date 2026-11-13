@@ -23,6 +23,7 @@ export class GetMeta extends Operation<object, Instance> {
 			files: FileLimits.of(environment),
 			signIn: environment.signedIn,
 			mcp: environment.mcp,
+			shareOrigin: environment.shareOrigin?.href,
 			releaseUrl: runningReleaseUrl(),
 			update: updateChecker.update,
 		}))

@@ -4,6 +4,7 @@ import { Calendars } from '#features/sources/client/Calendars.js'
 import { type Entry } from '#features/entries'
 import { type Source } from '#features/sources'
 import { CreateShareLink, ListShareLinks, RevokeShareLink, CreateGoogleShareCalendar } from '#operations'
+import { session } from '#infrastructure/http/PageSession.js'
 import { type ShareCapability, ShareRole } from '../ShareCapability.js'
 
 export interface ShareDialogParameters {
@@ -64,15 +65,20 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 		return Calendars.enabled.filter(source => source.id !== this.targetSourceId)
 	}
 
+	/** Where a guest opens the link: the operator's public edge when one is named, else this very origin. */
+	private get linkOrigin() {
+		return session.instance.shareOrigin ?? location.origin
+	}
+
 	private get maskedUrl() {
 		return this.createdToken === undefined
 			? ''
-			: `${location.origin}/s#calx_••••${this.createdToken.slice(-6)}${this.parameters.entry && !this.singleEventOnly ? `&entry=${this.parameters.entry.id}` : ''}`
+			: `${this.linkOrigin}/s#calx_••••${this.createdToken.slice(-6)}${this.parameters.entry && !this.singleEventOnly ? `&entry=${this.parameters.entry.id}` : ''}`
 	}
 
 	private linkUrlOf(token: string) {
 		const entry = this.parameters.entry && !this.singleEventOnly ? `&entry=${this.parameters.entry.id}` : ''
-		return `${location.origin}/s#${token}${entry}`
+		return `${this.linkOrigin}/s#${token}${entry}`
 	}
 
 	private async create() {

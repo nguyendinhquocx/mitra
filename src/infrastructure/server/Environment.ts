@@ -22,6 +22,10 @@ export class Environment {
 	readonly updateCheck: boolean
 	/** The instance's public address (`MITRA_URL`), where one is set and reads as a URL. */
 	readonly url?: URL
+	/** The public guest edge hostname (`MITRA_PUBLIC_HOST`): on it, only the guest surface and its static assets answer. */
+	readonly publicHost?: string
+	/** The origin share links name (`MITRA_SHARE_ORIGIN`), where a guest reaches this instance from outside the private network. */
+	readonly shareOrigin?: URL
 	/** Where places are looked up (`MITRA_PHOTON_URL`). */
 	readonly photon: URL
 	/** Who push services may contact about this instance (`MITRA_VAPID_SUBJECT`). */
@@ -44,6 +48,8 @@ export class Environment {
 		this.mcp = !Environment.off(variables.MITRA_MCP)
 		this.updateCheck = !Environment.off(variables.MITRA_UPDATE_CHECK)
 		this.url = Environment.urlOf(variables.MITRA_URL)
+		this.publicHost = variables.MITRA_PUBLIC_HOST?.trim().toLowerCase() || undefined
+		this.shareOrigin = Environment.urlOf(variables.MITRA_SHARE_ORIGIN)
 		this.photon = new URL(variables.MITRA_PHOTON_URL || 'https://photon.komoot.io')
 		this.vapidSubject = variables.MITRA_VAPID_SUBJECT || 'mailto:mitra@localhost'
 		this.files = { maxSize: Environment.bytesOf(variables.MITRA_FILE_MAX_SIZE), quota: Environment.bytesOf(variables.MITRA_FILE_QUOTA) }

@@ -455,6 +455,12 @@ export function sharingRouter() {
 		})
 	})
 
+	// An unknown guest API path answers 404 here rather than falling through to the owner sign-in redirect, which
+	// would name the private surface to whoever probes the guest namespace.
+	router.use((_req, res) => {
+		res.status(404).json({ error: 'Not found' })
+	})
+
 	return router
 }
 

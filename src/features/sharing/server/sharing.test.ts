@@ -300,7 +300,7 @@ describe('Sharing (guest capability)', () => {
 
 	it('scopes a single-event share link to only that one event on read and write', async () => {
 		exchangeLimiterForTests.reset() // an earlier flood test spends this address's whole exchange window
-		const answer = await new CreateShareLink({ targetSourceId: target.id, role: ShareRole.Edit, entryId: sharedEntry.id }).run({ em: em.fork(), user })
+		const answer = await new CreateShareLink({ targetSourceId: target.id, role: ShareRole.Edit, overlays: [], entryId: sharedEntry.id }).run({ em: em.fork(), user })
 		assert.equal(answer.capability.entryId, sharedEntry.id)
 
 		// 1. Exchange
@@ -355,5 +355,11 @@ describe('Sharing (guest capability)', () => {
 		}, cookie)
 		assert.equal(updateRes.status, 200)
 		assert.equal((await em.fork().findOne(Entry, { id: sharedEntry.id }))?.heading, 'Solo event edited')
+	})
+
+	it('answers an unknown guest API path with a bare 404, never the owner sign-in redirect', async () => {
+		const response = await request('/no-such-route', {}, cookieOf((await capabilityOf(ShareRole.View)).token))
+		assert.equal(response.status, 404)
+		assert.match(await response.text(), /Not found/)
 	})
 })
