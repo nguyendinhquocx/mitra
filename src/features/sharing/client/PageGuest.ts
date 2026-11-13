@@ -29,6 +29,7 @@ export class PageGuest extends PageComponent {
 	@state() navigatingDate = new DateTime()
 	@state() targetName = ''
 	@state() overlayNames: Array<string> = []
+	@state() private isSingleEvent = false
 
 	private focusEntryId?: string
 	private stream?: UpdatesStream
@@ -94,10 +95,19 @@ export class PageGuest extends PageComponent {
 			role: 'view' | 'edit'
 			target: { id: string, name: string, color?: string }
 			overlays: Array<{ id: string, name: string, color?: string }>
+			entryId?: string
+			entryStart?: string
 		}
 		this.guestRole = scope.role
 		this.targetName = scope.target.name
 		this.overlayNames = scope.overlays.map(overlay => overlay.name)
+		if (scope.entryId) {
+			this.isSingleEvent = true
+			this.focusEntryId = scope.entryId
+			if (scope.entryStart) {
+				this.navigatingDate = new DateTime(Date.parse(scope.entryStart))
+			}
+		}
 
 		// A stand-in integration holds only the sources this link reaches; nothing of the owner's account loads here.
 		const integration = new MitraCalendar({ uri: MitraCalendar.uri })
@@ -149,7 +159,7 @@ export class PageGuest extends PageComponent {
 		void this.fetcher.run()
 	}
 
-	private readonly canEdit = () => this.phase === 'ready' && this.guestRole === 'edit'
+	private readonly canEdit = () => this.phase === 'ready' && this.guestRole === 'edit' && !this.isSingleEvent
 
 	// The app's stylesheet lives in the document; a shadow root would wall the guest surface off from it.
 	protected override createRenderRoot() { return this }

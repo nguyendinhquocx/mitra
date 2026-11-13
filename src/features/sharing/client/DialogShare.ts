@@ -22,6 +22,7 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 	@state() private targetSourceId?: string
 	@state() linkRole: ShareRole = ShareRole.View
 	@state() private overlays = new Set<string>()
+	@state() private singleEventOnly = true
 	@state() private createdToken?: string
 	@state() private copied = false
 	@state() private creating = false
@@ -41,7 +42,7 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 	}
 
 	private async refreshLinks() {
-		this.links = await ListShareLinks.call().catch(() => [])
+		this.links = (await ListShareLinks.call().catch(() => [])).filter(link => !link.revoked)
 	}
 
 	protected override createRenderRoot() { return this }
@@ -66,11 +67,11 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 	private get maskedUrl() {
 		return this.createdToken === undefined
 			? ''
-			: `${location.origin}/s#calx_••••${this.createdToken.slice(-6)}${this.parameters.entry ? `&entry=${this.parameters.entry.id}` : ''}`
+			: `${location.origin}/s#calx_••••${this.createdToken.slice(-6)}${this.parameters.entry && !this.singleEventOnly ? `&entry=${this.parameters.entry.id}` : ''}`
 	}
 
 	private linkUrlOf(token: string) {
-		const entry = this.parameters.entry ? `&entry=${this.parameters.entry.id}` : ''
+		const entry = this.parameters.entry && !this.singleEventOnly ? `&entry=${this.parameters.entry.id}` : ''
 		return `${location.origin}/s#${token}${entry}`
 	}
 
@@ -80,7 +81,9 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 		}
 		this.creating = true
 		try {
-			const { token } = await CreateShareLink.call({ targetSourceId: this.targetSourceId, role: this.linkRole, overlays: [...this.overlays] })
+			const entryId = this.parameters.entry && this.singleEventOnly ? this.parameters.entry.id : undefined
+			const overlays = entryId ? [] : [...this.overlays]
+			const { token } = await CreateShareLink.call({ targetSourceId: this.targetSourceId, role: this.linkRole, overlays, entryId })
 			this.createdToken = token
 			await this.refreshLinks()
 		} finally {
@@ -146,7 +149,19 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 			.share .overlays {
 				grid-column: 1 / -1;
 				display: grid;
-				gap: 0.25rem;
+				gap: 0.5rem;
+				padding-block: 0.25rem;
+
+				> span {
+					color: var(--color-text-muted);
+					font-size: 0.8rem;
+				}
+
+				> div {
+					display: flex;
+					flex-wrap: wrap;
+					gap: 0.5rem 1rem;
+				}
 			}
 
 			.share .actions {
@@ -223,9 +238,6 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 					<h2>${entry ? t('Share event') : t('Share calendar')}</h2>
 				</div>
 				<div class="share">
-					${!entry ? html.nothing : html`
-						<span class="note">${t('The link opens the whole shared calendar on this event. Anyone holding it may work inside that calendar, and nothing beyond it.')}</span>
-					`}
 					${this.createdToken === undefined ? html`
 						<div class="row">
 							<mitra-icon icon="calendar-days"></mitra-icon>
@@ -235,6 +247,15 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 								${Calendars.enabled.map(source => html`<mitra-option .value=${source.id}>${source.name}</mitra-option>`)}
 							</mitra-select>
 						</div>
+						${!entry ? html.nothing : html`
+							<div class="row">
+								<mitra-icon icon="calendar-check"></mitra-icon>
+								<mitra-checkbox
+									.checked=${live(this.singleEventOnly)}
+									@change=${(e: CustomEvent<boolean>) => { this.singleEventOnly = e.detail; this.requestUpdate() }}
+								>${t('Only share this event')}</mitra-checkbox>
+							</div>
+						`}
 						${!this.needsScopeWarning ? html.nothing : html`
 							<span class="note">${t('A Google calendar is shared whole: every event inside it lies within the link, yours included. Check it is the calendar to share.')}</span>
 						`}
@@ -247,9 +268,10 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 								<mitra-option .value=${'edit' as const}>${t('View and edit')}</mitra-option>
 							</mitra-select>
 						</div>
-						${!this.allSources.length ? html.nothing : html`
+						${!this.allSources.length || (entry && this.singleEventOnly) ? html.nothing : html`
 							<div class="overlays">
-								${this.allSources.map(source => html`
+								<span>${t('Also visible to the guest (read-only)')}</span>
+								<div>${this.allSources.map(source => html`
 									<mitra-checkbox title=${t('Also visible to the guest (read-only)')}
 										.checked=${live(this.overlays.has(source.id))}
 										@change=${(e: CustomEvent<boolean>) => {
@@ -261,7 +283,7 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 											this.requestUpdate()
 										}}
 									>${source.name}</mitra-checkbox>
-								`)}
+								`)}</div>
 							</div>
 						`}
 						<div class="actions">
@@ -275,7 +297,6 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 							<span>${this.maskedUrl}</span>
 							<mitra-button variant="primary" icon=${this.copied ? 'check' : 'copy'} @click=${() => void this.copy()}>${this.copied ? t('Copied') : t('Copy')}</mitra-button>
 						</div>
-						<span class="note">${t('The full link is copied to the clipboard. Anyone holding it works with this scope until the link is revoked.')}</span>
 					`}
 					${!this.links.length ? html.nothing : html`
 						<div class="links">

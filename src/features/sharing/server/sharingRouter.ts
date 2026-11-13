@@ -1,11 +1,13 @@
 import { Router, type Request, type RequestHandler, type Response } from 'express'
 import { DateTimeRange } from '@3mo/date-time'
+import { ModelValueConstructor } from '@a11d/api-model-value-constructor'
 import { createLogger } from '#infrastructure/logging/Logger.js'
 import { orm } from '#infrastructure/database/orm.js'
 import { environment } from '#infrastructure/server/Environment.js'
 import { updates } from '#infrastructure/realtime/Updates.js'
 import { User } from '#features/identity'
 import { Source } from '#features/sources'
+import { Entry } from '#features/entries'
 import { ShareCapability, ShareRole } from '../ShareCapability.js'
 import { ShareOperation, shareOperationRetentionMs } from './ShareOperation.js'
 import { RateLimiter } from './rateLimit.js'
@@ -26,6 +28,8 @@ const logger = createLogger('Sharing')
 
 /** The one line each limiter takes: recorded defaults live on the RateLimiter, overridable by `MITRA_SHARE_*`. */
 const exchangeLimiter = new RateLimiter(environment.share.exchange, 60_000)
+/** Exposed for tests: a flood scenario leaves the per-address window spent, and the next test resets it. */
+export const exchangeLimiterForTests = exchangeLimiter
 const writeLimiter = new RateLimiter(environment.share.write, 60_000)
 const streamLimiter = new RateLimiter(environment.share.stream, 60_000)
 
@@ -117,6 +121,13 @@ async function oncePerOperation<T>(context: GuestContext, req: Request, run: () 
 	return { result }
 }
 
+/** Preserve already-revived model fields; path and scope overrides remain authoritative. */
+function guestBody(body: unknown, overrides: Record<string, unknown>) {
+	const object = body && typeof body === 'object' && !Array.isArray(body) ? body : {}
+	const built = ModelValueConstructor.typeNameOf(object) ? object : undefined
+	return { values: { ...built ? {} : object, ...overrides }, built }
+}
+
 /** The relations a body names, whatever shape it arrived in, as bare `{ targetUid }` rows for the scope check. */
 function relationTargetsOf(body: unknown): Array<{ targetUid?: string }> | undefined {
 	const relations = (body as { relations?: unknown })?.relations
@@ -164,6 +175,14 @@ export function sharingRouter() {
 		if (!owner || !target) {
 			return res.status(410).json({ error: 'The shared calendar is gone. Ask its owner for a new link' })
 		}
+		let entryInfo: { id: string, heading: string, start?: string } | undefined
+		if (capability.entryId) {
+			const entry = await em.findOne(Entry, { id: capability.entryId, sourceId: target.id })
+			if (!entry) {
+				return res.status(410).json({ error: 'The shared event is gone. Ask its owner for a new link' })
+			}
+			entryInfo = { id: entry.id!, heading: entry.heading, start: entry.start?.toISOString() }
+		}
 		res.cookie(ShareCapability.cookie, token, {
 			httpOnly: true,
 			secure: true, // `__Host-` demands it; localhost counts as secure, and a plain-HTTP LAN host cannot hold this cookie.
@@ -175,8 +194,10 @@ export function sharingRouter() {
 		return res.status(200).json({
 			capabilityId: capability.id,
 			role: capability.role,
-			target: { id: target.id, name: target.name, color: target.color?.value },
+			target: { id: target.id, name: entryInfo ? entryInfo.heading || target.name : target.name, color: target.color?.value },
 			overlays: [] as Array<{ id: string, name: string, color?: string }>,
+			entryId: capability.entryId,
+			entryStart: entryInfo?.start,
 		})
 	})
 
@@ -186,18 +207,29 @@ export function sharingRouter() {
 		if (!target) {
 			throw new ShareAccessError(410, 'The shared calendar is gone. Ask its owner for a new link')
 		}
+		let entryInfo: { id: string, heading: string, start?: string } | undefined
+		if (context.capability.entryId) {
+			const entry = await context.em.findOne(Entry, { id: context.capability.entryId, sourceId: target.id })
+			if (entry) {
+				entryInfo = { id: entry.id!, heading: entry.heading, start: entry.start?.toISOString() }
+			}
+		}
 		const overlays = new Array<{ id: string, name: string, color?: string }>()
-		for (const id of context.capability.overlays ?? []) {
-			const overlay = await context.em.findOne(Source, { id })
-			if (overlay) {
-				overlays.push({ id: overlay.id, name: overlay.name, color: overlay.color?.value })
+		if (!context.capability.entryId) {
+			for (const id of context.capability.overlays ?? []) {
+				const overlay = await context.em.findOne(Source, { id })
+				if (overlay) {
+					overlays.push({ id: overlay.id, name: overlay.name, color: overlay.color?.value })
+				}
 			}
 		}
 		return res.status(200).json({
 			capabilityId: context.capability.id,
 			role: context.capability.role,
-			target: { id: target.id, name: target.name, color: target.color?.value },
+			target: { id: target.id, name: entryInfo ? entryInfo.heading || target.name : target.name, color: target.color?.value },
 			overlays,
+			entryId: context.capability.entryId,
+			entryStart: entryInfo?.start,
 		})
 	}))
 
@@ -239,9 +271,12 @@ export function sharingRouter() {
 		if (context.capability.role !== ShareRole.Edit) {
 			throw new ShareAccessError(403, 'This link can only view')
 		}
+		if (context.capability.entryId) {
+			throw new ShareAccessError(403, 'This link only allows viewing or editing a single event, not creating new ones')
+		}
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
-		const values = { ...(req.body as object), sourceId: context.capability.targetSourceId }
-		const operation = CreateEntry.fromValues(values as never)
+		const { values, built } = guestBody(req.body, { sourceId: context.capability.targetSourceId })
+		const operation = CreateEntry.fromValues(values, built)
 		const { result, replayed } = await oncePerOperation(context, req, async () => {
 			const created = await operation.run({ em: context.em, user: context.owner })
 			return created
@@ -263,7 +298,8 @@ export function sharingRouter() {
 			throw new ShareAccessError(403, 'An entry of the shared calendar stays inside it')
 		}
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
-		const operation = UpdateEntry.fromValues({ ...(req.body as object), id: existing.id } as never)
+		const { values, built } = guestBody(req.body, { id: existing.id })
+		const operation = UpdateEntry.fromValues(values, built)
 		const { result, replayed } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
 		if (replayed !== undefined) {
 			return scopedAnswer(context, res, 200, replayed)
@@ -274,6 +310,9 @@ export function sharingRouter() {
 
 	router.delete('/entries/:id', sameOriginWrites, guest(async (req, res, context) => {
 		writeGuard(res, context)
+		if (context.capability.entryId) {
+			throw new ShareAccessError(403, 'A link to one event cannot delete it')
+		}
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		const operation = DeleteEntry.fromValues({ id: existing.id } as never)
@@ -284,6 +323,9 @@ export function sharingRouter() {
 
 	router.put('/entries/:id/occurrences/:occurrence', sameOriginWrites, guest(async (req, res, context) => {
 		writeGuard(res, context)
+		if (context.capability.entryId) {
+			throw new ShareAccessError(403, 'A single-event link cannot detach individual occurrences')
+		}
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		// The occurrence patch carries the wire's sourceId too: without this clamp an edit link could move the entry,
@@ -293,7 +335,8 @@ export function sharingRouter() {
 			throw new ShareAccessError(403, 'An entry of the shared calendar stays inside it')
 		}
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
-		const operation = UpdateEntryOccurrence.fromValues({ ...(req.body as object), id: existing.id, occurrence: String(req.params.occurrence), scope: (req.body as { scope?: string }).scope ?? 'this' } as never)
+		const { values, built } = guestBody(req.body, { id: existing.id, occurrence: String(req.params.occurrence), scope: String(req.query.scope ?? 'this') })
+		const operation = UpdateEntryOccurrence.fromValues(values, built)
 		const { result, replayed } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
 		if (replayed !== undefined) {
 			return scopedAnswer(context, res, 200, replayed)

@@ -48,11 +48,20 @@ export async function resolveGuest(req: Request): Promise<GuestContext> {
 	if (!owner || !targetExists) {
 		throw new ShareAccessError(410, 'The shared calendar is gone. Ask its owner for a new link')
 	}
+	if (capability.entryId) {
+		const entry = await em.findOne(Entry, { id: capability.entryId, sourceId: capability.targetSourceId })
+		if (!entry) {
+			throw new ShareAccessError(410, 'The shared event is gone. Ask its owner for a new link')
+		}
+	}
 	return { em, capability, owner, scope: capability.scope }
 }
 
 /** The entry `id` names, provided it sits inside what the link reaches; anything else is a denial, not a 404. */
 export async function guestEntry(context: GuestContext, id: string) {
+	if (context.capability.entryId && id !== context.capability.entryId) {
+		throw new ShareAccessError(403, 'This link only reaches a single event')
+	}
 	const entry = await context.em.findOne(Entry, { id })
 	if (!entry) {
 		throw new ShareAccessError(404, 'No such entry')
@@ -92,6 +101,25 @@ export async function assertRelationsInScope(context: GuestContext, relations: R
  * relations whose both ends the scope holds: a relation from a private calendar is neither returned nor followed.
  */
 export async function scopedEntries(context: GuestContext, range?: DateTimeRange, limit?: number) {
+	if (context.capability.entryId) {
+		const entries = await context.em.find(Entry, {
+			$and: [
+				{ id: context.capability.entryId },
+				{ sourceId: context.capability.targetSourceId },
+				{ recurrenceId: null },
+			],
+		})
+		const recurring = entries.filter(entry => entry.recurrence)
+		const overrides = recurring.length
+			? await context.em.find(Entry, { recurringEntryId: { $in: recurring.map(entry => entry.id!) }, sourceId: context.capability.targetSourceId })
+			: []
+		const byEntry = Map.groupBy(overrides, override => override.recurringEntryId!)
+		for (const entry of recurring) {
+			entry.overrides = byEntry.get(entry.id!) ?? []
+		}
+		await attachScopedRelations(context, entries)
+		return entries
+	}
 	const scope = [...context.scope]
 	const entries = await context.em.find(Entry, {
 		$and: [
@@ -114,6 +142,17 @@ export async function scopedEntries(context: GuestContext, range?: DateTimeRange
 
 /** The entries a search finds inside the scope, newest first, the availability background left out. */
 export async function searchedEntries(context: GuestContext, query: string) {
+	if (context.capability.entryId) {
+		const found = await context.em.find(Entry, {
+			$and: [
+				{ id: context.capability.entryId },
+				{ sourceId: context.capability.targetSourceId },
+				User.matching(query),
+			],
+		}, { limit: 1 })
+		await attachScopedRelations(context, found)
+		return found
+	}
 	const found = await context.em.find(Entry, {
 		$and: [{ sourceId: { $in: [...context.scope] } }, User.matching(query)],
 	}, { limit: 20, orderBy: { start: 'desc' } })

@@ -1,7 +1,8 @@
 import { description, label } from '@a11d/metadata'
 import { z } from 'zod'
-import { validation } from '#infrastructure/validation'
+import { validation, ValidationError } from '#infrastructure/validation'
 import { http, operation, Operation, type OperationContext } from '#infrastructure/operations/Operation.js'
+import { Entry } from '#features/entries'
 import { ShareCapability, ShareRole } from '../ShareCapability.js'
 import { takeLinkShot } from './rateLimit.js'
 
@@ -17,6 +18,10 @@ class Parameters {
 	@validation(z.array(z.string()).max(50))
 	@description('Other calendars the guest may read along, always read-only; the target stays the only writable one.')
 	readonly overlays: Array<string> = []
+
+	@validation(z.string().optional())
+	@description('The one entry this link reaches, if restricted to a single event.')
+	readonly entryId?: string
 }
 
 @operation(Parameters)
@@ -27,15 +32,23 @@ export class CreateShareLink extends Operation<Parameters, { capability: ShareCa
 	async run({ em, user }: OperationContext) {
 		takeLinkShot(user.id)
 		const target = await user.getSource(em, this.parameters.targetSourceId)
-		const overlays: Array<string> = []
-		for (const sourceId of this.parameters.overlays) {
-			if (sourceId === target.id) {
-				continue
+		if (this.parameters.entryId) {
+			const entry = await em.findOne(Entry, { id: this.parameters.entryId, sourceId: target.id })
+			if (!entry) {
+				throw new ValidationError('The specified entry does not belong to the selected calendar')
 			}
-			await user.getSource(em, sourceId)
-			overlays.push(sourceId)
 		}
-		const { capability, token } = await ShareCapability.issue(user, target, this.parameters.role, overlays)
+		const overlays: Array<string> = []
+		if (!this.parameters.entryId) {
+			for (const sourceId of this.parameters.overlays) {
+				if (sourceId === target.id) {
+					continue
+				}
+				await user.getSource(em, sourceId)
+				overlays.push(sourceId)
+			}
+		}
+		const { capability, token } = await ShareCapability.issue(user, target, this.parameters.role, overlays, this.parameters.entryId)
 		em.persist(capability)
 		await em.flush()
 		this.logger.info(`Created a ${capability.role} share link for source ${capability.targetSourceId}`)

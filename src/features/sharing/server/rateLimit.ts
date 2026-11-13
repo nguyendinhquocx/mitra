@@ -40,6 +40,11 @@ export class RateLimiter {
 		}
 		this.lastSweptAt = now
 	}
+
+	/** Clears every bucket, so a test can isolate a rate-limited scenario from an earlier flood. */
+	reset() {
+		this.buckets.clear()
+	}
 }
 
 /** The one bucket every owner link mutation (create, revoke, overlays, dedicated Google calendar) draws from. */

@@ -450,6 +450,7 @@ declare global {
 		"on the last ${weekday}": unknown
 		"One calendar to plan your events and tasks": unknown
 		"One for each connection, so you can revoke each on its own": unknown
+		"Only share this event": unknown
 		"Only Show ${name}": unknown
 		"Only show this calendar": unknown
 		"Only the organizer can change participants": unknown
@@ -597,11 +598,9 @@ declare global {
 		"The calendars of your Google account": unknown
 		"The calendars of your iCloud account": unknown
 		"The file stays exactly as it is": unknown
-		"The full link is copied to the clipboard. Anyone holding it works with this scope until the link is revoked.": unknown
 		"The hours you book on Jira issues": unknown
 		"the last ${weekday}": unknown
 		"The link could not be opened": unknown
-		"The link opens the whole shared calendar on this event. Anyone holding it may work inside that calendar, and nothing beyond it.": unknown
 		"The originals stay exactly where they are": unknown
 		"The owner has revoked it, or the shared calendar is gone. Ask for a new link to continue.": unknown
 		"The shared calendar cannot be reached right now. Your last view stays as it was.": unknown

@@ -26,7 +26,7 @@ export class ShareCapability {
 	static readonly sessionLifetime = 12 * 60 * 60 * 1000
 
 	/** A new capability for `owner`'s `target`: the record to keep, and the token to show once (a ≥256-bit CSPRNG secret). */
-	static async issue(owner: User, target: Source, role: ShareRole, overlays: ReadonlyArray<string> = []) {
+	static async issue(owner: User, target: Source, role: ShareRole, overlays: ReadonlyArray<string> = [], entryId?: string) {
 		const token = `${ShareCapability.prefix}${ShareCapability.hexOf(crypto.getRandomValues(new Uint8Array(32)))}`
 		const capability = new ShareCapability({
 			id: crypto.randomUUID(),
@@ -35,6 +35,7 @@ export class ShareCapability {
 			targetSourceId: target.id,
 			role,
 			overlays: [...overlays],
+			entryId: entryId ?? undefined,
 			createdAt: new Date(),
 		})
 		return { capability, token }
@@ -62,6 +63,9 @@ export class ShareCapability {
 
 	/** Other calendars of the owner the guest sees, read-only. Owner-managed; guests never write this list. */
 	@property({ type: 'json', nullable: true }) overlays?: Array<string>
+
+	/** When set, the link reaches only this single entry inside targetSourceId. Other entries in the calendar are omitted. */
+	@property({ type: 'string', fieldName: 'entry_id', nullable: true }) entryId?: string
 
 	@property({ type: 'Date', nullable: true }) revokedAt?: Date
 

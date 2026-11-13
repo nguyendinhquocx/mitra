@@ -17,7 +17,7 @@ import { ShareOperation } from './ShareOperation.js'
 import { RevokeShareLink } from './RevokeShareLink.js'
 import { CreateShareLink } from './CreateShareLink.js'
 import { UpdateShareLinkOverlays } from './UpdateShareLinkOverlays.js'
-import { sweepShareOperations } from './sharingRouter.js'
+import { exchangeLimiterForTests, sweepShareOperations } from './sharingRouter.js'
 
 /** The guest API as a hostile client would reach it: real HTTP, a cookie the test sets, no owner session anywhere. */
 describe('Sharing (guest capability)', () => {
@@ -167,6 +167,17 @@ describe('Sharing (guest capability)', () => {
 		assert.ok(!body.includes(privateEntry.uid!))
 	})
 
+	it('persists a guest edit sent as the browser EntryPatch model', async () => {
+		const cookie = cookieOf((await capabilityOf(ShareRole.Edit)).token)
+		const response = await request(`/entries/${sharedEntry.id}`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', type: 'event', heading: 'Guest edit persisted', start: '2027-01-10T10:00:00.000Z', end: '2027-01-10T11:00:00.000Z' }),
+		}, cookie)
+		assert.equal(response.status, 200, await response.text())
+		assert.equal((await em.fork().findOne(Entry, { id: sharedEntry.id }))?.heading, 'Guest edit persisted')
+	})
+
 	it('answers a guest write without leaking the owner relation graph into the JSON', async () => {
 		// A private entry points at this shared entry: the mutation's raw answer once carried the private side along.
 		const { token } = await capabilityOf(ShareRole.Edit)
@@ -285,5 +296,64 @@ describe('Sharing (guest capability)', () => {
 		const stored = await em.findOne(ShareCapability, { id: answer.capability.id })
 		assert.ok(stored?.hash)
 		assert.notEqual(stored.hash, answer.token)
+	})
+
+	it('scopes a single-event share link to only that one event on read and write', async () => {
+		exchangeLimiterForTests.reset() // an earlier flood test spends this address's whole exchange window
+		const answer = await new CreateShareLink({ targetSourceId: target.id, role: ShareRole.Edit, entryId: sharedEntry.id }).run({ em: em.fork(), user })
+		assert.equal(answer.capability.entryId, sharedEntry.id)
+
+		// 1. Exchange
+		const exchange = await fetch(`${url}/s/api/exchange`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ token: answer.token }),
+		})
+		assert.equal(exchange.status, 200)
+		const exchangeData = await exchange.json() as { entryId?: string, target: { name: string } }
+		assert.equal(exchangeData.entryId, sharedEntry.id)
+		assert.equal(exchangeData.target.name, sharedEntry.heading)
+
+		const cookie = cookieOf(answer.token)
+
+		// 2. Bootstrap
+		const bootstrap = await (await request('/bootstrap', {}, cookie)).json() as { entryId?: string, overlays: Array<unknown> }
+		assert.equal(bootstrap.entryId, sharedEntry.id)
+		assert.deepEqual(bootstrap.overlays, [])
+
+		// 3. GET /entries returns ONLY this entry
+		const entries = await (await request(`/entries?start=${instant('2027-01-01T00:00:00Z')}&end=${instant('2027-01-31T00:00:00Z')}`, {}, cookie)).json() as Array<{ id: string }>
+		assert.equal(entries.length, 1)
+		assert.equal(entries[0]!.id, sharedEntry.id)
+
+		// 4. Searching for other entries returns nothing
+		const searchWork = await (await request('/entries/search?query=Work', {}, cookie)).json() as Array<unknown>
+		assert.equal(searchWork.length, 0)
+		const searchShared = await (await request('/entries/search?query=Shared', {}, cookie)).json() as Array<{ id: string }>
+		assert.equal(searchShared.length, 1)
+		assert.equal(searchShared[0]!.id, sharedEntry.id)
+
+		// 5. Direct GET for other entries in the same calendar or overlay is rejected with 403
+		assert.equal((await request(`/entries/${overlayEntry.id}`, {}, cookie)).status, 403)
+
+		// 6. Creating new entries is forbidden
+		const createAttempt = await request('/entries', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', type: 'event', heading: 'Sneaked event', start: '2027-01-10T10:00:00.000Z', end: '2027-01-10T11:00:00.000Z' }),
+		}, cookie)
+		assert.equal(createAttempt.status, 403)
+
+		// 7. Deleting the single event is forbidden
+		assert.equal((await request(`/entries/${sharedEntry.id}`, { method: 'DELETE' }, cookie)).status, 403)
+
+		// 8. Updating the single event succeeds and persists
+		const updateRes = await request(`/entries/${sharedEntry.id}`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', type: 'event', heading: 'Solo event edited', start: '2027-01-10T10:00:00.000Z', end: '2027-01-10T11:00:00.000Z' }),
+		}, cookie)
+		assert.equal(updateRes.status, 200)
+		assert.equal((await em.fork().findOne(Entry, { id: sharedEntry.id }))?.heading, 'Solo event edited')
 	})
 })
