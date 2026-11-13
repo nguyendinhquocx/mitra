@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { validation } from '#infrastructure/validation'
 import { http, operation, Operation, type OperationContext } from '#infrastructure/operations/Operation.js'
 import { ShareCapability, ShareRole } from '../ShareCapability.js'
+import { takeLinkShot } from './rateLimit.js'
 
 class Parameters {
 	@validation(z.string())
@@ -24,6 +25,7 @@ class Parameters {
 @http({ method: 'POST', path: '/shares', status: 201 })
 export class CreateShareLink extends Operation<Parameters, { capability: ShareCapability, token: string }> {
 	async run({ em, user }: OperationContext) {
+		takeLinkShot(user.id)
 		const target = await user.getSource(em, this.parameters.targetSourceId)
 		const overlays: Array<string> = []
 		for (const sourceId of this.parameters.overlays) {

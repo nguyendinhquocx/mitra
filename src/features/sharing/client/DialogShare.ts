@@ -32,7 +32,10 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 		if (this.parameters.entry) {
 			this.targetSourceId = this.parameters.entry.sourceId
 		}
-		this.targetSourceId ??= Calendars.visible.find(source => source.writable && source.integration.type === 'google')?.id
+		// The default is a calendar created for sharing; without one, a CalendarX-only source, never a personal
+		// Google calendar — sharing that one is the accident this dialog exists to prevent.
+		this.targetSourceId ??= Calendars.visible.find(source => source.writable && source.isShareTarget)?.id
+		this.targetSourceId ??= Calendars.visible.find(source => source.writable && source.integration.type === 'mitra')?.id
 			?? Calendars.visible.find(source => source.writable)?.id
 		await this.refreshLinks()
 	}
@@ -114,7 +117,7 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 	static override get styles() {
 		return css`
 			calendarx-dialog-share {
-				--mitra-dialog-width: 34rem;
+				--mitra-dialog-width: min(34rem, 92vw);
 			}
 
 			.share {

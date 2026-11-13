@@ -37,8 +37,12 @@ export class PageGuest extends PageComponent {
 
 	readonly fetcher = new Task(this, {
 		args: () => [this.phase, this.view, this.navigatingDate.month] as const,
+		// No autoRun: the first render happens before the exchange has pointed the API at /s, and a stray request to
+		// the owner's API from a link holder is exactly what this surface exists to prevent.
+		autoRun: false,
 		task: async () => {
-			const today = new DateTime()
+			// The window answers the period in view, so paging away keeps bringing its entries, not today's.
+			const today = this.navigatingDate
 			const start = this.view === 'week'
 				? today.subtract({ days: 21 })
 				: today.monthStart.subtract({ months: 2 })
@@ -104,6 +108,8 @@ export class PageGuest extends PageComponent {
 			name: source.name,
 			color: source.color ? Color.parse(source.color) : undefined,
 			entryTypes: [EntryType.Event, EntryType.Task],
+			// A view-only link's sources read as read-only, so the editor arrives without its mutation actions.
+			readOnly: this.guestRole !== 'edit',
 			enabled: true,
 			hidden: false,
 			order: index,
@@ -140,6 +146,7 @@ export class PageGuest extends PageComponent {
 	private step(direction: 1 | -1) {
 		const step = this.view === 'week' ? { days: 7 } : { months: 1 }
 		this.navigatingDate = direction > 0 ? this.navigatingDate.add(step) : this.navigatingDate.subtract(step)
+		void this.fetcher.run()
 	}
 
 	private readonly canEdit = () => this.phase === 'ready' && this.guestRole === 'edit'
@@ -328,7 +335,7 @@ export class PageGuest extends PageComponent {
 				</span>
 				<div class="trailing">
 					<h1>${heading}</h1>
-					<mitra-select class="view" label=${t('View')} .value=${this.view} @change=${(e: CustomEvent<'week' | 'month'>) => this.view = e.detail}>
+					<mitra-select class="view" label=${t('View')} .value=${this.view} @change=${(e: CustomEvent<'week' | 'month'>) => { this.view = e.detail; void this.fetcher.run() }}>
 						<mitra-option .value=${'week' as const}>${t('Week')}</mitra-option>
 						<mitra-option .value=${'month' as const}>${t('Month')}</mitra-option>
 					</mitra-select>
@@ -337,7 +344,7 @@ export class PageGuest extends PageComponent {
 					` : html.nothing}
 					<div class="period" role="group">
 						<mitra-icon-button icon="chevron-left" label=${t('Previous')} @click=${() => this.step(-1)}></mitra-icon-button>
-						<mitra-button @click=${() => this.navigatingDate = new DateTime()}>${t('Today')}</mitra-button>
+						<mitra-button @click=${() => { this.navigatingDate = new DateTime(); void this.fetcher.run() }}>${t('Today')}</mitra-button>
 						<mitra-icon-button icon="chevron-right" label=${t('Next')} @click=${() => this.step(1)}></mitra-icon-button>
 					</div>
 				</div>
@@ -366,7 +373,7 @@ export class PageGuest extends PageComponent {
 						<mitra-weeks
 							.occurrences=${this.store.shown}
 							.navigatingDate=${bind(this, 'navigatingDate', { event: 'navigate' })}
-							@switchToWeek=${() => this.view = 'week'}
+							@switchToWeek=${() => { this.view = 'week'; void this.fetcher.run() }}
 						></mitra-weeks>
 					`}
 				`}

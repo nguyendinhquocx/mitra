@@ -29,6 +29,17 @@ const exchangeLimiter = new RateLimiter(environment.share.exchange, 60_000)
 const writeLimiter = new RateLimiter(environment.share.write, 60_000)
 const streamLimiter = new RateLimiter(environment.share.stream, 60_000)
 
+/** Answers a mutation the way reads are scoped: the owner's relation graph must not leak through the JSON body. */
+async function scopedAnswer(context: GuestContext, res: Response, status: number, entry: unknown) {
+	await attachScopedRelations(context, [entry as never])
+	return res.status(status).json(entry)
+}
+
+/** Publishes a guest mutation to the update stream, so the owner's open tabs learn of it at once. */
+function announce(operation: object, context: GuestContext, subject?: { readonly sourceId?: string }) {
+	updates.dispatchFor(operation, context.owner, subject ?? undefined)
+}
+
 /** Share answers are private and perishable: no cache, no crawler, no referrer leakage. */
 const shareHeaders: RequestHandler = (_req, res, next) => {
 	res.setHeader('Cache-Control', 'no-store')
@@ -236,10 +247,11 @@ export function sharingRouter() {
 			return created
 		})
 		if (replayed !== undefined) {
-			return res.status(201).json(replayed)
+			return scopedAnswer(context, res, 201, replayed)
 		}
 		logger.debug(`Guest created an entry in shared target ${context.capability.targetSourceId}`)
-		return res.status(201).json(result)
+		announce(operation, context, result as { sourceId?: string })
+		return scopedAnswer(context, res, 201, result)
 	}))
 
 	router.put('/entries/:id', sameOriginWrites, guest(async (req, res, context) => {
@@ -254,9 +266,10 @@ export function sharingRouter() {
 		const operation = UpdateEntry.fromValues({ ...(req.body as object), id: existing.id } as never)
 		const { result, replayed } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
 		if (replayed !== undefined) {
-			return res.status(200).json(replayed)
+			return scopedAnswer(context, res, 200, replayed)
 		}
-		return res.status(200).json(result)
+		announce(operation, context, result as { sourceId?: string })
+		return scopedAnswer(context, res, 200, result)
 	}))
 
 	router.delete('/entries/:id', sameOriginWrites, guest(async (req, res, context) => {
@@ -265,6 +278,7 @@ export function sharingRouter() {
 		assertGuestWritable(context, existing)
 		const operation = DeleteEntry.fromValues({ id: existing.id } as never)
 		await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
+		announce(operation, context, existing)
 		return res.status(204).end()
 	}))
 
@@ -272,13 +286,20 @@ export function sharingRouter() {
 		writeGuard(res, context)
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
+		// The occurrence patch carries the wire's sourceId too: without this clamp an edit link could move the entry,
+		// this occurrence or the series, onto a read-only overlay or a calendar the link never reached.
+		const body = req.body as { sourceId?: string }
+		if (body.sourceId !== undefined && body.sourceId !== context.capability.targetSourceId) {
+			throw new ShareAccessError(403, 'An entry of the shared calendar stays inside it')
+		}
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
 		const operation = UpdateEntryOccurrence.fromValues({ ...(req.body as object), id: existing.id, occurrence: String(req.params.occurrence), scope: (req.body as { scope?: string }).scope ?? 'this' } as never)
 		const { result, replayed } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
 		if (replayed !== undefined) {
-			return res.status(200).json(replayed)
+			return scopedAnswer(context, res, 200, replayed)
 		}
-		return res.status(200).json(result)
+		announce(operation, context, result as { sourceId?: string })
+		return scopedAnswer(context, res, 200, result)
 	}))
 
 	router.delete('/entries/:id/occurrences/:occurrence', sameOriginWrites, guest(async (req, res, context) => {
@@ -336,14 +357,20 @@ export function sharingRouter() {
 	// The scoped stream: entry changes the link reaches, and nothing else; a revoke closes it mid-flight.
 	router.get('/stream', async (req, res, next) => {
 		let context: GuestContext
+		// Armed before the guest is resolved: a revoke committing while resolution is still underway must not slip
+		// past this stream, leaving it open with a capability that no longer exists.
+		const revocationsWhileResolving = new Set<string>()
+		const unsubscribeWhileResolving = subscribeToRevocations(id => revocationsWhileResolving.add(id))
 		try {
 			context = await resolveGuest(req)
 		} catch (error) {
+			unsubscribeWhileResolving()
 			if (error instanceof ShareAccessError) {
 				return res.status(error.status).json({ error: error.message })
 			}
 			return next(error)
 		}
+		unsubscribeWhileResolving()
 		const limit = streamLimiter.take(req.ip ?? 'unknown')
 		if (!limit.allowed) {
 			res.setHeader('Retry-After', String(limit.retryAfterSeconds))
@@ -357,6 +384,10 @@ export function sharingRouter() {
 		// Flushed at once: an SSE stream may stay silent until its first change, and a client waiting on the headers must not hang.
 		res.flushHeaders()
 		const capability = context.capability
+		if (revocationsWhileResolving.has(capability.id)) {
+			res.write('event: revoked\ndata: revoked\n\n')
+			return res.end()
+		}
 		const scope = new Set(capability.scope)
 		const unsubscribe = updates.subscribe((userId, updateScope, sourceId) => {
 			if (userId !== capability.ownerId) {

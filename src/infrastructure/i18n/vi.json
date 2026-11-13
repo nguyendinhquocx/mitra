@@ -667,6 +667,7 @@
 	"The full link is copied to the clipboard. Anyone holding it works with this scope until the link is revoked.": "Liên kết đầy đủ đã được sao chép vào bộ nhớ tạm. Ai giữ liên kết đều làm việc trong phạm vi này cho tới khi liên kết bị thu hồi.",
 	"Revoke": "Thu hồi",
 	"Revoked": "Đã thu hồi",
+	"A removed calendar": "Một lịch đã bị gỡ",
 	"Shared calendar": "Lịch được chia sẻ",
 	"Opening the shared calendar…": "Đang mở lịch được chia sẻ…",
 	"This link is no longer active": "Liên kết này không còn hoạt động",
@@ -678,5 +679,8 @@
 	"The shared calendar cannot be reached right now. Your last view stays as it was.": "Hiện không truy cập được lịch được chia sẻ. Lần xem gần nhất vẫn giữ nguyên.",
 	"Nothing here yet": "Chưa có gì",
 	"This shared calendar is empty. Create the first entry.": "Lịch được chia sẻ còn trống. Tạo sự kiện đầu tiên.",
-	"The shared calendar is empty for now.": "Lịch được chia sẻ hiện vẫn trống."
+	"The shared calendar is empty for now.": "Lịch được chia sẻ hiện vẫn trống.",
+	"Try again": "Thử lại",
+	"Copied": "Đã sao chép",
+	"Previous": "Trước"
 }

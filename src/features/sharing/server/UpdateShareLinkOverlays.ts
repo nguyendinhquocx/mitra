@@ -5,6 +5,7 @@ import { validation } from '#infrastructure/validation'
 import { updates } from '#infrastructure/realtime/Updates.js'
 import { http, operation, Operation, type OperationContext } from '#infrastructure/operations/Operation.js'
 import { ShareCapability } from '../ShareCapability.js'
+import { takeLinkShot } from './rateLimit.js'
 
 class Parameters {
 	@validation(z.string())
@@ -23,6 +24,7 @@ class Parameters {
 @updates('entries')
 export class UpdateShareLinkOverlays extends Operation<Parameters, void> {
 	async run({ em, user }: OperationContext) {
+		takeLinkShot(user.id)
 		const capability = await em.findOne(ShareCapability, { id: this.parameters.id, ownerId: user.id })
 		if (!capability) {
 			throw new NotFoundError('No such share link')

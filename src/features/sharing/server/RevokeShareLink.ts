@@ -5,6 +5,7 @@ import { validation } from '#infrastructure/validation'
 import { http, operation, Operation, type OperationContext } from '#infrastructure/operations/Operation.js'
 import { ShareCapability } from '../ShareCapability.js'
 import { announceRevocation } from './shareRevocations.js'
+import { takeLinkShot } from './rateLimit.js'
 
 class Parameters {
 	@validation(z.string())
@@ -18,6 +19,7 @@ class Parameters {
 @http({ method: 'DELETE', path: '/shares/:id' })
 export class RevokeShareLink extends Operation<Parameters, void> {
 	async run({ em, user }: OperationContext) {
+		takeLinkShot(user.id)
 		const capability = await em.findOne(ShareCapability, { id: this.parameters.id, ownerId: user.id })
 		if (!capability) {
 			throw new NotFoundError('No such share link')

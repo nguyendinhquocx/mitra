@@ -5,6 +5,7 @@ import { validation, ValidationError } from '#infrastructure/validation'
 import { updates } from '#infrastructure/realtime/Updates.js'
 import { http, operation, Operation, type OperationContext } from '#infrastructure/operations/Operation.js'
 import { Integration } from '#integrations'
+import { takeLinkShot } from './rateLimit.js'
 import { GoogleCalendar } from '#integrations/google/GoogleCalendar.js'
 
 class Parameters {
@@ -26,6 +27,7 @@ class Parameters {
 @updates('sources')
 export class CreateGoogleShareCalendar extends Operation<Parameters, { sourceId: string | undefined }> {
 	async run({ em, user }: OperationContext) {
+		takeLinkShot(user.id)
 		const integration = await em.findOne(GoogleCalendar, { userId: user.id })
 		if (!integration) {
 			throw new ValidationError('Google Calendar is not connected. Connect it first, then create the calendar')
@@ -47,8 +49,12 @@ export class CreateGoogleShareCalendar extends Operation<Parameters, { sourceId:
 			await integration.getSources(em)
 			await em.flush()
 		})
+		// The calendar made for sharing wears the marker, so the share dialog answers it as the default target.
 		const created = integration.sources.find(source => source.name === this.parameters.name)
 			?? integration.sources.at(-1)
+		if (created) {
+			created.isShareTarget = true
+		}
 		if (!created) {
 			throw new ValidationError('The calendar was created, but Google has not listed it yet. Try selecting the target again in a moment')
 		}

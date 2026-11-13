@@ -167,6 +167,32 @@ describe('Sharing (guest capability)', () => {
 		assert.ok(!body.includes(privateEntry.uid!))
 	})
 
+	it('answers a guest write without leaking the owner relation graph into the JSON', async () => {
+		// A private entry points at this shared entry: the mutation's raw answer once carried the private side along.
+		const { token } = await capabilityOf(ShareRole.Edit)
+		const cookie = cookieOf(token)
+		const updated = await request(`/entries/${sharedEntry.id}`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ heading: 'Shared review' }),
+		}, cookie)
+		assert.equal(updated.status, 200)
+		const body = await updated.text()
+		assert.ok(!body.includes('Private matter'))
+		assert.ok(!body.includes(privateEntry.uid!))
+	})
+
+	it('keeps an occurrence patch from moving the entry outside the target', async () => {
+		const { token } = await capabilityOf(ShareRole.Edit)
+		const cookie = cookieOf(token)
+		const moved = await request(`/entries/${sharedEntry.id}/occurrences/2027-01-05T09:00:00Z`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ heading: 'Shared review', sourceId: privatus.id, scope: 'all' }),
+		}, cookie)
+		assert.equal(moved.status, 403)
+	})
+
 	it('lets a view link read but not write, and an edit link write only inside the target', async () => {
 		const { token } = await capabilityOf(ShareRole.View)
 		const refused = await request('/entries', {

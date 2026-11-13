@@ -83,6 +83,7 @@ export class Source extends Entity {
 	@equality()
 	@property({ type: 'boolean', fieldName: 'read_only', nullable: true }) readOnly?: boolean | null
 
+	/** Marks a calendar created to be shared, which the share dialog answers as the default target. */
 	@equality()
 	@property({ type: 'boolean' }) hidden = false
 
@@ -120,6 +121,9 @@ export class Source extends Entity {
 	}
 
 	@property({ type: 'json', nullable: true }) syncState?: Record<string, any>
+
+	/** Marks a calendar created to be shared, which the share dialog answers as the default target. */
+	@property({ type: 'boolean', fieldName: 'is_share_target', nullable: true }) isShareTarget?: boolean | null
 
 	/**
 	 * Whether entries of `type` can live here. The provider's list decides for events and tasks. Availability
