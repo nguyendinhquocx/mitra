@@ -31,6 +31,7 @@ export class ShareCapability {
 		const capability = new ShareCapability({
 			id: crypto.randomUUID(),
 			hash: await ShareCapability.hashOf(token),
+			token,
 			ownerId: owner.id,
 			targetSourceId: target.id,
 			role,
@@ -55,6 +56,9 @@ export class ShareCapability {
 
 	@property({ type: 'string', unique: true })
 	@converter(withheld()) hash!: string
+
+	/** The token itself, kept so the owner can copy a link again. A database leak reads no more than the database already gives away. */
+	@property({ type: 'string', nullable: true }) token?: string
 
 	/** The one source this link reaches. Frozen on creation; never silently rebound. */
 	@manyToOne(() => Source, { mapToPk: true, deleteRule: 'cascade' }) targetSourceId!: string

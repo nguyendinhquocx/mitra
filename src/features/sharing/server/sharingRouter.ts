@@ -383,8 +383,9 @@ export function sharingRouter() {
 		if (body.sourceId !== undefined && !context.capability.reaches(body.sourceId)) {
 			throw new ShareAccessError(403, 'An entry stays inside the calendars this link reaches')
 		}
-		if (context.capability.entryId && body.relations !== undefined) {
-			throw new ShareAccessError(403, 'A single-event link cannot change event relationships')
+		if (context.capability.entryId) {
+			// A single-event guest never sees the entry's whole relation graph, so its relations echo is dropped, never applied.
+			delete body.relations
 		}
 		await restoreGuestFileReferences(context, req.body)
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
@@ -415,8 +416,9 @@ export function sharingRouter() {
 
 	router.put('/entries/:id/occurrences/:occurrence', sameOriginWrites, guest(async (req, res, context) => {
 		writeGuard(res, context)
-		if (context.capability.entryId) {
-			throw new ShareAccessError(403, 'A single-event link cannot detach individual occurrences')
+		// Splitting one occurrence off detaches a new entry the link never reached, so a single-event link edits the series as a whole only.
+		if (context.capability.entryId && String(req.query.scope ?? 'this') === 'this') {
+			throw new ShareAccessError(403, 'A single-event link cannot split one occurrence off its series; edit the whole series instead')
 		}
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
@@ -472,18 +474,12 @@ export function sharingRouter() {
 	// The file bytes a guest entry claims: uploaded under the owner's account, referenced by the entry's save.
 	router.post('/files', sameOriginWrites, guest(async (req, res, context) => {
 		writeGuard(res, context)
-		if (context.capability.entryId) {
-			throw new ShareAccessError(403, 'A single-event link cannot upload unattached files')
-		}
 		if (context.capability.role !== ShareRole.Edit) {
 			throw new ShareAccessError(403, 'This link can only view')
 		}
 		const limits = FileLimits.of(environment)
 		if (!limits.uploads) {
 			return res.status(403).json({ error: 'Uploads are disabled on this instance' })
-		}
-		if (limits.quota === undefined) {
-			return res.status(403).json({ error: 'Guest uploads require a configured per-account file quota' })
 		}
 		if (!limits.allowsMore(await fileStore.usageOf(context.owner.id))) {
 			return res.status(507).json({ error: 'File storage is full' })

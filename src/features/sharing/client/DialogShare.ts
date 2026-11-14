@@ -26,6 +26,7 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 	@state() private singleEventOnly = true
 	@state() private createdToken?: string
 	@state() private copied = false
+	@state() private copiedLinkId?: string
 	@state() private creating = false
 	@state() private creatingCalendar = false
 
@@ -125,6 +126,15 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 		await navigator.clipboard.writeText(this.linkUrlOf(this.createdToken))
 		this.copied = true
 		setTimeout(() => this.copied = false, 2000)
+	}
+
+	private async copyLink(link: ShareCapability) {
+		if (!link.token) {
+			return
+		}
+		await navigator.clipboard.writeText(this.linkUrlOf(link.token))
+		this.copiedLinkId = link.id
+		setTimeout(() => { if (this.copiedLinkId === link.id) this.copiedLinkId = undefined }, 2000)
 	}
 
 	private async revoke(id: string) {
@@ -255,7 +265,6 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 				<div class="share">
 					${this.createdToken === undefined ? html`
 						<div class="row">
-							<mitra-icon icon="calendar-days"></mitra-icon>
 							<mitra-select label=${t('Calendar')} .value=${this.targetSourceId}
 								@change=${(e: CustomEvent<string | undefined>) => { this.targetSourceId = e.detail; this.requestUpdate() }}
 							>
@@ -275,7 +284,6 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 							<span class="note">${t('A Google calendar is shared whole: every event inside it lies within the link, yours included. Check it is the calendar to share.')}</span>
 						`}
 						<div class="row">
-							<mitra-icon icon="key-round"></mitra-icon>
 							<mitra-select label=${t('Permission')} title=${t('Permission')} .value=${this.linkRole}
 								@change=${(e: CustomEvent<ShareRole>) => this.linkRole = e.detail}
 							>
@@ -316,14 +324,16 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 						<div class="links">
 							${this.links.map((link: ShareCapability) => html`
 								<div class="link">
-									<mitra-icon icon="link"></mitra-icon>
 									<span class="name">
 										${Calendars.getSource(link.targetSourceId)?.name ?? t('A removed calendar')}
 										· ${link.role === 'edit' ? t('View and edit') : t('View only')}
 									</span>
 									${!link.revoked ? html.nothing : html`<span class="revoked">${t('Revoked')}</span>`}
 									${link.revoked ? html.nothing : html`
-										<mitra-icon-button icon="ban" label=${t('Revoke')} title=${t('Revoke')} @click=${() => void this.revoke(link.id)}></mitra-icon-button>
+										${!link.token ? html.nothing : html`
+											<mitra-icon-button icon=${this.copiedLinkId === link.id ? 'check' : 'copy'} label=${t('Copy')} title=${t('Copy')} @click=${() => void this.copyLink(link)}></mitra-icon-button>
+										`}
+										<mitra-icon-button icon="trash-2" label=${t('Revoke')} title=${t('Revoke')} @click=${() => void this.revoke(link.id)}></mitra-icon-button>
 									`}
 								</div>
 							`)}

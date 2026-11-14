@@ -477,16 +477,14 @@ export class EntryDetailsComponent extends Component {
 							<span class="bar">
 								${this.sourceTemplate}
 								<span class="spacer"></span>
+								${this.isGuestSurface ? html.nothing : html`
+									<mitra-icon-button label=${t('Share…')} icon="share" @click=${() => void new DialogShare({ entry: this.segment!.entry }).confirm()}></mitra-icon-button>
+								`}
 								${this.entryTypeTemplate}
 								${!this.hasMenu ? html.nothing : html`
 									<mitra-popover-container>
 										<mitra-icon-button label=${t('Options')} icon="more-horizontal"></mitra-icon-button>
 										<mitra-menu slot="popover">
-											${this.isGuestSurface ? html.nothing : html`
-												<mitra-menu-item icon="share" @click=${() => void new DialogShare({ entry: this.segment!.entry }).confirm()}>
-													${t('Share…')}
-												</mitra-menu-item>
-											`}
 											${this.externalLinkTemplate}
 											${!this.segment!.entry.copyable ? html.nothing : html`
 												<mitra-menu-item icon="copy" @click=${this.handleDuplicate}>

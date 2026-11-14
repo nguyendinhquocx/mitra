@@ -57,9 +57,6 @@ export class PageGuest extends PageComponent {
 		},
 		onComplete: ({ entries, window }) => {
 			EntryStore.applyServerEntries(entries, window)
-			if (this.focusEntryId && entries.some(entry => entry.id === this.focusEntryId || entry.overrides?.some(override => override.id === this.focusEntryId))) {
-				EntryEditorIntent.requestOpen(this.focusEntryId)
-			}
 		},
 	})
 

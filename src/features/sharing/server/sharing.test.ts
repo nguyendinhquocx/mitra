@@ -233,18 +233,21 @@ describe('Sharing (guest capability)', () => {
 		assert.equal((await em.fork().findOne(Entry, { id: sharedEntry.id }))?.heading, 'Guest edit persisted')
 	})
 
-	it('refuses guest uploads when the owner has not configured a file quota', async () => {
+	it('uploads guest files without a configured quota, bounded by the per-file cap', async () => {
 		if (!FileLimits.of(environment).uploads || environment.files.quota !== undefined) {
 			return
 		}
 		const { token } = await capabilityOf(ShareRole.Edit)
 		const response = await request('/files', {
 			method: 'POST',
-			headers: { 'content-type': 'text/plain' },
+			headers: { 'content-type': 'text/plain', 'content-disposition': 'attachment; filename="guest.txt"' },
 			body: 'unclaimed guest bytes',
 		}, cookieOf(token))
-		assert.equal(response.status, 403)
-		assert.match(await response.text(), /quota/)
+		assert.equal(response.status, 201, await response.clone().text())
+		const stored = await response.json() as { sha256: string, size: number, name: string }
+		assert.equal(stored.size, 'unclaimed guest bytes'.length)
+		assert.equal(stored.name, 'guest.txt')
+		await fileStore.delete(user.id, stored.sha256)
 	})
 
 	it('persists a guest create sent as the browser EntryPatch model', async () => {
@@ -684,13 +687,17 @@ describe('Sharing (guest capability)', () => {
 		assert.equal((await request(`/entries/${sharedEntry.id}/occurrences/2027-01-10T10%3A00%3A00.000Z?scope=all`, { method: 'DELETE' }, cookie)).status, 403)
 		assert.equal((await request(`/entries/${sharedEntry.id}/complete?occurrence=2027-01-10T10%3A00%3A00.000Z`, { method: 'POST' }, cookie)).status, 403)
 
-		// 8. A scoped link cannot mutate the event's relation graph
+		// 8. A relations echo is dropped, never applied: the guest cannot see the whole graph, so it cannot change it
 		const relationPatch = await request(`/entries/${sharedEntry.id}`, {
 			method: 'PUT',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ '@type': 'EntryPatch', relations: [{ type: 'PARENT', targetUid: sibling.uid }] }),
+			body: JSON.stringify({ '@type': 'EntryPatch', heading: 'Relation echo', relations: [] }),
 		}, cookie)
-		assert.equal(relationPatch.status, 403)
+		assert.equal(relationPatch.status, 200, await relationPatch.text())
+		const afterEcho = await em.fork().findOneOrFail(Entry, { id: sharedEntry.id })
+		assert.equal(afterEcho.heading, 'Relation echo')
+		assert.equal(afterEcho.relations?.all.length, 1)
+		assert.equal(afterEcho.relations?.all[0]?.targetUid, sibling.uid)
 
 		// 9. Updating the single event succeeds and persists
 		const updateRes = await request(`/entries/${sharedEntry.id}`, {
@@ -733,6 +740,33 @@ describe('Sharing (guest capability)', () => {
 		fileEm.remove([sharedFile, siblingFile])
 		await fileEm.flush()
 		await Promise.all([fileStore.delete(user.id, sharedBytes.sha256), fileStore.delete(user.id, siblingBytes.sha256)])
+	})
+
+	it('lets an edit link edit occurrences of the single series it shares', async () => {
+		const series = new Entry({
+			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'Solo shared series',
+			start: new DateTime(Date.parse('2027-01-10T10:00:00Z')), end: new DateTime(Date.parse('2027-01-10T11:00:00Z')),
+			recurrence: new Recurrence({ freq: RecurrenceFrequency.Daily, count: 3 }), uid: crypto.randomUUID(),
+		})
+		em.persist(series)
+		await em.flush()
+		const answer = await new CreateShareLink({ targetSourceId: target.id, role: ShareRole.Edit, overlays: [], entryId: series.id }).run({ em: em.fork(), user })
+		const cookie = cookieOf(answer.token)
+		const edited = await request(`/entries/${series.id}/occurrences/2027-01-12T10%3A00%3A00.000Z?scope=all`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', heading: 'Series edited by guest' }),
+		}, cookie)
+		assert.equal(edited.status, 200, await edited.text())
+		assert.equal((await em.fork().findOneOrFail(Entry, { id: series.id })).heading, 'Series edited by guest')
+		const split = await request(`/entries/${series.id}/occurrences/2027-01-12T10%3A00%3A00.000Z?scope=this`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', heading: 'Split occurrence' }),
+		}, cookie)
+		assert.equal(split.status, 403)
+		await new RevokeShareLink({ id: answer.capability.id }).run({ em: em.fork(), user })
+		await em.fork().nativeDelete(Entry, { id: series.id })
 	})
 
 	it('normalizes an override share to its recurring series and keeps its overrides inside that scope', async () => {
