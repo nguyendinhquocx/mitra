@@ -78,13 +78,13 @@ export async function guestEntry(context: GuestContext, id: string) {
 	return entry
 }
 
-/** Whether a guest may change `entry`: an edit link, and the entry sitting in the target — overlays are read-only. */
+/** Whether a guest may change `entry`: an edit link, and the entry sitting inside what the link reaches — target or overlays. */
 export function assertGuestWritable(context: GuestContext, entry: Pick<Entry, 'sourceId'>) {
 	if (context.capability.role !== 'edit') {
 		throw new ShareAccessError(403, 'This link can only view')
 	}
-	if (entry.sourceId !== context.capability.targetSourceId) {
-		throw new ShareAccessError(403, 'Only the shared calendar itself takes changes')
+	if (!context.capability.reaches(entry.sourceId)) {
+		throw new ShareAccessError(403, 'Only calendars this link reaches take changes')
 	}
 }
 

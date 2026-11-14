@@ -356,7 +356,12 @@ export function sharingRouter() {
 		}
 		await restoreGuestFileReferences(context, req.body)
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
-		const { values, built } = guestBody(req.body, { sourceId: context.capability.targetSourceId })
+		// The guest picks the calendar: an id the link reaches wins; anything hostile falls back to the target, never to a private calendar.
+		const requestedSourceId = (req.body as { sourceId?: string }).sourceId
+		const sourceId = requestedSourceId !== undefined && context.capability.reaches(requestedSourceId)
+			? requestedSourceId
+			: context.capability.targetSourceId
+		const { values, built } = guestBody(req.body, { sourceId })
 		const operation = CreateEntry.fromValues(values, built)
 		const { result, replayed, didReplay } = await oncePerOperation(context, req, async () => {
 			const created = await operation.run({ em: context.em, user: context.owner })
@@ -375,8 +380,8 @@ export function sharingRouter() {
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		const body = req.body as { sourceId?: string, relations?: unknown }
-		if (body.sourceId !== undefined && body.sourceId !== context.capability.targetSourceId) {
-			throw new ShareAccessError(403, 'An entry of the shared calendar stays inside it')
+		if (body.sourceId !== undefined && !context.capability.reaches(body.sourceId)) {
+			throw new ShareAccessError(403, 'An entry stays inside the calendars this link reaches')
 		}
 		if (context.capability.entryId && body.relations !== undefined) {
 			throw new ShareAccessError(403, 'A single-event link cannot change event relationships')
@@ -416,10 +421,10 @@ export function sharingRouter() {
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		// The occurrence patch carries the wire's sourceId too: without this clamp an edit link could move the entry,
-		// this occurrence or the series, onto a read-only overlay or a calendar the link never reached.
+		// this occurrence or the series onto a calendar the link never reached.
 		const body = req.body as { sourceId?: string }
-		if (body.sourceId !== undefined && body.sourceId !== context.capability.targetSourceId) {
-			throw new ShareAccessError(403, 'An entry of the shared calendar stays inside it')
+		if (body.sourceId !== undefined && !context.capability.reaches(body.sourceId)) {
+			throw new ShareAccessError(403, 'An entry stays inside the calendars this link reaches')
 		}
 		await restoreGuestFileReferences(context, req.body)
 		await assertRelationsInScope(context, relationTargetsOf(req.body))

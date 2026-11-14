@@ -285,9 +285,8 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 						</div>
 						${!this.allSources.length || (entry && this.singleEventOnly) ? html.nothing : html`
 							<div class="overlays">
-								<span>${t('Also visible to the guest (read-only)')}</span>
 								<div>${this.allSources.map(source => html`
-									<mitra-checkbox title=${t('Also visible to the guest (read-only)')}
+									<mitra-checkbox
 										.checked=${live(this.overlays.has(source.id))}
 										@change=${(e: CustomEvent<boolean>) => {
 											if (e.detail) {

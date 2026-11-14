@@ -148,7 +148,7 @@ describe('Sharing (guest capability)', () => {
 		assert.ok(!text.includes(privatus.id))
 	})
 
-	it('keeps a private calendar out of search, direct ids, writes, relations and the overlay read-only line', async () => {
+	it('keeps a private calendar out of search, direct ids, writes and relations', async () => {
 		const { token } = await capabilityOf(ShareRole.Edit, [overlay.id])
 		const cookie = cookieOf(token)
 
@@ -161,9 +161,6 @@ describe('Sharing (guest capability)', () => {
 			body: JSON.stringify({ heading: 'Shared review', sourceId: privatus.id }),
 		}, cookie)
 		assert.equal(moved.status, 403)
-
-		const overlayDelete = await request(`/entries/${overlayEntry.id}`, { method: 'DELETE' }, cookie)
-		assert.equal(overlayDelete.status, 403)
 
 		const bridged = await request('/entries', {
 			method: 'POST',
@@ -261,6 +258,45 @@ describe('Sharing (guest capability)', () => {
 		assert.ok(await em.fork().findOne(Entry, { sourceId: target.id, heading: 'Browser-created guest event' }))
 	})
 
+	it('lets an edit link change and create inside its overlays, never outside the link', async () => {
+		const probe = new Entry({ id: crypto.randomUUID(), sourceId: overlay.id, type: EntryType.Event, heading: 'Overlay probe', start: new DateTime(Date.parse('2027-01-16T10:00:00Z')), end: new DateTime(Date.parse('2027-01-16T11:00:00Z')), uid: crypto.randomUUID() })
+		em.persist(probe)
+		await em.flush()
+		const { token } = await capabilityOf(ShareRole.Edit, [overlay.id])
+		const cookie = cookieOf(token)
+		const edited = await request(`/entries/${probe.id}`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', heading: 'Overlay edit persisted' }),
+		}, cookie)
+		assert.equal(edited.status, 200, await edited.text())
+		assert.equal((await em.fork().findOne(Entry, { id: probe.id }))?.heading, 'Overlay edit persisted')
+
+		const created = await request('/entries', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', type: 'event', heading: 'Guest overlay event', sourceId: overlay.id, start: '2027-02-03T10:00:00.000Z', end: '2027-02-03T11:00:00.000Z' }),
+		}, cookie)
+		assert.equal(created.status, 201, await created.text())
+		assert.equal((await em.fork().findOne(Entry, { heading: 'Guest overlay event' }))?.sourceId, overlay.id)
+
+		// A calendar the link never reached stays unreachable: a hostile sourceId lands in the target, a move there is a denial.
+		const outside = await request('/entries', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', type: 'event', heading: 'Guest hostile event', sourceId: privatus.id, start: '2027-02-04T10:00:00.000Z', end: '2027-02-04T11:00:00.000Z' }),
+		}, cookie)
+		assert.equal(outside.status, 201)
+		assert.equal((await em.fork().findOne(Entry, { heading: 'Guest hostile event' }))?.sourceId, target.id)
+		const escaped = await request(`/entries/${probe.id}`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ sourceId: privatus.id }),
+		}, cookie)
+		assert.equal(escaped.status, 403)
+		await em.fork().nativeDelete(Entry, { id: probe.id })
+	})
+
 	it('answers a guest write without leaking the owner relation graph into the JSON', async () => {
 		// A private entry points at this shared entry: the mutation's raw answer once carried the private side along.
 		const { token } = await capabilityOf(ShareRole.Edit)
@@ -308,7 +344,7 @@ describe('Sharing (guest capability)', () => {
 		assert.equal(moved.status, 403)
 	})
 
-	it('lets a view link read but not write, and an edit link write only inside the target', async () => {
+	it('lets a view link read but not write, and an edit link write inside what it reaches', async () => {
 		const { token } = await capabilityOf(ShareRole.View)
 		const refused = await request('/entries', {
 			method: 'POST',

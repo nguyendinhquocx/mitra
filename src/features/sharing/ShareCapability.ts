@@ -61,7 +61,7 @@ export class ShareCapability {
 
 	@enumType({ items: () => ShareRole }) role!: ShareRole
 
-	/** Other calendars of the owner the guest sees, read-only. Owner-managed; guests never write this list. */
+	/** Other calendars of the owner the guest sees alongside the target; owner-managed, guests never write this list. */
 	@property({ type: 'json', nullable: true }) overlays?: Array<string>
 
 	/** When set, the link reaches only this single entry inside targetSourceId. Other entries in the calendar are omitted. */
@@ -90,10 +90,5 @@ export class ShareCapability {
 	/** The sources a guest may read: the target and the owner's current overlays. */
 	get scope() {
 		return [this.targetSourceId, ...this.overlays ?? []]
-	}
-
-	/** Whether `sourceId` takes a guest's writes: only the target, and only an edit link. */
-	get writableSourceId() {
-		return this.role === ShareRole.Edit ? this.targetSourceId : undefined
 	}
 }
