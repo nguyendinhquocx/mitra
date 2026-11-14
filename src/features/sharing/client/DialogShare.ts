@@ -292,7 +292,7 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 								<mitra-option .value=${'edit' as const}>${t('View and edit')}</mitra-option>
 							</mitra-select>
 						</div>
-						${!this.allSources.length || this.blank || (entry && this.singleEventOnly) ? html.nothing : html`
+						${!this.allSources.length ? html.nothing : html`
 							<div class="overlays">
 								<div>${this.allSources.map(source => html`
 									<mitra-checkbox

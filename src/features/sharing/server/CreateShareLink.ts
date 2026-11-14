@@ -54,14 +54,13 @@ export class CreateShareLink extends Operation<Parameters, { capability: ShareCa
 			}
 		}
 		const overlays: Array<string> = []
-		if (!this.parameters.entryId) {
-			for (const sourceId of this.parameters.overlays) {
-				if (sourceId === target.id) {
-					continue
-				}
-				await user.getSource(em, sourceId)
-				overlays.push(sourceId)
+		// Overlays ride for every link shape now: a single-event or blank link may still name calendars to show whole.
+		for (const sourceId of this.parameters.overlays) {
+			if (sourceId === target.id) {
+				continue
 			}
+			await user.getSource(em, sourceId)
+			overlays.push(sourceId)
 		}
 		const { capability, token } = await ShareCapability.issue(user, target, this.parameters.role, overlays, entryId)
 		capability.blank = blank || undefined

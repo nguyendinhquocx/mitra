@@ -383,12 +383,6 @@ export class PageGuest extends PageComponent {
 						<p>${t('The shared calendar cannot be reached right now. Your last view stays as it was.')}</p>
 						<mitra-button @click=${() => void this.fetcher.run()}>${t('Try again')}</mitra-button>
 					</div>
-				` : !this.store.shown.length && this.fetcher.status === TaskStatus.COMPLETE ? html`
-					<div class="guest-center">
-						<mitra-icon icon="calendar-days" size="32"></mitra-icon>
-						<h2>${t('Nothing here yet')}</h2>
-						<p>${this.guestRole === 'edit' ? t('This shared calendar is empty. Create the first entry.') : t('The shared calendar is empty for now.')}</p>
-					</div>
 				` : html`
 					${this.view === 'week' ? html`
 						<mitra-days

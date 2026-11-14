@@ -788,6 +788,31 @@ describe('Sharing (guest capability)', () => {
 		await em.fork().nativeDelete(Entry, { heading: 'Blank guest event' })
 	})
 
+	it('keeps named overlays visible on single-event and blank links', async () => {
+		const single = await new CreateShareLink({ targetSourceId: target.id, role: ShareRole.Edit, overlays: [overlay.id], entryId: sharedEntry.id }).run({ em: em.fork(), user })
+		const singleCookie = cookieOf(single.token)
+		const bootstrapped = await (await request('/bootstrap', {}, singleCookie)).json() as { overlays: Array<{ id: string }> }
+		assert.deepEqual(bootstrapped.overlays.map(source => source.id), [overlay.id])
+		const singleWindow = await (await request(`/entries?start=${instant('2027-01-01T00:00:00Z')}&end=${instant('2027-01-31T00:00:00Z')}`, {}, singleCookie)).json() as Array<{ id: string }>
+		const singleIds = singleWindow.map(entry => entry.id)
+		assert.ok(singleIds.includes(sharedEntry.id!))
+		assert.ok(singleIds.includes(overlayEntry.id!))
+		assert.ok(!singleIds.includes(privateEntry.id!))
+		assert.equal((await request(`/entries/${overlayEntry.id}`, {}, singleCookie)).status, 200)
+		assert.equal((await request(`/entries/${privateEntry.id}`, {}, singleCookie)).status, 403)
+
+		const blanked = await new CreateShareLink({ targetSourceId: target.id, role: ShareRole.Edit, overlays: [overlay.id], blank: true }).run({ em: em.fork(), user })
+		const blankCookie = cookieOf(blanked.token)
+		const blankWindow = await (await request(`/entries?start=${instant('2027-01-01T00:00:00Z')}&end=${instant('2027-01-31T00:00:00Z')}`, {}, blankCookie)).json() as Array<{ id: string }>
+		const blankIds = blankWindow.map(entry => entry.id)
+		assert.ok(blankIds.includes(overlayEntry.id!))
+		assert.ok(!blankIds.includes(sharedEntry.id!))
+		assert.equal((await request(`/entries/${overlayEntry.id}`, {}, blankCookie)).status, 200)
+		assert.equal((await request(`/entries/${sharedEntry.id}`, {}, blankCookie)).status, 403)
+		await new RevokeShareLink({ id: single.capability.id }).run({ em: em.fork(), user })
+		await new RevokeShareLink({ id: blanked.capability.id }).run({ em: em.fork(), user })
+	})
+
 	it('lets an edit link edit occurrences of the single series it shares', async () => {
 		const series = new Entry({
 			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'Solo shared series',

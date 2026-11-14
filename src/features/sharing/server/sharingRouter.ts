@@ -244,6 +244,13 @@ export function sharingRouter() {
 			}
 			entryInfo = { id: entry.id!, heading: entry.heading, start: entry.start?.toISOString() }
 		}
+		const overlays = new Array<{ id: string, name: string, color?: string }>()
+		for (const id of capability.overlays ?? []) {
+			const overlay = await em.findOne(Source, { id })
+			if (overlay) {
+				overlays.push({ id: overlay.id, name: overlay.name, color: overlay.color?.value })
+			}
+		}
 		res.cookie(ShareCapability.cookie, token, {
 			httpOnly: true,
 			secure: true, // `__Host-` demands it; localhost counts as secure, and a plain-HTTP LAN host cannot hold this cookie.
@@ -256,7 +263,7 @@ export function sharingRouter() {
 			capabilityId: capability.id,
 			role: capability.role,
 			target: { id: target.id, name: entryInfo ? entryInfo.heading || target.name : target.name, color: target.color?.value },
-			overlays: [] as Array<{ id: string, name: string, color?: string }>,
+			overlays,
 			entryId: capability.entryId,
 			entryStart: entryInfo?.start,
 		})
@@ -276,12 +283,10 @@ export function sharingRouter() {
 			}
 		}
 		const overlays = new Array<{ id: string, name: string, color?: string }>()
-		if (!context.capability.entryId) {
-			for (const id of context.capability.overlays ?? []) {
-				const overlay = await context.em.findOne(Source, { id })
-				if (overlay) {
-					overlays.push({ id: overlay.id, name: overlay.name, color: overlay.color?.value })
-				}
+		for (const id of context.capability.overlays ?? []) {
+			const overlay = await context.em.findOne(Source, { id })
+			if (overlay) {
+				overlays.push({ id: overlay.id, name: overlay.name, color: overlay.color?.value })
 			}
 		}
 		return res.status(200).json({

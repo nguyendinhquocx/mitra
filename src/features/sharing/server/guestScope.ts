@@ -65,17 +65,19 @@ export async function guestEntry(context: GuestContext, id: string) {
 	if (!entry) {
 		throw new ShareAccessError(404, 'No such entry')
 	}
-	// What the guest added through this link rides along, however little else the link shows.
+	// What the guest added through this link rides along, however little else the link shows; an overlay calendar
+	// the owner named shows whole.
 	const own = entry.createdVia === context.capability.id
-	if (context.capability.entryId && id !== context.capability.entryId && !own) {
+	const overlay = entry.sourceId !== context.capability.targetSourceId && context.capability.reaches(entry.sourceId)
+	if (context.capability.entryId && id !== context.capability.entryId && !own && !overlay) {
 		const override = await context.em.findOne(Entry, { id, recurringEntryId: context.capability.entryId, sourceId: context.capability.targetSourceId })
 		if (!override) {
-			throw new ShareAccessError(403, 'This link only reaches a single event or its series overrides')
+			throw new ShareAccessError(403, 'This link only reaches a single event, its series overrides or an overlay calendar')
 		}
 		return override
 	}
-	if (context.capability.blank && !own) {
-		throw new ShareAccessError(403, 'This link starts blank: only what its guest adds is reachable')
+	if (context.capability.blank && !own && !overlay) {
+		throw new ShareAccessError(403, 'This link starts blank: only what its guest adds and its overlays are reachable')
 	}
 	if (!context.capability.reaches(entry.sourceId)) {
 		throw new ShareAccessError(403, 'This entry is outside the shared calendar')
@@ -89,12 +91,21 @@ export async function reachableEntryIds(context: GuestContext): Promise<Array<st
 		return undefined
 	}
 	const scope = [...context.scope]
+	const overlays = scope.filter(sourceId => sourceId !== context.capability.targetSourceId)
 	const own = await context.em.find(Entry, { sourceId: { $in: scope }, createdVia: context.capability.id, recurrenceId: null })
 	const heads = [...(context.capability.entryId ? [context.capability.entryId] : []), ...own.map(entry => entry.id!)]
 	const overrides = heads.length
 		? await context.em.find(Entry, { recurringEntryId: { $in: heads }, sourceId: { $in: scope } })
 		: []
-	return [...heads, ...overrides.map(entry => entry.id!)]
+	if (!overlays.length) {
+		return [...heads, ...overrides.map(entry => entry.id!)]
+	}
+	// Overlay calendars ride whole: their entries are reachable like any calendar link's.
+	const overlayEntries = await context.em.find(Entry, { $and: [{ sourceId: { $in: overlays } }, { recurrenceId: null }] })
+	const overlayOverrides = overlayEntries.length
+		? await context.em.find(Entry, { recurringEntryId: { $in: overlayEntries.map(entry => entry.id!) }, sourceId: { $in: overlays } })
+		: []
+	return [...heads, ...overrides.map(entry => entry.id!), ...overlayEntries.map(entry => entry.id!), ...overlayOverrides.map(entry => entry.id!)]
 }
 
 /** Whether a guest may change `entry`: an edit link, and the entry sitting inside what the link reaches — target or overlays. */
@@ -127,13 +138,13 @@ export async function assertRelationsInScope(context: GuestContext, relations: R
  */
 export async function scopedEntries(context: GuestContext, range?: DateTimeRange, limit?: number) {
 	if (context.capability.entryId) {
-		// The link's event rides with what its guest added: their own creations show even though the rest hides.
+		// The link's event rides with what its guest added; a named overlay calendar shows whole.
 		const own = await context.em.find(Entry, { sourceId: context.capability.targetSourceId, createdVia: context.capability.id, recurrenceId: null })
 		const ids = [context.capability.entryId, ...own.map(entry => entry.id!)]
+		const overlays = [...context.scope].filter(sourceId => sourceId !== context.capability.targetSourceId)
 		const entries = await context.em.find(Entry, {
 			$and: [
-				{ id: { $in: ids } },
-				{ sourceId: context.capability.targetSourceId },
+				{ $or: [{ id: { $in: ids } }, { sourceId: { $in: overlays } }] },
 				{ recurrenceId: null },
 			],
 		})
@@ -148,10 +159,11 @@ export async function scopedEntries(context: GuestContext, range?: DateTimeRange
 		return attachScopedRelations(context, entries)
 	}
 	const scope = [...context.scope]
+	const overlays = scope.filter(sourceId => sourceId !== context.capability.targetSourceId)
 	const entries = await context.em.find(Entry, {
 		$and: [
 			{ sourceId: { $in: scope } },
-			...(context.capability.blank ? [{ createdVia: context.capability.id }] : []),
+			...(context.capability.blank ? [{ $or: [{ createdVia: context.capability.id }, { sourceId: { $in: overlays } }] }] : []),
 			...(range ? [User.inRange(range)] : []),
 			{ recurrenceId: null },
 		],
@@ -171,8 +183,9 @@ export async function scopedEntries(context: GuestContext, range?: DateTimeRange
 export async function searchedEntries(context: GuestContext, query: string) {
 	if (context.capability.entryId) {
 		const own = await context.em.find(Entry, { sourceId: context.capability.targetSourceId, createdVia: context.capability.id, recurrenceId: null })
+		const overlays = await context.em.find(Entry, { $and: [{ sourceId: { $in: [...context.scope].filter(sourceId => sourceId !== context.capability.targetSourceId) } }, { recurrenceId: null }] })
 		const overrides = await context.em.find(Entry, { recurringEntryId: context.capability.entryId, sourceId: context.capability.targetSourceId })
-		const entryIds = [context.capability.entryId, ...own.map(entry => entry.id!), ...overrides.map(entry => entry.id!)]
+		const entryIds = [context.capability.entryId, ...own.map(entry => entry.id!), ...overlays.map(entry => entry.id!), ...overrides.map(entry => entry.id!)]
 		const found = await context.em.find(Entry, {
 			$and: [
 				{ id: { $in: entryIds } },
@@ -183,7 +196,11 @@ export async function searchedEntries(context: GuestContext, query: string) {
 		return attachScopedRelations(context, found)
 	}
 	const found = await context.em.find(Entry, {
-		$and: [{ sourceId: { $in: [...context.scope] } }, ...(context.capability.blank ? [{ createdVia: context.capability.id }] : []), User.matching(query)],
+		$and: [
+			{ sourceId: { $in: [...context.scope] } },
+			...(context.capability.blank ? [{ $or: [{ createdVia: context.capability.id }, { sourceId: { $in: [...context.scope].filter(sourceId => sourceId !== context.capability.targetSourceId) } }] }] : []),
+			User.matching(query),
+		],
 	}, { limit: 20, orderBy: { start: 'desc' } })
 	return attachScopedRelations(context, found)
 }
