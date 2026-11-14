@@ -6,6 +6,7 @@
  * Recorded defaults (2026-11-10, spec SPEC-2026-11-10): 10 exchanges a minute per address, 30 link changes a minute
  * per user, 60 guest writes a minute per capability, and 20 stream connections a minute per address.
  */
+import { environment } from '#infrastructure/server/Environment.js'
 import { ShareAccessError } from './guestScope.js'
 
 export class RateLimiter {
@@ -48,7 +49,7 @@ export class RateLimiter {
 }
 
 /** The one bucket every owner link mutation (create, revoke, overlays, dedicated Google calendar) draws from. */
-export const linkLimiter = new RateLimiter(Number(process.env.MITRA_SHARE_LINK_LIMIT) || 30, 60_000)
+export const linkLimiter = new RateLimiter(environment.share.link, 60_000)
 
 /** Takes a shot for the user, refusing with 429 once the link-change window is spent. */
 export function takeLinkShot(userId: string) {

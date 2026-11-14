@@ -32,10 +32,16 @@ export class CreateShareLink extends Operation<Parameters, { capability: ShareCa
 	async run({ em, user }: OperationContext) {
 		takeLinkShot(user.id)
 		const target = await user.getSource(em, this.parameters.targetSourceId)
-		if (this.parameters.entryId) {
-			const entry = await em.findOne(Entry, { id: this.parameters.entryId, sourceId: target.id })
-			if (!entry) {
+		let entryId = this.parameters.entryId
+		if (entryId) {
+			const selected = await em.findOne(Entry, { id: entryId, sourceId: target.id })
+			if (!selected) {
 				throw new ValidationError('The specified entry does not belong to the selected calendar')
+			}
+			// Recurring overrides are occurrences of one shared series, not separate capabilities; normalize them to its root.
+			entryId = selected.recurringEntryId ?? selected.id!
+			if (entryId !== selected.id && !await em.findOne(Entry, { id: entryId, sourceId: target.id })) {
+				throw new ValidationError('The recurring series for this event is gone')
 			}
 		}
 		const overlays: Array<string> = []
@@ -48,7 +54,7 @@ export class CreateShareLink extends Operation<Parameters, { capability: ShareCa
 				overlays.push(sourceId)
 			}
 		}
-		const { capability, token } = await ShareCapability.issue(user, target, this.parameters.role, overlays, this.parameters.entryId)
+		const { capability, token } = await ShareCapability.issue(user, target, this.parameters.role, overlays, entryId)
 		em.persist(capability)
 		await em.flush()
 		this.logger.info(`Created a ${capability.role} share link for source ${capability.targetSourceId}`)

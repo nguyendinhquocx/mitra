@@ -15,6 +15,13 @@ export class FileTooLargeError extends Error {
 	}
 }
 
+export class FileQuotaExceededError extends Error {
+	readonly status = 507
+	constructor() {
+		super('The account file quota is full')
+	}
+}
+
 export interface StoredBytes {
 	sha256: string
 	size: number
@@ -24,6 +31,7 @@ export interface StoredBytes {
 export class FileStore {
 	/** Mirrors the way `orm.ts` resolves the database: relative to the bundled server module. */
 	static readonly defaultRoot = path.resolve(import.meta.dirname, '../../data/files')
+	private readonly uploadLocks = new Map<string, Promise<void>>()
 
 	constructor(readonly root: string = FileStore.defaultRoot) { }
 
@@ -74,6 +82,29 @@ export class FileStore {
 			await utimes(destination, now, now)
 		}
 		return { sha256, size }
+	}
+
+	/** Serializes uploads per owner and enforces the remaining account quota before any new bytes are written. */
+	async putWithinQuota(userId: string, source: Readable, maxSize: number, quota?: number): Promise<StoredBytes> {
+		const previous = this.uploadLocks.get(userId) ?? Promise.resolve()
+		let release!: () => void
+		const slot = new Promise<void>(resolve => { release = resolve })
+		const queued = previous.then(() => slot)
+		this.uploadLocks.set(userId, queued)
+		await previous
+		try {
+			const used = await this.usageOf(userId)
+			const remaining = quota === undefined ? maxSize : quota - used
+			if (remaining <= 0) {
+				throw new FileQuotaExceededError()
+			}
+			return await this.put(userId, source, Math.min(maxSize, remaining))
+		} finally {
+			release()
+			if (this.uploadLocks.get(userId) === queued) {
+				this.uploadLocks.delete(userId)
+			}
+		}
 	}
 
 	/**

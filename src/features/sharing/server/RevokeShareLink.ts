@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { validation } from '#infrastructure/validation'
 import { http, operation, Operation, type OperationContext } from '#infrastructure/operations/Operation.js'
 import { ShareCapability } from '../ShareCapability.js'
+import { ShareFileGrant } from '../ShareFileGrant.js'
 import { announceRevocation } from './shareRevocations.js'
 import { takeLinkShot } from './rateLimit.js'
 
@@ -27,9 +28,10 @@ export class RevokeShareLink extends Operation<Parameters, void> {
 		if (!capability.revoked) {
 			capability.revokedAt = new Date()
 			await em.flush()
-			// Announced after the commit: open streams close only once the denial is durable.
-			announceRevocation(capability.id)
 			this.logger.info(`Revoked share link ${capability.id} for source ${capability.targetSourceId}`)
 		}
+		// Cleanup and stream closure are idempotent too, including after a prior revoke committed but cleanup failed.
+		await em.nativeDelete(ShareFileGrant, { capabilityId: capability.id })
+		announceRevocation(capability.id)
 	}
 }

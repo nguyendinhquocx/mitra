@@ -69,6 +69,7 @@
 
 ## Multi-User & Authentication
 - **Modes**: single-user by default (`[default_local_user]`); OIDC with `MITRA_OIDC_ISSUER`, `MITRA_OIDC_CLIENT_ID`, `MITRA_URL` (incomplete config throws). Demo (`MITRA_DEMO=true`, wins over OIDC) opens a `Sandbox` per visitor (`demo-<uuid>` with a `Demo` integration), living `Sandbox.lifetime` (24 h), capped at `MITRA_DEMO_CAP`; dotted paths outside `/api/` never open one; connecting is refused (403).
+- **Public guest edge**: `MITRA_PUBLIC_HOST`/`MITRA_SHARE_ORIGIN` exposes only guest paths; use raw `Host`, verify the exact `MITRA_TRUST_PROXY` peer, and serve files through capability-scoped `/s/api/files` aliases.
 - OIDC client `identity/server/Oidc.ts` (code + PKCE, `/auth/*`); sessions `Session.ts` (hashed 256-bit cookie, sliding 30 days, `SameSite=Lax`, keeps `id_token` for logout). Unauthenticated `/api/*` is 401, pages redirect to login.
 - `Identity` is embedded in `User` (`oidc_*`, unique issuer + subject); `User.provision` creates on first login.
 - **Tenant isolation**: query through the `User` (`user.getSources`, `user.filterEntries`, `user.getRelationGraph`, `user.getDevices`, `user.getAccessTokens`), never bare `em.find*` over an id list: `user.filterEntries(em, { range, search, where, sources, limit })` joins through the calendar's integration to the user, reads each recurring entry's overrides and attaches relations. A foreign id is `NotFoundError` (404). `EntryRelation` has no user column, so `targetUid` matches stay in the user's sources. A push endpoint taken over by another user loses its name.

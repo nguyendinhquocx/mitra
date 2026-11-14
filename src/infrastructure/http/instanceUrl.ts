@@ -14,8 +14,9 @@ export function instanceOrigin(): string | undefined {
 
 /** Remembers the address requests arrive at, so background writes can still build absolute URLs. */
 export const observeInstanceOrigin: RequestHandler = (req, _res, next) => {
-	const host = req.get('x-forwarded-host')?.split(',')[0]?.trim() || req.get('host')
-	const protocol = req.get('x-forwarded-proto')?.split(',')[0]?.trim() || req.protocol
+	// Express trusts forwarded protocol only when the socket peer matches `MITRA_TRUST_PROXY`; raw Host preserves local ports.
+	const host = req.get('host')
+	const protocol = req.protocol
 	if (host && protocol) {
 		observed = `${protocol}://${host}`
 	}

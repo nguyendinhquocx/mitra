@@ -5,7 +5,7 @@ import { Readable } from 'node:stream'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { Environment } from '#infrastructure/server/Environment.js'
-import { FileTooLargeError, FileStore } from './FileStore.js'
+import { FileQuotaExceededError, FileTooLargeError, FileStore } from './FileStore.js'
 import { FileLimits } from './FileLimits.js'
 
 describe('FileStore', () => {
@@ -47,6 +47,24 @@ describe('FileStore', () => {
 	it('aborts past the limit and leaves nothing behind', async () => {
 		await assert.rejects(() => store.put('user-3', bytes('far too long'), 4), FileTooLargeError)
 		assert.deepEqual((await readdir(path.join(root, 'user-3', '.tmp'))), [])
+	})
+
+	it('keeps quota uploads within the exact remaining bytes', async () => {
+		const first = await store.putWithinQuota('user-5', bytes('12345678'), 1024, 10)
+		assert.equal(first.size, 8)
+		await assert.rejects(() => store.putWithinQuota('user-5', bytes('abc'), 1024, 10), error => error instanceof FileTooLargeError && error.limit === 2)
+		assert.equal(await store.usageOf('user-5'), 8)
+		await assert.rejects(() => store.putWithinQuota('user-5', bytes('x'), 1024, 8), FileQuotaExceededError)
+	})
+
+	it('serializes simultaneous uploads so they cannot race past the owner quota', async () => {
+		const results = await Promise.allSettled([
+			store.putWithinQuota('user-6', bytes('1234567'), 1024, 10),
+			store.putWithinQuota('user-6', bytes('abcdefg'), 1024, 10),
+		])
+		assert.equal(results.filter(result => result.status === 'fulfilled').length, 1)
+		assert.equal(results.filter(result => result.status === 'rejected' && result.reason instanceof FileTooLargeError).length, 1)
+		assert.equal(await store.usageOf('user-6'), 7)
 	})
 
 	it('reads a byte range', async () => {

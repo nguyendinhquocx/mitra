@@ -5,7 +5,7 @@ import { createLogger } from '#infrastructure/logging/Logger.js'
 import { environment } from '#infrastructure/server/Environment.js'
 import { File } from '../File.js'
 import { MimeType } from '../MimeType.js'
-import { FileTooLargeError, fileStore } from './FileStore.js'
+import { FileQuotaExceededError, FileTooLargeError, fileStore } from './FileStore.js'
 import { FileLimits } from './FileLimits.js'
 
 const logger = createLogger('Files')
@@ -23,46 +23,55 @@ export function fileContentRouter(tables: ReadonlyArray<EntityClass<File>>) {
 		for (const table of tables) {
 			file ??= await em.findOne<File>(table, { id: req.params.id, sha256: { $ne: null } })
 		}
-		const size = file?.userId ? await fileStore.sizeOf(file.userId, file.sha256!) : undefined
-		if (!file || size === undefined) {
-			return res.status(404).json({ error: 'File not found' })
-		}
-
-		res.setHeader('Content-Type', String(file.mimeType ?? MimeType.octetStream))
-		res.setHeader('X-Content-Type-Options', 'nosniff')
-		res.setHeader('Content-Disposition', file.disposition)
-		// A file shown in place must never be able to script the app's own origin.
-		res.setHeader('Content-Security-Policy', 'sandbox')
-		res.setHeader('Referrer-Policy', 'no-referrer')
-		res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
-		// `no-transform` keeps the compression middleware off: gzip would break byte ranges and the ETag.
-		res.setHeader('Cache-Control', 'private, max-age=31536000, immutable, no-transform')
-		res.setHeader('ETag', `"${file.sha256}"`)
-		res.setHeader('Accept-Ranges', 'bytes')
-
-		if (req.headers['if-none-match']?.includes(file.sha256!)) {
-			return res.status(304).end()
-		}
-
-		const range = rangeOf(req.headers.range, size)
-		if (range === 'unsatisfiable') {
-			res.setHeader('Content-Range', `bytes */${size}`)
-			return res.status(416).end()
-		}
-		if (range) {
-			res.status(206)
-			res.setHeader('Content-Range', `bytes ${range.start}-${range.end}/${size}`)
-			res.setHeader('Content-Length', String(range.end - range.start + 1))
-		} else {
-			res.setHeader('Content-Length', String(size))
-		}
-
-		if (req.method === 'HEAD') {
-			return res.end()
-		}
-		return fileStore.read(file.userId!, file.sha256!, range || undefined).pipe(res)
+		return serveFileContent(file, req, res)
 	})
 	return router
+}
+
+/** Serves bytes after the caller has proved access; guest capabilities use this same range-safe response without the public bearer route. */
+export async function serveFileContent(file: File | null | undefined, req: import('express').Request, res: import('express').Response, cacheControl = 'private, max-age=31536000, immutable, no-transform'): Promise<void> {
+	const size = file?.userId ? await fileStore.sizeOf(file.userId, file.sha256!) : undefined
+	if (!file || size === undefined) {
+		res.status(404).json({ error: 'File not found' })
+		return
+	}
+
+	res.setHeader('Content-Type', String(file.mimeType ?? MimeType.octetStream))
+	res.setHeader('X-Content-Type-Options', 'nosniff')
+	res.setHeader('Content-Disposition', file.disposition)
+	// A file shown in place must never be able to script the app's own origin.
+	res.setHeader('Content-Security-Policy', 'sandbox')
+	res.setHeader('Referrer-Policy', 'no-referrer')
+	res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+	// `no-transform` keeps the compression middleware off: gzip would break byte ranges and the ETag.
+	res.setHeader('Cache-Control', cacheControl)
+	res.setHeader('ETag', `"${file.sha256}"`)
+	res.setHeader('Accept-Ranges', 'bytes')
+
+	if (req.headers['if-none-match']?.includes(file.sha256!)) {
+		res.status(304).end()
+		return
+	}
+
+	const range = rangeOf(req.headers.range, size)
+	if (range === 'unsatisfiable') {
+		res.setHeader('Content-Range', `bytes */${size}`)
+		res.status(416).end()
+		return
+	}
+	if (range) {
+		res.status(206)
+		res.setHeader('Content-Range', `bytes ${range.start}-${range.end}/${size}`)
+		res.setHeader('Content-Length', String(range.end - range.start + 1))
+	} else {
+		res.setHeader('Content-Length', String(size))
+	}
+
+	if (req.method === 'HEAD') {
+		res.end()
+		return
+	}
+	fileStore.read(file.userId!, file.sha256!, range || undefined).pipe(res)
 }
 
 /** A single-range `Range` header; several ranges and malformed values fall back to the whole body. */
@@ -92,12 +101,15 @@ filesRouter.post('/', async (req, res) => {
 	const name = File.nameFrom(req.get('content-disposition'))
 	const mimeType = MimeType.parse(req.get('content-type')) ?? MimeType.octetStream
 
-	const bytes = await fileStore.put(req.user.id, req, limits.maxSize).catch((error: unknown) => {
-		if (error instanceof FileTooLargeError) {
+	const bytes = await fileStore.putWithinQuota(req.user.id, req, limits.maxSize, limits.quota).catch((error: unknown) => {
+		if (error instanceof FileTooLargeError || error instanceof FileQuotaExceededError) {
 			return error
 		}
 		throw error
 	})
+	if (bytes instanceof FileQuotaExceededError || (bytes instanceof FileTooLargeError && bytes.limit < limits.maxSize)) {
+		return res.status(507).json({ error: 'File storage is full' })
+	}
 	if (bytes instanceof FileTooLargeError) {
 		return res.status(413).json({ error: `This file is larger than the ${Math.round(limits.maxSize / 1024 / 1024)} MB limit` })
 	}

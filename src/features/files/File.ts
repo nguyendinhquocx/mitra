@@ -5,7 +5,7 @@ import { MimeType } from './MimeType.js'
 /** Base64url of 16 random bytes: the id, which is the capability that stands in for a sign-in on the serving route. */
 const idPattern = '[A-Za-z0-9_-]{22}'
 
-const ownPath = new RegExp(`(?:^|^https?://[^/]+)/api/files/(${idPattern})(?:/[^/?#]*)?/?(?:[?#].*)?$`)
+const ownPath = new RegExp(`(?:^|^https?://[^/]+)/(?:s/)?api/files/(${idPattern})(?:/[^/?#]*)?/?(?:[?#].*)?$`)
 
 /**
  * A file, as iCalendar's `ATTACH` (RFC 5545 §3.8.1.1) refers to one: bytes Mitra holds (`sha256`, under `data/files/<user>/<sha256>`),

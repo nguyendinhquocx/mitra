@@ -1,3 +1,5 @@
+import { isIP } from 'node:net'
+
 type Variables = Readonly<Record<string, string | undefined>>
 
 /**
@@ -22,6 +24,8 @@ export class Environment {
 	readonly updateCheck: boolean
 	/** The instance's public address (`MITRA_URL`), where one is set and reads as a URL. */
 	readonly url?: URL
+	/** Exact reverse-proxy peer trusted to supply X-Forwarded headers (`MITRA_TRUST_PROXY`); development defaults to loopback. */
+	readonly trustedProxy: string
 	/** The public guest edge hostname (`MITRA_PUBLIC_HOST`): on it, only the guest surface and its static assets answer. */
 	readonly publicHost?: string
 	/** The origin share links name (`MITRA_SHARE_ORIGIN`), where a guest reaches this instance from outside the private network. */
@@ -48,8 +52,36 @@ export class Environment {
 		this.mcp = !Environment.off(variables.MITRA_MCP)
 		this.updateCheck = !Environment.off(variables.MITRA_UPDATE_CHECK)
 		this.url = Environment.urlOf(variables.MITRA_URL)
-		this.publicHost = variables.MITRA_PUBLIC_HOST?.trim().toLowerCase() || undefined
-		this.shareOrigin = Environment.urlOf(variables.MITRA_SHARE_ORIGIN)
+		const publicHostValue = variables.MITRA_PUBLIC_HOST?.trim().toLowerCase().replace(/\.$/, '') || undefined
+		if (publicHostValue?.includes(':')) {
+			throw new Error('MITRA_PUBLIC_HOST must be a hostname without a port')
+		}
+		this.publicHost = publicHostValue
+		const trustedProxyValue = variables.MITRA_TRUST_PROXY?.trim()
+		if (trustedProxyValue && isIP(trustedProxyValue) === 0) {
+			throw new Error('MITRA_TRUST_PROXY must be one exact IP address')
+		}
+		if (this.publicHost && !trustedProxyValue) {
+			throw new Error('MITRA_PUBLIC_HOST requires MITRA_TRUST_PROXY with the verified proxy peer IP')
+		}
+		this.trustedProxy = trustedProxyValue || 'loopback'
+		const shareOriginValue = variables.MITRA_SHARE_ORIGIN?.trim()
+		this.shareOrigin = Environment.urlOf(shareOriginValue)
+		if (shareOriginValue && !this.shareOrigin) {
+			throw new Error('MITRA_SHARE_ORIGIN must be a valid HTTPS origin')
+		}
+		if (!!this.publicHost !== !!this.shareOrigin) {
+			throw new Error('MITRA_PUBLIC_HOST and MITRA_SHARE_ORIGIN must be configured together')
+		}
+		if (this.publicHost && (!this.url || this.url.protocol !== 'https:')) {
+			throw new Error('MITRA_PUBLIC_HOST requires an HTTPS MITRA_URL to keep the owner origin fixed')
+		}
+		if (this.publicHost && this.url?.hostname.toLowerCase() === this.publicHost) {
+			throw new Error('MITRA_PUBLIC_HOST must differ from the owner hostname in MITRA_URL')
+		}
+		if (this.shareOrigin && (this.shareOrigin.protocol !== 'https:' || this.shareOrigin.pathname !== '/' || this.shareOrigin.search || this.shareOrigin.hash || this.shareOrigin.username || this.shareOrigin.password || this.shareOrigin.hostname.toLowerCase() !== this.publicHost)) {
+			throw new Error('MITRA_SHARE_ORIGIN must be an HTTPS origin whose hostname matches MITRA_PUBLIC_HOST')
+		}
 		this.photon = new URL(variables.MITRA_PHOTON_URL || 'https://photon.komoot.io')
 		this.vapidSubject = variables.MITRA_VAPID_SUBJECT || 'mailto:mitra@localhost'
 		this.files = { maxSize: Environment.bytesOf(variables.MITRA_FILE_MAX_SIZE), quota: Environment.bytesOf(variables.MITRA_FILE_QUOTA) }

@@ -91,7 +91,7 @@ describe('File', () => {
 	})
 
 	it('reads the id in one of Mitra\'s own URLs by path, whatever origin it carries, and leaves a path that only looks similar alone', () => {
-		for (const url of [`https://mitra.example.com/api/files/${id}/report.pdf`, `http://localhost:3000/api/files/${id}/report.pdf`, `/api/files/${id}`, `https://moved.example.org/api/files/${id}/`]) {
+		for (const url of [`https://mitra.example.com/api/files/${id}/report.pdf`, `http://localhost:3000/api/files/${id}/report.pdf`, `/api/files/${id}`, `/s/api/files/${id}/report.pdf`, `https://share.example.com/s/api/files/${id}/report.pdf`, `https://moved.example.org/api/files/${id}/`]) {
 			assert.equal(File.idOf(url), id, url)
 		}
 		assert.equal(File.idOf('https://x.example/api/files/too-short/report.pdf'), undefined)
@@ -116,6 +116,10 @@ describe('File', () => {
 
 		it('is another\'s URL as it is', () => {
 			assert.equal(EntryFile.from({ sourceUrl: 'https://example.com/x.pdf' })!.url('https://mitra.example.com'), 'https://example.com/x.pdf')
+		})
+
+		it('keeps a guest-scoped download path when it is sent on an entry', () => {
+			assert.equal(EntryFile.from({ sourceUrl: `/s/api/files/${id}/report.pdf` })!.url(), `/s/api/files/${id}/report.pdf`)
 		})
 	})
 

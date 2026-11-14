@@ -7,13 +7,15 @@ import { environment } from '#infrastructure/server/Environment.js'
 import { updates } from '#infrastructure/realtime/Updates.js'
 import { User } from '#features/identity'
 import { Source } from '#features/sources'
-import { Entry } from '#features/entries'
+import { Entry, EntryFile, EntryFiles } from '#features/entries'
+import { serveFileContent } from '#features/files/server/files.js'
 import { ShareCapability, ShareRole } from '../ShareCapability.js'
+import { ShareFileGrant } from '../ShareFileGrant.js'
 import { ShareOperation, shareOperationRetentionMs } from './ShareOperation.js'
 import { RateLimiter } from './rateLimit.js'
 import { subscribeToRevocations } from './shareRevocations.js'
 import { ShareAccessError, attachScopedRelations, assertGuestWritable, assertRelationsInScope, guestEntry, resolveGuest, scopedEntries, searchedEntries, type GuestContext } from './guestScope.js'
-import { FileTooLargeError, fileStore } from '#features/files/server/FileStore.js'
+import { FileQuotaExceededError, FileTooLargeError, fileStore } from '#features/files/server/FileStore.js'
 import { FileLimits } from '#features/files/server/FileLimits.js'
 import { MimeType } from '#features/files/MimeType.js'
 import { File } from '#features/files/File.js'
@@ -33,14 +35,19 @@ export const exchangeLimiterForTests = exchangeLimiter
 const writeLimiter = new RateLimiter(environment.share.write, 60_000)
 const streamLimiter = new RateLimiter(environment.share.stream, 60_000)
 
-/** Answers a mutation the way reads are scoped: the owner's relation graph must not leak through the JSON body. */
+/** Re-reads the saved row before projecting it, so replayed JSON and mutation answers share the same guest boundary. */
 async function scopedAnswer(context: GuestContext, res: Response, status: number, entry: unknown) {
-	await attachScopedRelations(context, [entry as never])
-	return res.status(status).json(entry)
+	const id = entry && typeof entry === 'object' ? (entry as { id?: unknown }).id : undefined
+	if (typeof id !== 'string') {
+		throw new ShareAccessError(500, 'The saved entry has no identifier')
+	}
+	const scoped = await guestEntry(context, id)
+	const [projected] = await attachScopedRelations(context, [scoped])
+	return res.status(status).json(projected)
 }
 
 /** Publishes a guest mutation to the update stream, so the owner's open tabs learn of it at once. */
-function announce(operation: object, context: GuestContext, subject?: { readonly sourceId?: string }) {
+function announce(operation: object, context: GuestContext, subject?: { readonly sourceId?: string, readonly id?: string }) {
 	updates.dispatchFor(operation, context.owner, subject ?? undefined)
 }
 
@@ -61,7 +68,7 @@ const sameOriginWrites: RequestHandler = (req, res, next) => {
 		return next()
 	}
 	const origin = req.headers.origin
-	const host = req.headers['x-forwarded-host'] ?? req.headers.host
+	const host = req.headers.host
 	if (origin !== undefined) {
 		try {
 			if (new URL(origin).host !== host) {
@@ -105,20 +112,20 @@ const operationIdOf = (req: Request) => {
  * Runs a guest mutation once per `x-operation-id`: a retry plays the first answer back instead of writing again, so
  * one retried create cannot become a second Google event. Without a header, the mutation simply runs.
  */
-async function oncePerOperation<T>(context: GuestContext, req: Request, run: () => Promise<T>): Promise<{ result?: T, replayed?: unknown }> {
+async function oncePerOperation<T>(context: GuestContext, req: Request, run: () => Promise<T>): Promise<{ result?: T, replayed?: unknown, didReplay: boolean }> {
 	const clientOperationId = operationIdOf(req)
 	if (!clientOperationId) {
-		return { result: await run() }
+		return { result: await run(), didReplay: false }
 	}
 	const id = ShareOperation.idFor(context.capability.id, clientOperationId)
 	const previous = await context.em.findOne(ShareOperation, { id })
 	if (previous) {
-		return { replayed: previous.result }
+		return { replayed: previous.result, didReplay: true }
 	}
 	const result = await run()
 	context.em.persist(new ShareOperation({ id, capabilityId: context.capability.id, result, createdAt: new Date() }))
 	await context.em.flush()
-	return { result }
+	return { result, didReplay: false }
 }
 
 /** Preserve already-revived model fields; path and scope overrides remain authoritative. */
@@ -126,6 +133,60 @@ function guestBody(body: unknown, overrides: Record<string, unknown>) {
 	const object = body && typeof body === 'object' && !Array.isArray(body) ? body : {}
 	const built = ModelValueConstructor.typeNameOf(object) ? object : undefined
 	return { values: { ...built ? {} : object, ...overrides }, built }
+}
+
+const guestFilePath = /(?:https?:\/\/[^/\s<>()]+)?\/s\/api\/files\/([A-Za-z0-9_-]{22})(?:\/[^\s<>()]*)?/
+const guestFilePaths = /(?:https?:\/\/[^/\s<>()]+)?\/s\/api\/files\/([A-Za-z0-9_-]{22})(?:\/[^\s<>()]*)?/g
+
+/** Resolves one opaque download alias only while its file remains inside the capability's live scope. */
+async function guestFileForAlias(context: GuestContext, alias: string) {
+	const grant = await context.em.findOne(ShareFileGrant, { id: alias, capabilityId: context.capability.id })
+	if (!grant) {
+		return undefined
+	}
+	const row = await context.em.findOne(EntryFile, { id: grant.entryFileId, entry: { sourceId: { $in: [...context.scope] } } })
+	const ownerEntry = row ? await context.em.findOne(Entry, { id: row.entry.id, sourceId: { $in: [...context.scope] } }) : undefined
+	if (!row || !ownerEntry || (context.capability.entryId && ownerEntry.id !== context.capability.entryId && ownerEntry.recurringEntryId !== context.capability.entryId)) {
+		return undefined
+	}
+	return { row, url: row.url(environment.url?.origin) }
+}
+
+/** Maps per-link file aliases in an echoed EntryPatch and description back to owner file URLs before saving. */
+async function restoreGuestFileReferences(context: GuestContext, body: unknown) {
+	const object = body && typeof body === 'object' && !Array.isArray(body) ? body as { files?: unknown, description?: unknown } : undefined
+	const filesValue = object?.files
+	const files = filesValue instanceof EntryFiles
+		? [...filesValue]
+		: Array.isArray(filesValue) ? filesValue.filter((file): file is Record<string, unknown> => typeof file === 'object' && file !== null) : []
+	const ownerUrls = new Map<string, string>()
+	for (const file of files) {
+		const sourceUrl = typeof file.sourceUrl === 'string' ? file.sourceUrl : ''
+		const alias = guestFilePath.exec(sourceUrl)?.[1]
+		if (!alias) {
+			continue
+		}
+		const resolved = await guestFileForAlias(context, alias)
+		if (!resolved) {
+			throw new ShareAccessError(403, 'This file is outside the shared event')
+		}
+		file.id = resolved.row.id
+		file.sourceUrl = resolved.row.sourceUrl
+		ownerUrls.set(alias, resolved.url)
+	}
+	if (typeof object?.description === 'string') {
+		const aliases = [...new Set([...object.description.matchAll(guestFilePaths)].map(match => match[1]!))]
+		for (const alias of aliases) {
+			if (ownerUrls.has(alias)) {
+				continue
+			}
+			const resolved = await guestFileForAlias(context, alias)
+			if (resolved) {
+				ownerUrls.set(alias, resolved.url)
+			}
+		}
+		object.description = object.description.replace(guestFilePaths, (_url, alias: string) => ownerUrls.get(alias) ?? '')
+	}
 }
 
 /** The relations a body names, whatever shape it arrived in, as bare `{ targetUid }` rows for the scope check. */
@@ -233,6 +294,25 @@ export function sharingRouter() {
 		})
 	}))
 
+	router.get('/files/:id{/:name}', guest(async (req, res, context) => {
+		let entryIds: Array<string> | undefined
+		if (context.capability.entryId) {
+			const overrides = await context.em.find(Entry, { recurringEntryId: context.capability.entryId, sourceId: context.capability.targetSourceId })
+			entryIds = [context.capability.entryId, ...overrides.map(override => override.id!)]
+		}
+		const grant = await context.em.findOne(ShareFileGrant, { id: String(req.params.id), capabilityId: context.capability.id })
+		if (!grant) {
+			throw new ShareAccessError(404, 'File not found')
+		}
+		const file = await context.em.findOne(EntryFile, {
+			id: grant.entryFileId,
+			entry: entryIds
+				? { id: { $in: entryIds } }
+				: { sourceId: { $in: [...context.scope] } },
+		})
+		return serveFileContent(file, req, res, 'no-store, no-transform')
+	}))
+
 	router.get('/entries', guest(async (req, res, context) => {
 		const start = secondsOf(req.query.start)
 		const end = secondsOf(req.query.end)
@@ -253,8 +333,8 @@ export function sharingRouter() {
 
 	router.get('/entries/:id', guest(async (req, res, context) => {
 		const entry = await guestEntry(context, String(req.params.id))
-		await attachScopedRelations(context, [entry])
-		return res.status(200).json(entry)
+		const [projected] = await attachScopedRelations(context, [entry])
+		return res.status(200).json(projected)
 	}))
 
 	// Writes: rate limited per capability, origin checked, and replay-safe by `x-operation-id`.
@@ -274,18 +354,19 @@ export function sharingRouter() {
 		if (context.capability.entryId) {
 			throw new ShareAccessError(403, 'This link only allows viewing or editing a single event, not creating new ones')
 		}
+		await restoreGuestFileReferences(context, req.body)
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
 		const { values, built } = guestBody(req.body, { sourceId: context.capability.targetSourceId })
 		const operation = CreateEntry.fromValues(values, built)
-		const { result, replayed } = await oncePerOperation(context, req, async () => {
+		const { result, replayed, didReplay } = await oncePerOperation(context, req, async () => {
 			const created = await operation.run({ em: context.em, user: context.owner })
 			return created
 		})
-		if (replayed !== undefined) {
+		if (didReplay) {
 			return scopedAnswer(context, res, 201, replayed)
 		}
 		logger.debug(`Guest created an entry in shared target ${context.capability.targetSourceId}`)
-		announce(operation, context, result as { sourceId?: string })
+		announce(operation, context, result as { sourceId?: string, id?: string })
 		return scopedAnswer(context, res, 201, result)
 	}))
 
@@ -293,18 +374,22 @@ export function sharingRouter() {
 		writeGuard(res, context)
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
-		const body = req.body as { sourceId?: string }
+		const body = req.body as { sourceId?: string, relations?: unknown }
 		if (body.sourceId !== undefined && body.sourceId !== context.capability.targetSourceId) {
 			throw new ShareAccessError(403, 'An entry of the shared calendar stays inside it')
 		}
+		if (context.capability.entryId && body.relations !== undefined) {
+			throw new ShareAccessError(403, 'A single-event link cannot change event relationships')
+		}
+		await restoreGuestFileReferences(context, req.body)
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
 		const { values, built } = guestBody(req.body, { id: existing.id })
 		const operation = UpdateEntry.fromValues(values, built)
-		const { result, replayed } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
-		if (replayed !== undefined) {
+		const { result, replayed, didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
+		if (didReplay) {
 			return scopedAnswer(context, res, 200, replayed)
 		}
-		announce(operation, context, result as { sourceId?: string })
+		announce(operation, context, result as { sourceId?: string, id?: string })
 		return scopedAnswer(context, res, 200, result)
 	}))
 
@@ -316,8 +401,10 @@ export function sharingRouter() {
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		const operation = DeleteEntry.fromValues({ id: existing.id } as never)
-		await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
-		announce(operation, context, existing)
+		const { didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
+		if (!didReplay) {
+			announce(operation, context, existing)
+		}
 		return res.status(204).end()
 	}))
 
@@ -334,41 +421,55 @@ export function sharingRouter() {
 		if (body.sourceId !== undefined && body.sourceId !== context.capability.targetSourceId) {
 			throw new ShareAccessError(403, 'An entry of the shared calendar stays inside it')
 		}
+		await restoreGuestFileReferences(context, req.body)
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
 		const { values, built } = guestBody(req.body, { id: existing.id, occurrence: String(req.params.occurrence), scope: String(req.query.scope ?? 'this') })
 		const operation = UpdateEntryOccurrence.fromValues(values, built)
-		const { result, replayed } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
-		if (replayed !== undefined) {
+		const { result, replayed, didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
+		if (didReplay) {
 			return scopedAnswer(context, res, 200, replayed)
 		}
-		announce(operation, context, result as { sourceId?: string })
+		announce(operation, context, result as { sourceId?: string, id?: string })
 		return scopedAnswer(context, res, 200, result)
 	}))
 
 	router.delete('/entries/:id/occurrences/:occurrence', sameOriginWrites, guest(async (req, res, context) => {
 		writeGuard(res, context)
+		if (context.capability.entryId) {
+			throw new ShareAccessError(403, 'A single-event link cannot delete individual occurrences')
+		}
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		const operation = DeleteEntryOccurrence.fromValues({ id: existing.id, occurrence: String(req.params.occurrence), scope: String(req.query.scope ?? 'this') } as never)
-		await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
+		const { didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
+		if (!didReplay) {
+			announce(operation, context, existing)
+		}
 		return res.status(204).end()
 	}))
 
 	router.post('/entries/:id/complete', sameOriginWrites, guest(async (req, res, context) => {
 		writeGuard(res, context)
+		if (context.capability.entryId) {
+			throw new ShareAccessError(403, 'A single-event link cannot complete individual occurrences')
+		}
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		const operation = CompleteTask.fromValues({ id: existing.id, occurrence: (req.query.occurrence ?? (req.body as { occurrence?: string } | undefined)?.occurrence) ? String(req.query.occurrence ?? (req.body as { occurrence?: string } | undefined)?.occurrence) : undefined } as never)
-		const { result, replayed } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
-		if (replayed !== undefined) {
-			return res.status(200).json(replayed)
+		const { result, replayed, didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
+		if (didReplay) {
+			return scopedAnswer(context, res, 200, replayed)
 		}
-		return res.status(200).json(result)
+		announce(operation, context, result as { sourceId?: string, id?: string })
+		return scopedAnswer(context, res, 200, result)
 	}))
 
 	// The file bytes a guest entry claims: uploaded under the owner's account, referenced by the entry's save.
 	router.post('/files', sameOriginWrites, guest(async (req, res, context) => {
 		writeGuard(res, context)
+		if (context.capability.entryId) {
+			throw new ShareAccessError(403, 'A single-event link cannot upload unattached files')
+		}
 		if (context.capability.role !== ShareRole.Edit) {
 			throw new ShareAccessError(403, 'This link can only view')
 		}
@@ -376,17 +477,23 @@ export function sharingRouter() {
 		if (!limits.uploads) {
 			return res.status(403).json({ error: 'Uploads are disabled on this instance' })
 		}
+		if (limits.quota === undefined) {
+			return res.status(403).json({ error: 'Guest uploads require a configured per-account file quota' })
+		}
 		if (!limits.allowsMore(await fileStore.usageOf(context.owner.id))) {
 			return res.status(507).json({ error: 'File storage is full' })
 		}
 		const name = File.nameFrom(req.get('content-disposition'))
 		const mimeType = MimeType.parse(req.get('content-type')) ?? MimeType.octetStream
-		const bytes = await fileStore.put(context.owner.id, req, limits.maxSize).catch((error: unknown) => {
-			if (error instanceof FileTooLargeError) {
+		const bytes = await fileStore.putWithinQuota(context.owner.id, req, limits.maxSize, limits.quota).catch((error: unknown) => {
+			if (error instanceof FileTooLargeError || error instanceof FileQuotaExceededError) {
 				return error
 			}
 			throw error
 		})
+		if (bytes instanceof FileQuotaExceededError || (bytes instanceof FileTooLargeError && bytes.limit < limits.maxSize)) {
+			return res.status(507).json({ error: 'File storage is full' })
+		}
 		if (bytes instanceof FileTooLargeError) {
 			return res.status(413).json({ error: `This file is larger than the ${Math.round(limits.maxSize / 1024 / 1024)} MB limit` })
 		}
@@ -413,11 +520,26 @@ export function sharingRouter() {
 			}
 			return next(error)
 		}
-		unsubscribeWhileResolving()
 		const limit = streamLimiter.take(req.ip ?? 'unknown')
 		if (!limit.allowed) {
+			unsubscribeWhileResolving()
 			res.setHeader('Retry-After', String(limit.retryAfterSeconds))
 			return res.status(429).json({ error: 'Too many connections. Try again later' })
+		}
+		const capability = context.capability
+		const scope = new Set(capability.scope)
+		let singleEventIds: Set<string> | undefined
+		try {
+			if (capability.entryId) {
+				singleEventIds = new Set([capability.entryId, ...(await context.em.find(Entry, { recurringEntryId: capability.entryId, sourceId: capability.targetSourceId })).map(entry => entry.id!)])
+			}
+		} catch (error) {
+			unsubscribeWhileResolving()
+			return next(error)
+		}
+		if (revocationsWhileResolving.has(capability.id)) {
+			unsubscribeWhileResolving()
+			return res.status(410).json({ error: 'This link is no longer available. Ask its owner for a new one' })
 		}
 		res.writeHead(200, {
 			'Content-Type': 'text/event-stream',
@@ -426,19 +548,17 @@ export function sharingRouter() {
 		})
 		// Flushed at once: an SSE stream may stay silent until its first change, and a client waiting on the headers must not hang.
 		res.flushHeaders()
-		const capability = context.capability
-		if (revocationsWhileResolving.has(capability.id)) {
-			res.write('event: revoked\ndata: revoked\n\n')
-			return res.end()
-		}
-		const scope = new Set(capability.scope)
-		const unsubscribe = updates.subscribe((userId, updateScope, sourceId) => {
+		const unsubscribe = updates.subscribe((userId, updateScope, sourceId, entryId) => {
 			if (userId !== capability.ownerId) {
 				return
 			}
-			// A change whose calendar is known rides its sourceId: outside the link's scope it is not even a ping.
-			// An unknown-calendar change (a deletion, say) pings every link of that user; the guest refetch sees only its own scope.
-			if (sourceId && !scope.has(sourceId)) {
+			if (singleEventIds) {
+				// A calendar-wide ping leaks when unrelated events change; event links hear only their entry and series overrides.
+				if (!entryId || !singleEventIds.has(entryId)) {
+					return
+				}
+			} else if (sourceId && !scope.has(sourceId)) {
+				// A change whose calendar is known rides its sourceId: outside the link's scope it is not even a ping.
 				return
 			}
 			res.write(`data: ${updateScope === 'sources' ? 'sources' : 'updated'}\n\n`)
@@ -453,6 +573,15 @@ export function sharingRouter() {
 			unsubscribe()
 			unsubscribeRevocation()
 		})
+		if (revocationsWhileResolving.has(capability.id)) {
+			if (!res.writableEnded) {
+				res.write('event: revoked\ndata: revoked\n\n')
+				res.end()
+			}
+			unsubscribeWhileResolving()
+			return
+		}
+		unsubscribeWhileResolving()
 	})
 
 	// An unknown guest API path answers 404 here rather than falling through to the owner sign-in redirect, which

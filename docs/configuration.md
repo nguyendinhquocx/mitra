@@ -97,6 +97,9 @@ Clicking the name opens the **About** dialog, which shows the version and commit
 | `MITRA_LOG_LEVEL` | `info` | [How much Mitra logs](logging.md): `error`, `warn`, `info`, `debug` or `trace`. Each level includes everything quieter than it. |
 | `MITRA_UPDATE_CHECK` | *(on)* | Set to `off` (or `false`, `0`, `no`) to turn off the [update check](updates.md). |
 | `MITRA_MCP` | *(on)* | Set to `off` (or `false`, `0`, `no`) to close the [address AI tools connect to](ai-connectors.md). |
+| `MITRA_PUBLIC_HOST` | *(unset)* | Optional hostname for a separate guest-only edge. Requires a distinct HTTPS `MITRA_URL` owner origin, `MITRA_SHARE_ORIGIN`, and the exact proxy peer in `MITRA_TRUST_PROXY`. When the request Host matches, Mitra serves only `/s`, its built assets, guest API and health check; owner APIs and sign-in answer 404. Configure only behind a reviewed, restricted public proxy. |
+| `MITRA_TRUST_PROXY` | *(loopback outside public-edge mode)* | One exact IP address allowed to supply Express forwarded headers. Required with `MITRA_PUBLIC_HOST`; measure the reverse-proxy peer from inside the container, do not guess a Docker gateway or use a broad subnet. |
+| `MITRA_SHARE_ORIGIN` | *(unset)* | HTTPS origin used in copied guest links, e.g. `https://share.example.com`. Must be configured together with `MITRA_PUBLIC_HOST`, with the same hostname; keep `MITRA_URL` pointed at the owner/OIDC address. The edge's proxy must preserve the request Host. |
 
 ### Reminders
 
@@ -115,7 +118,7 @@ Clicking the name opens the **About** dialog, which shows the version and commit
 | Variable | Default | Description |
 | --- | --- | --- |
 | `MITRA_FILE_MAX_SIZE` | `25M` | The largest file a person can [attach](attachments.md) to an entry, in bytes or with a `k`, `M` or `G` suffix. Set it to `0` to turn adding files off. |
-| `MITRA_FILE_QUOTA` | *(unset)* | How much each person can store in attached files altogether, written the same way. Without it, there's no limit. |
+| `MITRA_FILE_QUOTA` | *(unset)* | How much each person can store in attached files altogether, written the same way. Without it, there's no limit; guest uploads are refused until a quota is set. |
 
 ### Google Calendar
 

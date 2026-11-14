@@ -27,6 +27,7 @@ import { UnusedFileDisposer } from '#features/files/server/UnusedFileDisposer.js
 import { fileContentRouter, filesRouter } from '#features/files/server/files.js'
 import { EntryFile } from '#features/entries'
 import { observeInstanceOrigin } from '#infrastructure/http/instanceUrl.js'
+import { allowsPublicGuestPath, matchesPublicGuestHost } from '#infrastructure/server/PublicGuestEdge.js'
 
 const logger = createLogger('API')
 
@@ -42,26 +43,31 @@ updateChecker.start()
 const app = express()
 // The reverse proxy (Caddy) terminates TLS on the same host: only its loopback answers may rewrite the client address,
 // so rate limits and origin checks see the real visitor instead of the proxy.
-app.set('trust proxy', 'loopback')
-app.use(cors())
+app.set('trust proxy', environment.trustedProxy)
 
-// A public guest edge (`MITRA_PUBLIC_HOST`) reaches the guest surface, its static assets and the health check only;
-// every owner surface answers 404 there, fail-closed, so the open host names nothing else of this instance.
+const frontendDistPath = path.resolve(import.meta.dirname, '../../dist')
+
+// A public guest edge (`MITRA_PUBLIC_HOST`) reaches only the link shell, its actual built assets and health check.
+// Compare the request's Host authority: X-Forwarded-Host is untrusted input and must never choose the security zone.
 const publicHostGate: RequestHandler = (req, res, next) => {
 	if (!environment.publicHost) {
 		return next()
 	}
-	const forwarded = req.headers['x-forwarded-host']
-	const host = ((Array.isArray(forwarded) ? forwarded[0] : forwarded) ?? req.hostname).split(',')[0]!.trim().toLowerCase()
-	const guestAllowed = req.path === '/s' || req.path.startsWith('/s/') || req.path === '/api/health'
-		|| (req.method === 'GET' && !req.path.startsWith('/api/') && !req.path.startsWith('/auth/') && req.path.includes('.'))
-	if (host === environment.publicHost && !guestAllowed) {
+	const onPublicGuestHost = matchesPublicGuestHost(req.headers.host, environment.publicHost)
+	const guestAllowed = allowsPublicGuestPath(req.method, req.path, frontendDistPath)
+	if (onPublicGuestHost && !guestAllowed) {
 		return res.status(404).json({ error: 'Not found' })
 	}
 	return next()
 }
 app.use(publicHostGate)
-app.use(observeInstanceOrigin)
+app.use(cors())
+app.use((req, res, next) => {
+	if (environment.publicHost && matchesPublicGuestHost(req.headers.host, environment.publicHost)) {
+		return next()
+	}
+	return observeInstanceOrigin(req, res, next)
+})
 // Before everything it covers: the API routers below and the static frontend at the bottom.
 app.use(compression())
 
@@ -105,11 +111,10 @@ const guestPage: RequestHandler = (req, res, next) => {
 app.use(guestPage)
 
 // Static assets the guest shell loads, shared with the owner frontend below.
-const frontendDistPath = path.resolve(import.meta.dirname, '../../dist')
-
 // The guest page opens by link alone, so it is served before the owner sign-in has anything to say about it: under
 // OIDC the SPA fallback sits behind `authMiddleware`, which would redirect `/s` to login and strand every guest.
 app.get('/s', (_req, res) => res.sendFile('index.html', { root: frontendDistPath, headers: { 'Cache-Control': 'no-store' } }))
+app.use('/s', (_req, res) => res.status(404).json({ error: 'Not found' }))
 
 if (oidc) {
 	app.use('/auth', authRouter)

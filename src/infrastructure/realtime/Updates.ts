@@ -4,7 +4,7 @@ import { createMetadataDecorator } from '@a11d/metadata'
     change is known to sit in one calendar (`sourceId`), scoped transports use it to leave the calendars it doesn't reach alone. */
 export type UpdateScope = 'entries' | 'sources'
 
-type UpdateListener = (userId: string, scope: UpdateScope, sourceId?: string) => void
+type UpdateListener = (userId: string, scope: UpdateScope, sourceId?: string, entryId?: string) => void
 
 /** What changed for each user, told to their open pages through the event stream; only the server subscribes and dispatches. */
 class Updates {
@@ -20,16 +20,18 @@ class Updates {
 		this.listeners.delete(listener)
 	}
 
-	dispatch(userId: string, scope: UpdateScope, sourceId?: string) {
-		this.listeners.forEach(listener => listener(userId, scope, sourceId))
+	dispatch(userId: string, scope: UpdateScope, sourceId?: string, entryId?: string) {
+		this.listeners.forEach(listener => listener(userId, scope, sourceId, entryId))
 	}
 
 	/** Dispatches the update `operation` declared, once its run succeeded; one that declares none dispatches nothing. Where
 	    the result names its calendar (an entry answers with its `sourceId`), it rides along for the scoped transports. */
-	dispatchFor(operation: object, user: { readonly id: string }, subject?: { readonly sourceId?: string }) {
+	dispatchFor(operation: object, user: { readonly id: string }, subject?: { readonly sourceId?: string, readonly id?: string }) {
 		const scope = updates.of(operation)
 		if (scope) {
-			this.dispatch(user.id, scope, subject?.sourceId)
+			const parameterId = (operation as { readonly parameters?: { readonly id?: unknown } }).parameters?.id
+			const entryId = scope === 'entries' && typeof parameterId === 'string' ? parameterId : subject?.id
+			this.dispatch(user.id, scope, subject?.sourceId, entryId)
 		}
 	}
 }
@@ -50,5 +52,5 @@ export function updates(scope: UpdateScope) {
 updates.of = (operation: object) => declared.get(operation.constructor as Constructor<unknown>) as UpdateScope | undefined
 updates.subscribe = (listener: UpdateListener) => stream.subscribe(listener)
 updates.unsubscribe = (listener: UpdateListener) => stream.unsubscribe(listener)
-updates.dispatch = (userId: string, scope: UpdateScope, sourceId?: string) => stream.dispatch(userId, scope, sourceId)
-updates.dispatchFor = (operation: object, user: { readonly id: string }, subject?: { readonly sourceId?: string }) => stream.dispatchFor(operation, user, subject)
+updates.dispatch = (userId: string, scope: UpdateScope, sourceId?: string, entryId?: string) => stream.dispatch(userId, scope, sourceId, entryId)
+updates.dispatchFor = (operation: object, user: { readonly id: string }, subject?: { readonly sourceId?: string, readonly id?: string }) => stream.dispatchFor(operation, user, subject)

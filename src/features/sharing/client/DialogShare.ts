@@ -67,18 +67,27 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 
 	/** Where a guest opens the link: the operator's public edge when one is named, else this very origin. */
 	private get linkOrigin() {
-		return session.instance.shareOrigin ?? location.origin
+		const origin = session.instance.shareOrigin
+		return origin ? new URL(origin).origin : location.origin
+	}
+
+	private get eventFocusFragment() {
+		const entry = this.parameters.entry
+		if (!entry?.id) {
+			return ''
+		}
+		const start = entry.start ? `&at=${encodeURIComponent(entry.start.toISOString())}` : ''
+		return `&entry=${encodeURIComponent(entry.id)}${start}`
 	}
 
 	private get maskedUrl() {
 		return this.createdToken === undefined
 			? ''
-			: `${this.linkOrigin}/s#calx_••••${this.createdToken.slice(-6)}${this.parameters.entry && !this.singleEventOnly ? `&entry=${this.parameters.entry.id}` : ''}`
+			: `${this.linkOrigin}/s#calx_••••${this.createdToken.slice(-6)}${this.eventFocusFragment}`
 	}
 
 	private linkUrlOf(token: string) {
-		const entry = this.parameters.entry && !this.singleEventOnly ? `&entry=${this.parameters.entry.id}` : ''
-		return `${this.linkOrigin}/s#${token}${entry}`
+		return `${this.linkOrigin}/s#${token}${this.eventFocusFragment}`
 	}
 
 	private async create() {

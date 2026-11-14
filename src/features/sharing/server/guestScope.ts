@@ -3,11 +3,13 @@ import type { Request } from 'express'
 import type { DateTimeRange } from '@3mo/date-time'
 import { User } from '#features/identity'
 import { Source } from '#features/sources'
-import { Entry } from '#features/entries'
+import { Entry, EntryFile, EntryFiles } from '#features/entries'
 import { EntryRelation, EntryRelations } from '#features/relations'
+import { File } from '#features/files/File.js'
 import { orm } from '#infrastructure/database/orm.js'
 import { cookie } from '#features/identity/server/auth.js'
 import { ShareCapability } from '../ShareCapability.js'
+import { ShareFileGrant } from '../ShareFileGrant.js'
 
 /** What a guest request refuses as, each with the status it answers with. */
 export class ShareAccessError extends Error {
@@ -60,7 +62,11 @@ export async function resolveGuest(req: Request): Promise<GuestContext> {
 /** The entry `id` names, provided it sits inside what the link reaches; anything else is a denial, not a 404. */
 export async function guestEntry(context: GuestContext, id: string) {
 	if (context.capability.entryId && id !== context.capability.entryId) {
-		throw new ShareAccessError(403, 'This link only reaches a single event')
+		const override = await context.em.findOne(Entry, { id, recurringEntryId: context.capability.entryId, sourceId: context.capability.targetSourceId })
+		if (!override) {
+			throw new ShareAccessError(403, 'This link only reaches a single event or its series overrides')
+		}
+		return override
 	}
 	const entry = await context.em.findOne(Entry, { id })
 	if (!entry) {
@@ -117,8 +123,7 @@ export async function scopedEntries(context: GuestContext, range?: DateTimeRange
 		for (const entry of recurring) {
 			entry.overrides = byEntry.get(entry.id!) ?? []
 		}
-		await attachScopedRelations(context, entries)
-		return entries
+		return attachScopedRelations(context, entries)
 	}
 	const scope = [...context.scope]
 	const entries = await context.em.find(Entry, {
@@ -136,28 +141,27 @@ export async function scopedEntries(context: GuestContext, range?: DateTimeRange
 	for (const entry of recurring) {
 		entry.overrides = byEntry.get(entry.id!) ?? []
 	}
-	await attachScopedRelations(context, entries)
-	return entries
+	return attachScopedRelations(context, entries)
 }
 
 /** The entries a search finds inside the scope, newest first, the availability background left out. */
 export async function searchedEntries(context: GuestContext, query: string) {
 	if (context.capability.entryId) {
+		const overrides = await context.em.find(Entry, { recurringEntryId: context.capability.entryId, sourceId: context.capability.targetSourceId })
+		const entryIds = [context.capability.entryId, ...overrides.map(entry => entry.id!)]
 		const found = await context.em.find(Entry, {
 			$and: [
-				{ id: context.capability.entryId },
+				{ id: { $in: entryIds } },
 				{ sourceId: context.capability.targetSourceId },
 				User.matching(query),
 			],
-		}, { limit: 1 })
-		await attachScopedRelations(context, found)
-		return found
+		}, { limit: 20, orderBy: { start: 'desc' } })
+		return attachScopedRelations(context, found)
 	}
 	const found = await context.em.find(Entry, {
 		$and: [{ sourceId: { $in: [...context.scope] } }, User.matching(query)],
 	}, { limit: 20, orderBy: { start: 'desc' } })
-	await attachScopedRelations(context, found)
-	return found
+	return attachScopedRelations(context, found)
 }
 
 /**
@@ -167,29 +171,133 @@ export async function searchedEntries(context: GuestContext, query: string) {
  * A row pointing at a scope uid may come from a private entry: it stays only when its owner entry is inside the
  * scope too, so a private calendar's relation to a shared event is neither returned nor followed.
  */
-export async function attachScopedRelations(context: GuestContext, entries: ReadonlyArray<Entry>) {
+function entriesAndOverrides(entries: ReadonlyArray<Entry>) {
+	return entries.flatMap(entry => [entry, ...(entry.overrides ?? [])])
+}
+
+async function exposeGuestFilePaths(context: GuestContext, entries: ReadonlyArray<Entry>) {
+	const permittedEntryIds = context.capability.entryId
+		? [context.capability.entryId, ...(await context.em.find(Entry, { recurringEntryId: context.capability.entryId, sourceId: context.capability.targetSourceId })).map(entry => entry.id!)]
+		: undefined
+	const localFileOf = (id: string) => context.em.findOne(EntryFile, {
+		id,
+		userId: { $ne: null },
+		sha256: { $ne: null },
+		entry: permittedEntryIds ? { id: { $in: permittedEntryIds } } : { sourceId: { $in: [...context.scope] } },
+	})
+	for (const entry of entriesAndOverrides(entries)) {
+		const ownerFiles = new Map<string, { row: EntryFile, references: Array<EntryFile> }>()
+		const keep = new Array<EntryFile>()
+		for (const file of entry.files ?? []) {
+			const localId = file.userId && file.sha256 ? file.id : File.idOf(file.sourceUrl ?? '') ?? (!file.sourceUrl ? file.id : undefined)
+			if (!localId) {
+				keep.push(file)
+				continue
+			}
+			const row = file.userId && file.sha256 ? file : await localFileOf(localId)
+			if (!row?.id) {
+				continue // A local-looking file URL outside the current capability is never sent back to the guest.
+			}
+			const existing = ownerFiles.get(row.id)
+			if (existing) {
+				existing.references.push(file)
+			} else {
+				ownerFiles.set(row.id, { row, references: [file] })
+			}
+		}
+		const descriptionIds = entry.description
+			? [...new Set([...entry.description.matchAll(/(?:https?:\/\/[^/\s<>()]+)?(?:\/s)?\/api\/files\/([A-Za-z0-9_-]{22})(?:\/[^\s<>()]*)?/g)].map(match => match[1]!))]
+			: []
+		for (const id of descriptionIds) {
+			if (!ownerFiles.has(id)) {
+				const row = await localFileOf(id)
+				if (row?.id) {
+					ownerFiles.set(row.id, { row, references: [] })
+				}
+			}
+		}
+		const aliasIds = ownerFiles.size
+			? await ShareFileGrant.idsFor(context.em, context.capability.id, [...ownerFiles.keys()])
+			: new Map<string, string>()
+		const paths = new Map<string, string>()
+		for (const [ownerId, { row, references }] of ownerFiles) {
+			const guestId = aliasIds.get(ownerId)
+			if (!guestId) {
+				throw new ShareAccessError(410, 'This link is no longer available')
+			}
+			const path = `/s/api/files/${guestId}/${encodeURIComponent(row.name || 'file')}`
+			paths.set(ownerId, path)
+			for (const file of references) {
+				file.id = guestId
+				file.userId = undefined
+				file.sha256 = row.sha256
+				file.size ??= row.size
+				file.name ??= row.name
+				file.mimeType ??= row.mimeType
+				file.sourceUrl = path
+				keep.push(file)
+			}
+		}
+		entry.files = EntryFiles.of(keep)
+		if (entry.description) {
+			entry.description = entry.description.replace(/(?:https?:\/\/[^/\s<>()]+)?(?:\/s)?\/api\/files\/([A-Za-z0-9_-]{22})(?:\/[^\s<>()]*)?/g, (_url, id: string) => paths.get(id) ?? '')
+		}
+		// Provider payloads and URIs can repeat a raw `/api/files/<id>` URL; neither belongs on a guest wire projection.
+		entry.data = undefined
+		entry.uri = undefined
+	}
+}
+
+function cloneGuestEntry(entry: Entry): Entry {
+	const clone = entry.clone()
+	// Overrides are bookkeeping, so Entity.clone() keeps the array's Entity members by reference; detach them before projection.
+	clone.overrides = entry.overrides?.map(cloneGuestEntry)
+	return clone
+}
+
+export async function attachScopedRelations(context: GuestContext, entries: ReadonlyArray<Entry>): Promise<Array<Entry>> {
 	if (!entries.length) {
-		return
+		return []
+	}
+	// Project detached entities: a guest alias must never mutate a managed primary key and leak into a later ORM flush.
+	const projected = entries.map(cloneGuestEntry)
+	await exposeGuestFilePaths(context, projected)
+	const allEntries = entriesAndOverrides(projected)
+	if (context.capability.entryId) {
+		// A single-event link grants no calendar graph: even another entry or an override relation is outside this capability.
+		for (const entry of allEntries) {
+			entry.relations = EntryRelations.none
+		}
+		return projected
 	}
 	const scope = [...context.scope]
-	const ids = entries.map(entry => entry.id!)
-	const uids = [...new Set(entries.map(entry => entry.uid!).filter((uid): uid is string => !!uid))]
+	const ids = allEntries.map(entry => entry.id!)
+	const uids = [...new Set(allEntries.map(entry => entry.uid!).filter((uid): uid is string => !!uid))]
 	const [owned, pointing] = await Promise.all([
 		context.em.find(EntryRelation, { entryId: { $in: ids } }),
 		context.em.find(EntryRelation, { targetUid: { $in: uids } }),
 	])
-	// A row pointing at a scope uid may come from a private entry: it stays only when its owner entry is inside the scope too.
+	// Keep a relation only when its owning entry and target both belong to the current source scope.
 	const entryIdsInScope = new Set(ids)
-	const rows = [...owned, ...pointing].filter(row => entryIdsInScope.has(row.entryId))
-	const rowTargetUids = [...new Set(rows.map(row => row.targetUid))]
+	const candidateRows = [...owned, ...pointing].filter(row => entryIdsInScope.has(row.entryId))
+	const rowTargetUids = [...new Set(candidateRows.map(row => row.targetUid))]
 	const targets = rowTargetUids.length
 		? await context.em.find(Entry, { $and: [{ uid: { $in: rowTargetUids }, recurrenceId: null }, { sourceId: { $in: scope } }] })
 		: []
-	const targetByUid = new Map(targets.map(entry => [entry.uid!, entry]))
+	const visibleByUid = new Map(allEntries.map(entry => [entry.uid!, entry]))
+	const targetByUid = new Map(targets.map(entry => [entry.uid!, visibleByUid.get(entry.uid!) ?? cloneGuestEntry(entry)]))
+	const visibleEntryIds = new Set(allEntries.map(entry => entry.id!))
+	const externalTargets = [...targetByUid.values()].filter(target => !visibleEntryIds.has(target.id!))
+	await exposeGuestFilePaths(context, externalTargets)
+	for (const target of externalTargets) {
+		target.relations = EntryRelations.none
+	}
+	const rows = candidateRows.filter(row => targetByUid.has(row.targetUid))
 	const rowsByEntry = Map.groupBy(rows, row => row.entryId)
-	for (const entry of entries) {
+	for (const entry of allEntries) {
 		const entryRows = rowsByEntry.get(entry.id!) ?? []
 		entry.relations = EntryRelations.of(entryRows.map(row => row.relation))
 	}
-	EntryRelations.link([...entries], uid => targetByUid.get(uid ?? ''))
+	EntryRelations.link(allEntries, uid => targetByUid.get(uid ?? ''))
+	return projected
 }

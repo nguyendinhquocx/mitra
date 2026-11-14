@@ -3,21 +3,32 @@ import assert from 'node:assert/strict'
 import type { AddressInfo } from 'node:net'
 import type { EntityManager } from '@mikro-orm/sqlite'
 import type { Server } from 'node:http'
+import { Readable } from 'node:stream'
 import express from 'express'
 import { DateTime } from '@3mo/date-time'
 import { ModelValueConstructor } from '@a11d/api-model-value-constructor'
 import { User } from '#features/identity'
 import { Source } from '#features/sources'
-import { Entry, EntryType } from '#features/entries'
+import { Entry, EntryFile, EntryFileType, EntryFiles, EntryType } from '#features/entries'
 import { EntryRelations, RelationType } from '#features/relations'
+import { MimeType } from '#features/files/MimeType.js'
+import { FileLimits } from '#features/files/server/FileLimits.js'
+import { fileStore } from '#features/files/server/FileStore.js'
+import { environment } from '#infrastructure/server/Environment.js'
+import { fileContentRouter } from '#features/files/server/files.js'
+import { Recurrence, RecurrenceFrequency } from '#features/recurrence'
 import { MitraCalendar } from '#integrations/mitra/MitraCalendar.js'
 import { errorHandler } from '#infrastructure/http/errorHandler.js'
+import { updates } from '#infrastructure/realtime/Updates.js'
 import { ShareCapability, ShareRole } from '../ShareCapability.js'
+import { ShareFileGrant } from '../ShareFileGrant.js'
 import { ShareOperation } from './ShareOperation.js'
 import { RevokeShareLink } from './RevokeShareLink.js'
 import { CreateShareLink } from './CreateShareLink.js'
+import { DeleteEntry } from '#features/entries/server/DeleteEntry.js'
 import { UpdateShareLinkOverlays } from './UpdateShareLinkOverlays.js'
 import { exchangeLimiterForTests, sweepShareOperations } from './sharingRouter.js'
+import { attachScopedRelations, type GuestContext } from './guestScope.js'
 
 /** The guest API as a hostile client would reach it: real HTTP, a cookie the test sets, no owner session anywhere. */
 describe('Sharing (guest capability)', () => {
@@ -51,6 +62,7 @@ describe('Sharing (guest capability)', () => {
 		const models = new ModelValueConstructor()
 		const app = express()
 		app.use(express.json({ reviver: (_key, value) => models.shallConstruct(value) ? models.construct(value) : value }))
+		app.use('/api/files', fileContentRouter([EntryFile]))
 		app.use('/s/api', (await import('./sharingRouter.js')).sharingRouter())
 		app.use(errorHandler)
 		server = await new Promise<Server>(resolve => {
@@ -113,7 +125,7 @@ describe('Sharing (guest capability)', () => {
 		const cookie = cookieOf(token)
 		const foreign = await request('/entries', {
 			method: 'POST',
-			headers: { 'content-type': 'application/json', origin: 'https://evil.example' },
+			headers: { 'content-type': 'application/json', origin: 'https://evil.example', 'x-forwarded-host': 'evil.example' },
 			body: JSON.stringify(event('Injected', '2027-02-01T10:00:00Z')),
 		}, cookie)
 		assert.equal(foreign.status, 403)
@@ -167,6 +179,52 @@ describe('Sharing (guest capability)', () => {
 		assert.ok(!body.includes(privateEntry.uid!))
 	})
 
+	it('projects a task completion response through the guest file and relation scope', async () => {
+		const task = new Entry({
+			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Task, heading: 'Scoped task', uid: crypto.randomUUID(),
+			uri: 'private-provider-uri',
+			relations: EntryRelations.of([{ type: RelationType.Parent, targetUid: privateEntry.uid! }]),
+		})
+		const bytes = await fileStore.put(user.id, Readable.from([Buffer.from('task attachment')]), 1024)
+		const fileEm = em.fork()
+		const fileTask = new EntryFile({ entry: task, type: EntryFileType.Attachment, userId: user.id, sha256: bytes.sha256, size: bytes.size, name: 'task.txt', mimeType: MimeType.parse('text/plain') })
+		task.data = { raw: `ATTACH:/api/files/${fileTask.id}/task.txt` }
+		fileEm.persist([task, fileTask])
+		await fileEm.flush()
+		const cookie = cookieOf((await capabilityOf(ShareRole.Edit)).token)
+		const stream = await request('/stream', {}, cookie)
+		assert.equal(stream.status, 200)
+		const reader = stream.body!.getReader()
+		const updateRead = reader.read()
+		const completionHeaders = { 'x-operation-id': 'complete-scope-test-001' }
+		const response = await request(`/entries/${task.id}/complete`, { method: 'POST', headers: completionHeaders }, cookie)
+		assert.equal(response.status, 200)
+		const completionSignal = await Promise.race([
+			updateRead.then(result => new TextDecoder().decode(result.value)),
+			new Promise<string>(resolve => setTimeout(() => resolve('timeout'), 1000)),
+		])
+		assert.match(completionSignal, /data: updated/)
+		const body = await response.text()
+		assert.ok(!body.includes(fileTask.id))
+		assert.ok(!body.includes(privateEntry.uid!))
+		assert.ok(!body.includes('private-provider-uri'))
+		const entry = JSON.parse(body) as { files?: Array<{ id: string, sourceUrl?: string }> }
+		assert.ok(entry.files?.[0]?.sourceUrl?.startsWith('/s/api/files/'))
+		const replayRead = reader.read()
+		const replay = await request(`/entries/${task.id}/complete`, { method: 'POST', headers: completionHeaders }, cookie)
+		assert.equal(replay.status, 200)
+		assert.ok(!(await replay.text()).includes(fileTask.id))
+		const replaySignal = await Promise.race([
+			replayRead.then(() => 'sent'),
+			new Promise<string>(resolve => setTimeout(() => resolve('quiet'), 50)),
+		])
+		assert.equal(replaySignal, 'quiet')
+		await reader.cancel()
+		await fileStore.delete(user.id, bytes.sha256)
+		fileEm.remove([task, fileTask])
+		await fileEm.flush()
+	})
+
 	it('persists a guest edit sent as the browser EntryPatch model', async () => {
 		const cookie = cookieOf((await capabilityOf(ShareRole.Edit)).token)
 		const response = await request(`/entries/${sharedEntry.id}`, {
@@ -176,6 +234,31 @@ describe('Sharing (guest capability)', () => {
 		}, cookie)
 		assert.equal(response.status, 200, await response.text())
 		assert.equal((await em.fork().findOne(Entry, { id: sharedEntry.id }))?.heading, 'Guest edit persisted')
+	})
+
+	it('refuses guest uploads when the owner has not configured a file quota', async () => {
+		if (!FileLimits.of(environment).uploads || environment.files.quota !== undefined) {
+			return
+		}
+		const { token } = await capabilityOf(ShareRole.Edit)
+		const response = await request('/files', {
+			method: 'POST',
+			headers: { 'content-type': 'text/plain' },
+			body: 'unclaimed guest bytes',
+		}, cookieOf(token))
+		assert.equal(response.status, 403)
+		assert.match(await response.text(), /quota/)
+	})
+
+	it('persists a guest create sent as the browser EntryPatch model', async () => {
+		const { token } = await capabilityOf(ShareRole.Edit)
+		const response = await request('/entries', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', type: 'event', heading: 'Browser-created guest event', start: '2027-02-02T10:00:00.000Z', end: '2027-02-02T11:00:00.000Z' }),
+		}, cookieOf(token))
+		assert.equal(response.status, 201)
+		assert.ok(await em.fork().findOne(Entry, { sourceId: target.id, heading: 'Browser-created guest event' }))
 	})
 
 	it('answers a guest write without leaking the owner relation graph into the JSON', async () => {
@@ -191,6 +274,27 @@ describe('Sharing (guest capability)', () => {
 		const body = await updated.text()
 		assert.ok(!body.includes('Private matter'))
 		assert.ok(!body.includes(privateEntry.uid!))
+	})
+
+	it('uses the browser query occurrence scope rather than a conflicting body field', async () => {
+		const series = new Entry({
+			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'Query-scoped series',
+			start: new DateTime(Date.parse('2027-01-10T10:00:00Z')), end: new DateTime(Date.parse('2027-01-10T11:00:00Z')),
+			recurrence: new Recurrence({ freq: RecurrenceFrequency.Daily, count: 3 }), uid: crypto.randomUUID(),
+		})
+		em.persist(series)
+		await em.flush()
+		const cookie = cookieOf((await capabilityOf(ShareRole.Edit)).token)
+		const response = await request(`/entries/${series.id}/occurrences/2027-01-10T10%3A00%3A00.000Z?scope=all`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', heading: 'Series changed from query scope', scope: 'this' }),
+		}, cookie)
+		assert.equal(response.status, 200)
+		assert.equal((await em.fork().findOne(Entry, { id: series.id }))?.heading, 'Series changed from query scope')
+		assert.equal(await em.count(Entry, { heading: 'Series changed from query scope', recurrenceId: { $ne: null } }), 0)
+		em.remove(series)
+		await em.flush()
 	})
 
 	it('keeps an occurrence patch from moving the entry outside the target', async () => {
@@ -260,6 +364,14 @@ describe('Sharing (guest capability)', () => {
 		assert.equal(forged.status, 404)
 	})
 
+	it('dispatches the root entry ID when an entry mutation has no result body', () => {
+		const dispatched: Array<{ userId: string, scope: string, sourceId?: string, entryId?: string }> = []
+		const unsubscribe = updates.subscribe((userId, scope, sourceId, entryId) => dispatched.push({ userId, scope, sourceId, entryId }))
+		updates.dispatchFor(new DeleteEntry({ id: sharedEntry.id! }), user)
+		unsubscribe()
+		assert.deepEqual(dispatched, [{ userId: user.id, scope: 'entries', sourceId: undefined, entryId: sharedEntry.id }])
+	})
+
 	it('closes an open stream on revoke and denies the next request after it', async () => {
 		const { capability, token } = await capabilityOf(ShareRole.View)
 		const cookie = cookieOf(token)
@@ -298,6 +410,129 @@ describe('Sharing (guest capability)', () => {
 		assert.notEqual(stored.hash, answer.token)
 	})
 
+	it('projects recurring overrides without mutating managed rows across grant flushes', async () => {
+		const series = new Entry({
+			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'Detached guest series',
+			start: new DateTime(Date.parse('2027-03-01T10:00:00Z')), end: new DateTime(Date.parse('2027-03-01T11:00:00Z')),
+			recurrence: new Recurrence({ freq: RecurrenceFrequency.Daily, count: 3 }), uid: crypto.randomUUID(),
+		})
+		const first = new Entry({
+			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'First private override',
+			start: new DateTime(Date.parse('2027-03-02T12:00:00Z')), end: new DateTime(Date.parse('2027-03-02T13:00:00Z')),
+			recurringEntryId: series.id, recurrenceId: new DateTime(Date.parse('2027-03-02T10:00:00Z')), uid: series.uid,
+			uri: 'provider://private/first', data: { raw: 'first private payload' },
+			relations: EntryRelations.of([{ type: RelationType.Parent, targetUid: privateEntry.uid! }]),
+		})
+		const second = new Entry({
+			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'Second private override',
+			start: new DateTime(Date.parse('2027-03-03T12:00:00Z')), end: new DateTime(Date.parse('2027-03-03T13:00:00Z')),
+			recurringEntryId: series.id, recurrenceId: new DateTime(Date.parse('2027-03-03T10:00:00Z')), uid: series.uid,
+			uri: 'provider://private/second', data: { raw: 'second private payload' },
+			relations: EntryRelations.of([{ type: RelationType.Parent, targetUid: privateEntry.uid! }]),
+		})
+		const firstHash = 'a'.repeat(64)
+		const secondHash = 'b'.repeat(64)
+		const firstFile = new EntryFile({ entry: first, type: EntryFileType.Attachment, userId: user.id, sha256: firstHash, name: 'first-private.txt', mimeType: MimeType.parse('text/plain') })
+		const secondFile = new EntryFile({ entry: second, type: EntryFileType.Attachment, userId: user.id, sha256: secondHash, name: 'second-private.txt', mimeType: MimeType.parse('text/plain') })
+		const localUrlReference = new EntryFile({ entry: second, type: EntryFileType.Attachment, sourceUrl: `/api/files/${firstFile.id}/first-private.txt`, name: 'first-via-url.txt', mimeType: MimeType.parse('text/plain') })
+		series.description = `[Shared file](/api/files/${firstFile.id}/first-private.txt)`
+		em.persist([series, first, second, firstFile, secondFile, localUrlReference])
+		await em.flush()
+
+		const link = await new CreateShareLink({ targetSourceId: target.id, role: ShareRole.Edit, overlays: [], entryId: first.id }).run({ em: em.fork(), user })
+		const window = await request(`/entries?start=${instant('2027-03-01T00:00:00Z')}&end=${instant('2027-03-05T00:00:00Z')}`, {}, cookieOf(link.token))
+		assert.equal(window.status, 200)
+		const wireEntries = await window.json() as Array<{
+			id: string
+			description?: string
+			files?: Array<{ id: string }>
+			overrides?: Array<{
+				id: string
+				data?: unknown
+				uri?: string
+				relations?: unknown
+				files?: Array<{ id: string, sourceUrl?: string, name?: string }>
+			}>
+		}>
+		assert.equal(wireEntries.length, 1)
+		const projected = wireEntries[0]!
+		assert.equal(projected.id, series.id)
+		assert.deepEqual(projected.overrides?.map(entry => entry.id).sort(), [first.id, second.id].sort())
+		assert.match(projected.description ?? '', /\/s\/api\/files\//)
+		assert.equal(projected.files?.length ?? 0, 0)
+		const descriptionAlias = /\((\/s\/api\/files\/[^)]+)\)/.exec(projected.description ?? '')?.[1]
+		assert.ok(descriptionAlias)
+		assert.ok(projected.overrides?.find(entry => entry.id === second.id)?.files?.some(file => file.name === 'first-via-url.txt' && file.sourceUrl === descriptionAlias))
+		assert.ok(!JSON.stringify(projected).includes(firstFile.id))
+		assert.ok(!JSON.stringify(projected).includes(secondFile.id))
+		assert.ok(!JSON.stringify(projected).includes(user.id))
+		for (const override of projected.overrides ?? []) {
+			assert.equal(override.data, undefined)
+			assert.equal(override.uri, undefined)
+			assert.deepEqual(override.relations, [])
+			assert.ok(override.files?.every(file => file.sourceUrl?.startsWith('/s/api/files/')))
+		}
+
+		// The real guest route aliases multiple overrides; the second grant flush must leave all owner rows intact.
+		const storedOverrides = await em.fork().find(Entry, { id: { $in: [first.id!, second.id!] } })
+		const storedById = new Map(storedOverrides.map(entry => [entry.id!, entry]))
+		for (const [entryId, file, hash, uri, raw] of [
+			[first.id!, firstFile, firstHash, 'provider://private/first', 'first private payload'],
+			[second.id!, secondFile, secondHash, 'provider://private/second', 'second private payload'],
+		] as const) {
+			const stored = storedById.get(entryId)
+			assert.equal(stored?.uri, uri)
+			assert.equal(stored?.data?.raw, raw)
+			const storedFile = stored?.files?.all.find(candidate => candidate.id === file.id)
+			assert.equal(storedFile?.id, file.id)
+			assert.equal(storedFile?.userId, user.id)
+			assert.equal(storedFile?.sha256, hash)
+			assert.equal(stored?.relations?.all[0]?.targetUid, privateEntry.uid)
+		}
+		const storedSecond = storedById.get(second.id!)
+		const storedUrlReference = storedSecond?.files?.all.find(file => file.id === localUrlReference.id)
+		assert.equal(storedUrlReference?.sourceUrl, `/api/files/${firstFile.id}/first-private.txt`)
+		assert.equal(storedUrlReference?.userId, undefined)
+		assert.equal(storedUrlReference?.sha256, undefined)
+		const storedSeries = await em.fork().findOneOrFail(Entry, { id: series.id })
+		assert.equal(storedSeries.description, `[Shared file](/api/files/${firstFile.id}/first-private.txt)`)
+		assert.equal(storedSeries.files?.length, 0)
+
+		const guestEdit = await request(`/entries/${series.id}`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', description: projected.description }),
+		}, cookieOf(link.token))
+		assert.equal(guestEdit.status, 200, await guestEdit.text())
+		assert.equal((await em.fork().findOneOrFail(Entry, { id: series.id })).description, `[Shared file](/api/files/${firstFile.id}/first-private.txt)`)
+
+		assert.ok(await em.fork().findOne(ShareFileGrant, { capabilityId: link.capability.id, entryFileId: secondFile.id }))
+		await em.fork().nativeDelete(EntryFile, { id: secondFile.id })
+		assert.equal(await em.fork().findOne(ShareFileGrant, { capabilityId: link.capability.id, entryFileId: secondFile.id }), null)
+		await new RevokeShareLink({ id: link.capability.id }).run({ em: em.fork(), user })
+		await new RevokeShareLink({ id: link.capability.id }).run({ em: em.fork(), user })
+		assert.equal(await em.count(ShareFileGrant, { capabilityId: link.capability.id }), 0)
+		const cleanupEm = em.fork()
+		cleanupEm.remove([series, first, second])
+		await cleanupEm.flush()
+	})
+
+	it('clears relations from a shared series and its nested overrides', async () => {
+		const override = new Entry({
+			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'Private override',
+			relations: EntryRelations.of([{ type: RelationType.Parent, targetUid: privateEntry.uid! }]),
+		})
+		const root = new Entry({
+			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'Shared series',
+			relations: EntryRelations.of([{ type: RelationType.Parent, targetUid: privateEntry.uid! }]),
+			overrides: [override],
+		})
+		const context = { capability: { entryId: root.id, targetSourceId: target.id }, scope: [target.id], em: { find: () => Promise.resolve([]) } } as unknown as GuestContext
+		const [projected] = await attachScopedRelations(context, [root])
+		assert.deepEqual(projected!.relations?.all, [])
+		assert.deepEqual(projected!.overrides?.[0]?.relations?.all, [])
+	})
+
 	it('scopes a single-event share link to only that one event on read and write', async () => {
 		exchangeLimiterForTests.reset() // an earlier flood test spends this address's whole exchange window
 		const answer = await new CreateShareLink({ targetSourceId: target.id, role: ShareRole.Edit, overlays: [], entryId: sharedEntry.id }).run({ em: em.fork(), user })
@@ -315,6 +550,22 @@ describe('Sharing (guest capability)', () => {
 		assert.equal(exchangeData.target.name, sharedEntry.heading)
 
 		const cookie = cookieOf(answer.token)
+		const sibling = new Entry({ id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'Sibling secret', start: new DateTime(Date.parse('2027-01-13T10:00:00Z')), end: new DateTime(Date.parse('2027-01-13T11:00:00Z')), uid: crypto.randomUUID(), relations: EntryRelations.of([{ type: RelationType.Parent, targetUid: privateEntry.uid! }]) })
+		const relationEm = em.fork()
+		const shared = await relationEm.findOneOrFail(Entry, { id: sharedEntry.id })
+		shared.relations = EntryRelations.of([{ type: RelationType.Parent, targetUid: sibling.uid! }])
+		relationEm.persist(sibling)
+		await relationEm.flush()
+		const fileEm = em.fork()
+		const sharedForFiles = await fileEm.findOneOrFail(Entry, { id: sharedEntry.id })
+		const siblingForFiles = await fileEm.findOneOrFail(Entry, { id: sibling.id })
+		const sharedBytes = await fileStore.put(user.id, Readable.from([Buffer.from('shared event attachment')]), 1024)
+		const siblingBytes = await fileStore.put(user.id, Readable.from([Buffer.from('sibling attachment')]), 1024)
+		const sharedFile = new EntryFile({ entry: sharedForFiles, type: EntryFileType.Attachment, userId: user.id, sha256: sharedBytes.sha256, size: sharedBytes.size, name: 'shared.txt', mimeType: MimeType.parse('text/plain') })
+		const siblingFile = new EntryFile({ entry: siblingForFiles, type: EntryFileType.Attachment, userId: user.id, sha256: siblingBytes.sha256, size: siblingBytes.size, name: 'sibling.txt', mimeType: MimeType.parse('text/plain') })
+		fileEm.persist([sharedFile, siblingFile])
+		sharedForFiles.description = `[Shared file](https://calendar.quoc.app/api/files/${sharedFile.id}/shared.txt)\n\n[Prior guest path](/s/api/files/${sharedFile.id}/shared.txt)`
+		await fileEm.flush()
 
 		// 2. Bootstrap
 		const bootstrap = await (await request('/bootstrap', {}, cookie)).json() as { entryId?: string, overlays: Array<unknown> }
@@ -322,9 +573,57 @@ describe('Sharing (guest capability)', () => {
 		assert.deepEqual(bootstrap.overlays, [])
 
 		// 3. GET /entries returns ONLY this entry
-		const entries = await (await request(`/entries?start=${instant('2027-01-01T00:00:00Z')}&end=${instant('2027-01-31T00:00:00Z')}`, {}, cookie)).json() as Array<{ id: string }>
+		const entries = await (await request(`/entries?start=${instant('2027-01-01T00:00:00Z')}&end=${instant('2027-01-31T00:00:00Z')}`, {}, cookie)).json() as Array<{ id: string, description?: string, data?: unknown, uri?: string, relations?: unknown, files?: Array<{ id: string, sourceUrl?: string, type?: string, name?: string, size?: number, mimeType?: unknown }> }>
 		assert.equal(entries.length, 1)
 		assert.equal(entries[0]!.id, sharedEntry.id)
+		assert.deepEqual(entries[0]!.relations, [])
+		const calendarLink = await capabilityOf(ShareRole.View)
+		assert.ok(await em.fork().findOne(ShareCapability, { id: calendarLink.capability.id }))
+		assert.ok(await em.fork().findOne(EntryFile, { id: sharedFile.id }))
+		assert.ok(await em.fork().findOne(EntryFile, { id: siblingFile.id }))
+		const calendarCookie = cookieOf(calendarLink.token)
+		const calendarWindow = await (await request(`/entries?start=${instant('2027-01-01T00:00:00Z')}&end=${instant('2027-01-12T00:00:00Z')}`, {}, calendarCookie)).text()
+		assert.ok(calendarWindow.includes('Sibling secret'))
+		assert.ok(!calendarWindow.includes(privateEntry.uid!))
+		await new RevokeShareLink({ id: calendarLink.capability.id }).run({ em: em.fork(), user })
+		assert.doesNotMatch(JSON.stringify(entries), /Sibling secret|"targetUid":"[^"]+"/)
+		assert.equal(entries[0]!.data, undefined)
+		assert.equal(entries[0]!.uri, undefined)
+		assert.equal(JSON.stringify(entries).includes(user.id), false)
+		const guestFile = entries[0]!.files?.[0]
+		assert.ok(guestFile)
+		assert.notEqual(guestFile.id, sharedFile.id)
+		assert.ok(!JSON.stringify(entries).includes(sharedFile.id))
+		assert.equal(guestFile.sourceUrl, `/s/api/files/${guestFile.id}/shared.txt`)
+		assert.match(entries[0]!.description ?? '', new RegExp(`/s/api/files/${guestFile.id}/shared.txt`))
+		assert.equal((entries[0]!.description ?? '').includes('calendar.quoc.app/api/files'), false)
+		assert.equal((entries[0]!.description ?? '').includes('/s/s/api/files'), false)
+		assert.equal((await fetch(`${url}/api/files/${guestFile.id}/shared.txt`)).status, 404)
+		const attachmentResponse = await request(`/files/${guestFile.id}/shared.txt`, {}, cookie)
+		assert.equal(attachmentResponse.status, 200, await attachmentResponse.clone().text())
+		assert.equal(attachmentResponse.headers.get('cache-control'), 'no-store, no-transform')
+		assert.equal(await attachmentResponse.text(), 'shared event attachment')
+		assert.equal((await request(`/files/${siblingFile.id}/sibling.txt`, {}, cookie)).status, 404)
+
+		// A hand-written file URL on an entry without that attachment is removed rather than leaking another row's bearer id.
+		const linkOnlyEntry = new Entry({
+			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'Link-only event',
+			start: new DateTime(Date.parse('2027-01-14T10:00:00Z')), end: new DateTime(Date.parse('2027-01-14T11:00:00Z')),
+			description: `[Private file](/api/files/${sharedFile.id}/shared.txt)`, uid: crypto.randomUUID(),
+		})
+		const outOfScopeReference = new EntryFile({ entry: linkOnlyEntry, type: EntryFileType.Attachment, sourceUrl: `https://calendar.quoc.app/api/files/${sharedFile.id}/shared.txt`, name: 'private.txt', mimeType: MimeType.parse('text/plain') })
+		linkOnlyEntry.files = EntryFiles.of([outOfScopeReference])
+		fileEm.persist(linkOnlyEntry)
+		await fileEm.flush()
+		const linkOnly = await new CreateShareLink({ targetSourceId: target.id, role: ShareRole.View, overlays: [], entryId: linkOnlyEntry.id }).run({ em: em.fork(), user })
+		const linkOnlyResponse = await request(`/entries/${linkOnlyEntry.id}`, {}, cookieOf(linkOnly.token))
+		const linkOnlyBody = await linkOnlyResponse.text()
+		assert.equal(linkOnlyResponse.status, 200)
+		assert.ok(!linkOnlyBody.includes(sharedFile.id))
+		assert.ok(!linkOnlyBody.includes('private.txt'))
+		await new RevokeShareLink({ id: linkOnly.capability.id }).run({ em: em.fork(), user })
+		fileEm.remove([linkOnlyEntry, outOfScopeReference])
+		await fileEm.flush()
 
 		// 4. Searching for other entries returns nothing
 		const searchWork = await (await request('/entries/search?query=Work', {}, cookie)).json() as Array<unknown>
@@ -344,17 +643,140 @@ describe('Sharing (guest capability)', () => {
 		}, cookie)
 		assert.equal(createAttempt.status, 403)
 
-		// 7. Deleting the single event is forbidden
+		// 7. Deleting the event or detaching one occurrence is forbidden
 		assert.equal((await request(`/entries/${sharedEntry.id}`, { method: 'DELETE' }, cookie)).status, 403)
+		assert.equal((await request(`/entries/${sharedEntry.id}/occurrences/2027-01-10T10%3A00%3A00.000Z?scope=all`, { method: 'DELETE' }, cookie)).status, 403)
+		assert.equal((await request(`/entries/${sharedEntry.id}/complete?occurrence=2027-01-10T10%3A00%3A00.000Z`, { method: 'POST' }, cookie)).status, 403)
 
-		// 8. Updating the single event succeeds and persists
+		// 8. A scoped link cannot mutate the event's relation graph
+		const relationPatch = await request(`/entries/${sharedEntry.id}`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', relations: [{ type: 'PARENT', targetUid: sibling.uid }] }),
+		}, cookie)
+		assert.equal(relationPatch.status, 403)
+
+		// 9. Updating the single event succeeds and persists
 		const updateRes = await request(`/entries/${sharedEntry.id}`, {
 			method: 'PUT',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ '@type': 'EntryPatch', type: 'event', heading: 'Solo event edited', start: '2027-01-10T10:00:00.000Z', end: '2027-01-10T11:00:00.000Z' }),
+			body: JSON.stringify({ '@type': 'EntryPatch', type: 'event', heading: 'Solo event edited', start: '2027-01-10T10:00:00.000Z', end: '2027-01-10T11:00:00.000Z', description: entries[0]!.description, files: [guestFile] }),
 		}, cookie)
 		assert.equal(updateRes.status, 200)
-		assert.equal((await em.fork().findOne(Entry, { id: sharedEntry.id }))?.heading, 'Solo event edited')
+		const savedEvent = await em.fork().findOne(Entry, { id: sharedEntry.id })
+		assert.equal(savedEvent?.heading, 'Solo event edited')
+		assert.ok(savedEvent?.description?.includes(`/api/files/${sharedFile.id}/shared.txt`))
+		assert.equal(savedEvent?.description?.includes('/s/api/files/'), false)
+		assert.ok(await em.fork().findOne(EntryFile, { id: sharedFile.id }))
+
+		// 10. A single-event stream does not reveal when an unrelated event in the same calendar changes.
+		const stream = await request('/stream', {}, cookie)
+		assert.equal(stream.status, 200)
+		const reader = stream.body!.getReader()
+		const nextEvent = reader.read()
+		updates.dispatch(user.id, 'entries', target.id, sibling.id!)
+		const unrelatedUpdate = await Promise.race([
+			nextEvent.then(() => 'sent'),
+			new Promise<string>(resolve => setTimeout(() => resolve('quiet'), 50)),
+		])
+		assert.equal(unrelatedUpdate, 'quiet')
+		updates.dispatch(user.id, 'entries', target.id, sharedEntry.id!)
+		const ownUpdate = await Promise.race([
+			nextEvent.then(result => new TextDecoder().decode(result.value)),
+			new Promise<string>(resolve => setTimeout(() => resolve('timeout'), 1000)),
+		])
+		assert.match(ownUpdate, /data: updated/)
+		await reader.cancel()
+
+		// 11. Revocation also closes the file route; its URL is not an independent year-long bearer cache.
+		await new RevokeShareLink({ id: answer.capability.id }).run({ em: em.fork(), user })
+		assert.equal((await request(`/files/${guestFile.id}/shared.txt`, {}, cookie)).status, 410)
+		assert.equal((await fetch(`${url}/api/files/${guestFile.id}/shared.txt`)).status, 404)
+		assert.equal(await em.count(ShareFileGrant, { capabilityId: answer.capability.id }), 0)
+		assert.deepEqual(await ShareFileGrant.idsFor(em.fork(), answer.capability.id, [sharedFile.id]), new Map())
+		fileEm.remove([sharedFile, siblingFile])
+		await fileEm.flush()
+		await Promise.all([fileStore.delete(user.id, sharedBytes.sha256), fileStore.delete(user.id, siblingBytes.sha256)])
+	})
+
+	it('normalizes an override share to its recurring series and keeps its overrides inside that scope', async () => {
+		const series = new Entry({
+			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'Shared recurring series',
+			start: new DateTime(Date.parse('2027-01-10T10:00:00Z')), end: new DateTime(Date.parse('2027-01-10T11:00:00Z')),
+			recurrence: new Recurrence({ freq: RecurrenceFrequency.Daily, count: 3 }), uid: crypto.randomUUID(),
+		})
+		const override = new Entry({
+			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'One moved occurrence',
+			start: new DateTime(Date.parse('2027-01-11T12:00:00Z')), end: new DateTime(Date.parse('2027-01-11T13:00:00Z')),
+			recurringEntryId: series.id, recurrenceId: new DateTime(Date.parse('2027-01-11T10:00:00Z')), uid: series.uid,
+			relations: EntryRelations.of([{ type: RelationType.Parent, targetUid: privateEntry.uid! }]),
+		})
+		em.persist([series, override])
+		await em.flush()
+		const answer = await new CreateShareLink({ targetSourceId: target.id, role: ShareRole.View, overlays: [], entryId: override.id }).run({ em: em.fork(), user })
+		assert.equal(answer.capability.entryId, series.id)
+		const cookie = cookieOf(answer.token)
+		const entries = await (await request(`/entries?start=${instant('2027-01-01T00:00:00Z')}&end=${instant('2027-01-31T00:00:00Z')}`, {}, cookie)).json() as Array<{ id: string, overrides?: Array<{ id: string }> }>
+		assert.equal(entries.length, 1)
+		assert.equal(entries[0]!.id, series.id)
+		assert.equal(entries[0]!.overrides?.[0]?.id, override.id)
+		assert.equal((await request(`/entries/${override.id}`, {}, cookie)).status, 200)
+		const search = await (await request('/entries/search?query=One%20moved', {}, cookie)).json() as Array<{ id: string }>
+		assert.deepEqual(search.map(entry => entry.id), [override.id])
+		await new RevokeShareLink({ id: answer.capability.id }).run({ em: em.fork(), user })
+
+		// A calendar-wide link can include the series, but its nested override must not leak the private relation either.
+		const calendarReadLink = await capabilityOf(ShareRole.View)
+		const calendarCookie = cookieOf(calendarReadLink.token)
+		const calendarEntries = await (await request(`/entries?start=${instant('2027-01-01T00:00:00Z')}&end=${instant('2027-01-31T00:00:00Z')}`, {}, calendarCookie)).json() as Array<{ id: string, overrides?: Array<{ id: string, relations?: unknown }> }>
+		const calendarSeries = calendarEntries.find(entry => entry.id === series.id)
+		assert.ok(calendarSeries)
+		assert.deepEqual(calendarSeries.overrides?.[0]?.relations, [])
+		assert.equal(JSON.stringify(calendarEntries).includes(privateEntry.uid!), false)
+		await new RevokeShareLink({ id: calendarReadLink.capability.id }).run({ em: em.fork(), user })
+
+		const occurrenceLink = await capabilityOf(ShareRole.Edit)
+		const occurrenceCookie = cookieOf(occurrenceLink.token)
+		const occurrenceStream = await request('/stream', {}, occurrenceCookie)
+		const occurrenceReader = occurrenceStream.body!.getReader()
+		const occurrenceRead = occurrenceReader.read()
+		const deleted = await request(`/entries/${series.id}/occurrences/2027-01-12T10%3A00%3A00.000Z?scope=this`, { method: 'DELETE' }, occurrenceCookie)
+		assert.equal(deleted.status, 204)
+		const occurrenceSignal = await Promise.race([
+			occurrenceRead.then(result => new TextDecoder().decode(result.value)),
+			new Promise<string>(resolve => setTimeout(() => resolve('timeout'), 1000)),
+		])
+		assert.match(occurrenceSignal, /data: updated/)
+		await occurrenceReader.cancel()
+		await new RevokeShareLink({ id: occurrenceLink.capability.id }).run({ em: em.fork(), user })
+
+		em.remove([series, override])
+		await em.flush()
+	})
+
+	it('notifies the scoped stream after an HTTP entry delete', async () => {
+		const entry = new Entry({
+			id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'Guest-deleted entry',
+			start: new DateTime(Date.parse('2027-04-01T10:00:00Z')), end: new DateTime(Date.parse('2027-04-01T11:00:00Z')), uid: crypto.randomUUID(),
+		})
+		em.persist(entry)
+		await em.flush()
+		const link = await capabilityOf(ShareRole.Edit)
+		const cookie = cookieOf(link.token)
+		const stream = await request('/stream', {}, cookie)
+		assert.equal(stream.status, 200)
+		const reader = stream.body!.getReader()
+		const updateRead = reader.read()
+		const deleted = await request(`/entries/${entry.id}`, { method: 'DELETE' }, cookie)
+		assert.equal(deleted.status, 204)
+		const signal = await Promise.race([
+			updateRead.then(result => new TextDecoder().decode(result.value)),
+			new Promise<string>(resolve => setTimeout(() => resolve('timeout'), 1000)),
+		])
+		assert.match(signal, /data: updated/)
+		await reader.cancel()
+		assert.equal(await em.fork().findOne(Entry, { id: entry.id }), null)
+		await new RevokeShareLink({ id: link.capability.id }).run({ em: em.fork(), user })
 	})
 
 	it('answers an unknown guest API path with a bare 404, never the owner sign-in redirect', async () => {

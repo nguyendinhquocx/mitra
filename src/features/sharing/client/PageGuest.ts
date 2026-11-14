@@ -33,6 +33,7 @@ export class PageGuest extends PageComponent {
 
 	private focusEntryId?: string
 	private stream?: UpdatesStream
+	private refreshTimer?: ReturnType<typeof setInterval>
 
 	readonly store = new EntryStore(this)
 
@@ -56,18 +57,27 @@ export class PageGuest extends PageComponent {
 		},
 		onComplete: ({ entries, window }) => {
 			EntryStore.applyServerEntries(entries, window)
-			if (this.focusEntryId) {
+			if (this.focusEntryId && entries.some(entry => entry.id === this.focusEntryId || entry.overrides?.some(override => override.id === this.focusEntryId))) {
 				EntryEditorIntent.requestOpen(this.focusEntryId)
 			}
 		},
 	})
 
 	protected override async connected() {
+		let focusStartFromLink = false
 		const hash = location.hash.startsWith('#') ? location.hash.slice(1) : ''
 		if (hash) {
 			// The fragment carries the token once; it leaves the address before anything renders or logs it.
 			history.replaceState(null, '', location.pathname)
-			const [token, entryParameter] = hash.split('&')
+			const [token, ...fragmentParts] = hash.split('&')
+			const fragment = new URLSearchParams(fragmentParts.join('&'))
+			this.focusEntryId = fragment.get('entry') ?? undefined
+			const focusStart = fragment.get('at')
+			const focusTime = focusStart ? Date.parse(focusStart) : Number.NaN
+			if (Number.isFinite(focusTime)) {
+				this.navigatingDate = new DateTime(focusTime)
+				focusStartFromLink = true
+			}
 			const opened = await fetch('/s/api/exchange', {
 				method: 'POST',
 				credentials: 'include',
@@ -78,9 +88,6 @@ export class PageGuest extends PageComponent {
 				this.phase = opened.status === 410 ? 'revoked' : 'failed'
 				this.failure = ((await opened.json().catch(() => undefined)) as { error?: string } | undefined)?.error
 				return
-			}
-			if (entryParameter?.startsWith('entry=')) {
-				this.focusEntryId = entryParameter.slice('entry='.length)
 			}
 		}
 		const bootstrap = await fetch('/s/api/bootstrap', { credentials: 'include' })
@@ -103,8 +110,8 @@ export class PageGuest extends PageComponent {
 		this.overlayNames = scope.overlays.map(overlay => overlay.name)
 		if (scope.entryId) {
 			this.isSingleEvent = true
-			this.focusEntryId = scope.entryId
-			if (scope.entryStart) {
+			this.focusEntryId ??= scope.entryId
+			if (scope.entryStart && !focusStartFromLink) {
 				this.navigatingDate = new DateTime(Date.parse(scope.entryStart))
 			}
 		}
@@ -139,10 +146,22 @@ export class PageGuest extends PageComponent {
 
 		this.phase = 'ready'
 		this.fetcher.run()
+		if (this.isSingleEvent) {
+			// Source-wide sync notices are intentionally hidden from a one-event link; refresh on a fixed cadence instead.
+			this.refreshTimer = setInterval(() => {
+				if (this.phase === 'ready' && this.fetcher.status !== TaskStatus.PENDING) {
+					void this.fetcher.run()
+				}
+			}, 60_000)
+		}
 	}
 
 	protected override disconnected() {
 		this.stream?.close()
+		if (this.refreshTimer) {
+			clearInterval(this.refreshTimer)
+			this.refreshTimer = undefined
+		}
 	}
 
 	protected override updated(props: PropertyValues) {
