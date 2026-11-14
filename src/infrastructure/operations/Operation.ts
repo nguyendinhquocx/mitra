@@ -12,6 +12,8 @@ import { createLogger } from '#infrastructure/logging/Logger.js'
 export interface OperationContext {
 	readonly em: EntityManager
 	readonly user: User
+	/** The share link a guest acts through, so what they create stays visible to that link alone. */
+	readonly shareCapabilityId?: string
 }
 
 type OperationConstructor = new (parameters: never) => Operation<unknown, unknown>

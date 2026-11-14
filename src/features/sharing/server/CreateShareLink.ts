@@ -22,6 +22,10 @@ class Parameters {
 	@validation(z.string().optional())
 	@description('The one entry this link reaches, if restricted to a single event.')
 	readonly entryId?: string
+
+	@validation(z.boolean().optional())
+	@description('Show none of the owner\'s entries: an edit link that starts from an empty calendar, the guest seeing only what they add. Requires the edit role.')
+	readonly blank?: boolean
 }
 
 @operation(Parameters)
@@ -31,8 +35,13 @@ class Parameters {
 export class CreateShareLink extends Operation<Parameters, { capability: ShareCapability, token: string }> {
 	async run({ em, user }: OperationContext) {
 		takeLinkShot(user.id)
+		if (this.parameters.blank && this.parameters.role !== ShareRole.Edit) {
+			throw new ValidationError('A blank link hides everything, so it needs the edit role')
+		}
+		// A blank calendar has no event to focus: the flag supersedes a single-event share.
+		const blank = this.parameters.blank ?? false
 		const target = await user.getSource(em, this.parameters.targetSourceId)
-		let entryId = this.parameters.entryId
+		let entryId = blank ? undefined : this.parameters.entryId
 		if (entryId) {
 			const selected = await em.findOne(Entry, { id: entryId, sourceId: target.id })
 			if (!selected) {
@@ -55,6 +64,7 @@ export class CreateShareLink extends Operation<Parameters, { capability: ShareCa
 			}
 		}
 		const { capability, token } = await ShareCapability.issue(user, target, this.parameters.role, overlays, entryId)
+		capability.blank = blank || undefined
 		em.persist(capability)
 		await em.flush()
 		this.logger.info(`Created a ${capability.role} share link for source ${capability.targetSourceId}`)

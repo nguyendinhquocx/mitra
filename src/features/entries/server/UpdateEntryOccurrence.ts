@@ -32,7 +32,7 @@ class Parameters extends EntryPatch {
 @tool({ name: 'update_entry_occurrence', annotations: { idempotentHint: false } })
 @updates('entries')
 export class UpdateEntryOccurrence extends Operation<Parameters, Entry> {
-	async run({ em, user }: OperationContext) {
+	async run({ em, user, shareCapabilityId }: OperationContext) {
 		const patch = this.parameters
 		const { scope } = patch
 		const existing = await user.getEntry(em, patch.id)
@@ -54,6 +54,10 @@ export class UpdateEntryOccurrence extends Operation<Parameters, Entry> {
 		const result = await existing.occurrences.existing(patch.occurrence).edit(patch, scope).save(em, change.from.integration, change.to.integration)
 		if (scope === EntryOccurrenceChangeScope.All && result !== existing) {
 			result.relations = existing.relations
+		}
+		// A guest's split-off occurrence is marked with its link, so a link that hides the calendar still shows it.
+		if (shareCapabilityId && result !== existing) {
+			result.createdVia = shareCapabilityId
 		}
 		await em.flush()
 		const graph = await user.getRelationGraph(em, [result.uid])

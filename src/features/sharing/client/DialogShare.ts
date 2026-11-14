@@ -24,6 +24,7 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 	@state() linkRole: ShareRole = ShareRole.View
 	@state() private overlays = new Set<string>()
 	@state() private singleEventOnly = true
+	@state() private blank = false
 	@state() private createdToken?: string
 	@state() private copied = false
 	@state() private copiedLinkId?: string
@@ -97,9 +98,9 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 		}
 		this.creating = true
 		try {
-			const entryId = this.parameters.entry && this.singleEventOnly ? this.parameters.entry.id : undefined
+			const entryId = !this.blank && this.parameters.entry && this.singleEventOnly ? this.parameters.entry.id : undefined
 			const overlays = entryId ? [] : [...this.overlays]
-			const { token } = await CreateShareLink.call({ targetSourceId: this.targetSourceId, role: this.linkRole, overlays, entryId })
+			const { token } = await CreateShareLink.call({ targetSourceId: this.targetSourceId, role: this.linkRole, overlays, entryId, blank: this.blank || undefined })
 			this.createdToken = token
 			await this.refreshLinks()
 		} finally {
@@ -192,8 +193,17 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 			.share .actions {
 				grid-column: 1 / -1;
 				display: flex;
+				flex-wrap: wrap;
 				align-items: center;
 				gap: 0.5rem;
+			}
+
+			.share .actions > mitra-checkbox {
+				margin-inline-start: auto;
+			}
+
+			.share .actions > mitra-checkbox + mitra-checkbox {
+				margin-inline-start: 0;
 			}
 
 			.share .url {
@@ -271,15 +281,6 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 								${Calendars.enabled.map(source => html`<mitra-option .value=${source.id}>${source.name}</mitra-option>`)}
 							</mitra-select>
 						</div>
-						${!entry ? html.nothing : html`
-							<div class="row">
-								<mitra-icon icon="calendar-check"></mitra-icon>
-								<mitra-checkbox
-									.checked=${live(this.singleEventOnly)}
-									@change=${(e: CustomEvent<boolean>) => { this.singleEventOnly = e.detail; this.requestUpdate() }}
-								>${t('Only share this event')}</mitra-checkbox>
-							</div>
-						`}
 						${!this.needsScopeWarning ? html.nothing : html`
 							<span class="note">${t('A Google calendar is shared whole: every event inside it lies within the link, yours included. Check it is the calendar to share.')}</span>
 						`}
@@ -291,7 +292,7 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 								<mitra-option .value=${'edit' as const}>${t('View and edit')}</mitra-option>
 							</mitra-select>
 						</div>
-						${!this.allSources.length || (entry && this.singleEventOnly) ? html.nothing : html`
+						${!this.allSources.length || this.blank || (entry && this.singleEventOnly) ? html.nothing : html`
 							<div class="overlays">
 								<div>${this.allSources.map(source => html`
 									<mitra-checkbox
@@ -313,6 +314,18 @@ export class DialogShare extends DialogComponent<ShareDialogParameters, void> {
 							${!this.googleConnected ? html.nothing : html`
 								<mitra-button ?busy=${this.creatingCalendar} @click=${() => void this.createGoogleCalendar()}>${t('New Google calendar')}</mitra-button>
 							`}
+							${entry ? html`
+								<mitra-checkbox title=${t('Share only this event: the guest sees the event, not the calendar')}
+									.checked=${live(this.singleEventOnly)}
+									@change=${(e: CustomEvent<boolean>) => { this.singleEventOnly = e.detail; this.requestUpdate() }}
+								>${t('Only')}</mitra-checkbox>
+							` : html.nothing}
+							${this.linkRole === 'edit' ? html`
+								<mitra-checkbox title=${t('Start blank: the guest sees none of your entries and builds the calendar themselves')}
+									.checked=${live(this.blank)}
+									@change=${(e: CustomEvent<boolean>) => { this.blank = e.detail; this.requestUpdate() }}
+								>${t('Blank')}</mitra-checkbox>
+							` : html.nothing}
 						</div>
 					` : html`
 						<div class="url">

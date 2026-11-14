@@ -14,7 +14,7 @@ import { ShareFileGrant } from '../ShareFileGrant.js'
 import { ShareOperation, shareOperationRetentionMs } from './ShareOperation.js'
 import { RateLimiter } from './rateLimit.js'
 import { subscribeToRevocations } from './shareRevocations.js'
-import { ShareAccessError, attachScopedRelations, assertGuestWritable, assertRelationsInScope, guestEntry, resolveGuest, scopedEntries, searchedEntries, type GuestContext } from './guestScope.js'
+import { ShareAccessError, attachScopedRelations, assertGuestWritable, assertRelationsInScope, guestEntry, reachableEntryIds, resolveGuest, scopedEntries, searchedEntries, type GuestContext } from './guestScope.js'
 import { FileQuotaExceededError, FileTooLargeError, fileStore } from '#features/files/server/FileStore.js'
 import { FileLimits } from '#features/files/server/FileLimits.js'
 import { MimeType } from '#features/files/MimeType.js'
@@ -295,11 +295,7 @@ export function sharingRouter() {
 	}))
 
 	router.get('/files/:id{/:name}', guest(async (req, res, context) => {
-		let entryIds: Array<string> | undefined
-		if (context.capability.entryId) {
-			const overrides = await context.em.find(Entry, { recurringEntryId: context.capability.entryId, sourceId: context.capability.targetSourceId })
-			entryIds = [context.capability.entryId, ...overrides.map(override => override.id!)]
-		}
+		const entryIds = await reachableEntryIds(context)
 		const grant = await context.em.findOne(ShareFileGrant, { id: String(req.params.id), capabilityId: context.capability.id })
 		if (!grant) {
 			throw new ShareAccessError(404, 'File not found')
@@ -351,9 +347,6 @@ export function sharingRouter() {
 		if (context.capability.role !== ShareRole.Edit) {
 			throw new ShareAccessError(403, 'This link can only view')
 		}
-		if (context.capability.entryId) {
-			throw new ShareAccessError(403, 'This link only allows viewing or editing a single event, not creating new ones')
-		}
 		await restoreGuestFileReferences(context, req.body)
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
 		// The guest picks the calendar: an id the link reaches wins; anything hostile falls back to the target, never to a private calendar.
@@ -364,7 +357,7 @@ export function sharingRouter() {
 		const { values, built } = guestBody(req.body, { sourceId })
 		const operation = CreateEntry.fromValues(values, built)
 		const { result, replayed, didReplay } = await oncePerOperation(context, req, async () => {
-			const created = await operation.run({ em: context.em, user: context.owner })
+			const created = await operation.run({ em: context.em, user: context.owner, shareCapabilityId: context.capability.id })
 			return created
 		})
 		if (didReplay) {
@@ -391,7 +384,7 @@ export function sharingRouter() {
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
 		const { values, built } = guestBody(req.body, { id: existing.id })
 		const operation = UpdateEntry.fromValues(values, built)
-		const { result, replayed, didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
+		const { result, replayed, didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner, shareCapabilityId: context.capability.id }))
 		if (didReplay) {
 			return scopedAnswer(context, res, 200, replayed)
 		}
@@ -401,13 +394,10 @@ export function sharingRouter() {
 
 	router.delete('/entries/:id', sameOriginWrites, guest(async (req, res, context) => {
 		writeGuard(res, context)
-		if (context.capability.entryId) {
-			throw new ShareAccessError(403, 'A link to one event cannot delete it')
-		}
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		const operation = DeleteEntry.fromValues({ id: existing.id } as never)
-		const { didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
+		const { didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner, shareCapabilityId: context.capability.id }))
 		if (!didReplay) {
 			announce(operation, context, existing)
 		}
@@ -416,10 +406,6 @@ export function sharingRouter() {
 
 	router.put('/entries/:id/occurrences/:occurrence', sameOriginWrites, guest(async (req, res, context) => {
 		writeGuard(res, context)
-		// Splitting one occurrence off detaches a new entry the link never reached, so a single-event link edits the series as a whole only.
-		if (context.capability.entryId && String(req.query.scope ?? 'this') === 'this') {
-			throw new ShareAccessError(403, 'A single-event link cannot split one occurrence off its series; edit the whole series instead')
-		}
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		// The occurrence patch carries the wire's sourceId too: without this clamp an edit link could move the entry,
@@ -432,7 +418,7 @@ export function sharingRouter() {
 		await assertRelationsInScope(context, relationTargetsOf(req.body))
 		const { values, built } = guestBody(req.body, { id: existing.id, occurrence: String(req.params.occurrence), scope: String(req.query.scope ?? 'this') })
 		const operation = UpdateEntryOccurrence.fromValues(values, built)
-		const { result, replayed, didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
+		const { result, replayed, didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner, shareCapabilityId: context.capability.id }))
 		if (didReplay) {
 			return scopedAnswer(context, res, 200, replayed)
 		}
@@ -442,13 +428,10 @@ export function sharingRouter() {
 
 	router.delete('/entries/:id/occurrences/:occurrence', sameOriginWrites, guest(async (req, res, context) => {
 		writeGuard(res, context)
-		if (context.capability.entryId) {
-			throw new ShareAccessError(403, 'A single-event link cannot delete individual occurrences')
-		}
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		const operation = DeleteEntryOccurrence.fromValues({ id: existing.id, occurrence: String(req.params.occurrence), scope: String(req.query.scope ?? 'this') } as never)
-		const { didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
+		const { didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner, shareCapabilityId: context.capability.id }))
 		if (!didReplay) {
 			announce(operation, context, existing)
 		}
@@ -457,13 +440,10 @@ export function sharingRouter() {
 
 	router.post('/entries/:id/complete', sameOriginWrites, guest(async (req, res, context) => {
 		writeGuard(res, context)
-		if (context.capability.entryId) {
-			throw new ShareAccessError(403, 'A single-event link cannot complete individual occurrences')
-		}
 		const existing = await guestEntry(context, String(req.params.id))
 		assertGuestWritable(context, existing)
 		const operation = CompleteTask.fromValues({ id: existing.id, occurrence: (req.query.occurrence ?? (req.body as { occurrence?: string } | undefined)?.occurrence) ? String(req.query.occurrence ?? (req.body as { occurrence?: string } | undefined)?.occurrence) : undefined } as never)
-		const { result, replayed, didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner }))
+		const { result, replayed, didReplay } = await oncePerOperation(context, req, () => operation.run({ em: context.em, user: context.owner, shareCapabilityId: context.capability.id }))
 		if (didReplay) {
 			return scopedAnswer(context, res, 200, replayed)
 		}

@@ -71,6 +71,9 @@ export class ShareCapability {
 	/** When set, the link reaches only this single entry inside targetSourceId. Other entries in the calendar are omitted. */
 	@property({ type: 'string', fieldName: 'entry_id', nullable: true }) entryId?: string
 
+	/** An edit link that shows none of the owner's entries: the guest starts from an empty calendar and sees only what they add. */
+	@property({ type: 'boolean', nullable: true }) blank?: boolean
+
 	@property({ type: 'Date', nullable: true }) revokedAt?: Date
 
 	@property({ type: 'Date' }) createdAt!: Date

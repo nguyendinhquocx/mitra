@@ -17,6 +17,7 @@ import { fileStore } from '#features/files/server/FileStore.js'
 import { environment } from '#infrastructure/server/Environment.js'
 import { fileContentRouter } from '#features/files/server/files.js'
 import { Recurrence, RecurrenceFrequency } from '#features/recurrence'
+import { ValidationError } from '#infrastructure/validation'
 import { MitraCalendar } from '#integrations/mitra/MitraCalendar.js'
 import { errorHandler } from '#infrastructure/http/errorHandler.js'
 import { updates } from '#infrastructure/realtime/Updates.js'
@@ -674,18 +675,23 @@ describe('Sharing (guest capability)', () => {
 		// 5. Direct GET for other entries in the same calendar or overlay is rejected with 403
 		assert.equal((await request(`/entries/${overlayEntry.id}`, {}, cookie)).status, 403)
 
-		// 6. Creating new entries is forbidden
-		const createAttempt = await request('/entries', {
+		// 6. Other events stay hidden, but the guest may create: what they add shows up and can go again
+		const created = await request('/entries', {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ '@type': 'EntryPatch', type: 'event', heading: 'Sneaked event', start: '2027-01-10T10:00:00.000Z', end: '2027-01-10T11:00:00.000Z' }),
 		}, cookie)
-		assert.equal(createAttempt.status, 403)
+		const createdBody = await created.json() as { id: string }
+		assert.equal(created.status, 201, JSON.stringify(createdBody))
+		const sneakWindow = await (await request(`/entries?start=${instant('2027-01-01T00:00:00Z')}&end=${instant('2027-01-31T00:00:00Z')}`, {}, cookie)).json() as Array<{ heading: string }>
+		assert.deepEqual(sneakWindow.map(entry => entry.heading).sort(), ['Shared review', 'Sneaked event'])
+		assert.equal((await request(`/entries/${createdBody.id}`, { method: 'DELETE' }, cookie)).status, 204)
+		const afterDelete = await (await request(`/entries?start=${instant('2027-01-01T00:00:00Z')}&end=${instant('2027-01-31T00:00:00Z')}`, {}, cookie)).json() as Array<{ heading: string }>
+		assert.deepEqual(afterDelete.map(entry => entry.heading), ['Shared review'])
 
-		// 7. Deleting the event or detaching one occurrence is forbidden
-		assert.equal((await request(`/entries/${sharedEntry.id}`, { method: 'DELETE' }, cookie)).status, 403)
-		assert.equal((await request(`/entries/${sharedEntry.id}/occurrences/2027-01-10T10%3A00%3A00.000Z?scope=all`, { method: 'DELETE' }, cookie)).status, 403)
-		assert.equal((await request(`/entries/${sharedEntry.id}/complete?occurrence=2027-01-10T10%3A00%3A00.000Z`, { method: 'POST' }, cookie)).status, 403)
+		// 7. The reach boundary still holds: entries the link never named stay untouchable
+		assert.equal((await request(`/entries/${sibling.id}`, { method: 'DELETE' }, cookie)).status, 403)
+		assert.equal((await request(`/entries/${sibling.id}/complete`, { method: 'POST' }, cookie)).status, 403)
 
 		// 8. A relations echo is dropped, never applied: the guest cannot see the whole graph, so it cannot change it
 		const relationPatch = await request(`/entries/${sharedEntry.id}`, {
@@ -740,6 +746,46 @@ describe('Sharing (guest capability)', () => {
 		fileEm.remove([sharedFile, siblingFile])
 		await fileEm.flush()
 		await Promise.all([fileStore.delete(user.id, sharedBytes.sha256), fileStore.delete(user.id, siblingBytes.sha256)])
+
+		// 12. The guest may delete the very event the link focuses; the link then reports it gone.
+		const focus = new Entry({ id: crypto.randomUUID(), sourceId: target.id, type: EntryType.Event, heading: 'Focus event', start: new DateTime(Date.parse('2027-01-15T10:00:00Z')), end: new DateTime(Date.parse('2027-01-15T11:00:00Z')), uid: crypto.randomUUID() })
+		em.persist(focus)
+		await em.flush()
+		const focusLink = await new CreateShareLink({ targetSourceId: target.id, role: ShareRole.Edit, overlays: [], entryId: focus.id }).run({ em: em.fork(), user })
+		const focusCookie = cookieOf(focusLink.token)
+		assert.equal((await request(`/entries/${focus.id}`, { method: 'DELETE' }, focusCookie)).status, 204)
+		const gone = await fetch(`${url}/s/api/exchange`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ token: focusLink.token }),
+		})
+		assert.equal(gone.status, 410)
+		await em.fork().nativeDelete(Entry, { id: focus.id })
+	})
+
+	it('starts a blank edit link empty, showing only what its guest adds', async () => {
+		await assert.rejects(
+			new CreateShareLink({ targetSourceId: target.id, role: ShareRole.View, overlays: [], blank: true }).run({ em: em.fork(), user }),
+			(error: unknown) => error instanceof ValidationError,
+		)
+		const answer = await new CreateShareLink({ targetSourceId: target.id, role: ShareRole.Edit, overlays: [], blank: true, entryId: sharedEntry.id }).run({ em: em.fork(), user })
+		assert.equal(answer.capability.entryId, undefined)
+		assert.equal(answer.capability.blank, true)
+		const cookie = cookieOf(answer.token)
+		const empty = await (await request(`/entries?start=${instant('2027-01-01T00:00:00Z')}&end=${instant('2027-01-31T00:00:00Z')}`, {}, cookie)).json() as Array<unknown>
+		assert.equal(empty.length, 0)
+		assert.equal((await request(`/entries/${sharedEntry.id}`, {}, cookie)).status, 403)
+		const created = await request('/entries', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ '@type': 'EntryPatch', type: 'event', heading: 'Blank guest event', start: '2027-02-05T10:00:00.000Z', end: '2027-02-05T11:00:00.000Z' }),
+		}, cookie)
+		assert.equal(created.status, 201)
+		const added = await (await request(`/entries?start=${instant('2027-02-01T00:00:00Z')}&end=${instant('2027-02-28T00:00:00Z')}`, {}, cookie)).json() as Array<{ heading: string }>
+		assert.deepEqual(added.map(entry => entry.heading), ['Blank guest event'])
+		assert.equal((await em.fork().findOneOrFail(Entry, { heading: 'Blank guest event' })).createdVia, answer.capability.id)
+		await new RevokeShareLink({ id: answer.capability.id }).run({ em: em.fork(), user })
+		await em.fork().nativeDelete(Entry, { heading: 'Blank guest event' })
 	})
 
 	it('lets an edit link edit occurrences of the single series it shares', async () => {
@@ -764,9 +810,13 @@ describe('Sharing (guest capability)', () => {
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ '@type': 'EntryPatch', heading: 'Split occurrence' }),
 		}, cookie)
-		assert.equal(split.status, 403)
+		assert.equal(split.status, 200, await split.text())
+		const detached = await em.fork().findOne(Entry, { createdVia: answer.capability.id })
+		assert.equal(detached?.heading, 'Split occurrence')
 		await new RevokeShareLink({ id: answer.capability.id }).run({ em: em.fork(), user })
-		await em.fork().nativeDelete(Entry, { id: series.id })
+		const cleanupEm = em.fork()
+		cleanupEm.remove(await cleanupEm.find(Entry, { $or: [{ id: series.id }, { recurringEntryId: series.id }, { createdVia: answer.capability.id }] }))
+		await cleanupEm.flush()
 	})
 
 	it('normalizes an override share to its recurring series and keeps its overrides inside that scope', async () => {

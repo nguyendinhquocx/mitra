@@ -61,21 +61,40 @@ export async function resolveGuest(req: Request): Promise<GuestContext> {
 
 /** The entry `id` names, provided it sits inside what the link reaches; anything else is a denial, not a 404. */
 export async function guestEntry(context: GuestContext, id: string) {
-	if (context.capability.entryId && id !== context.capability.entryId) {
+	const entry = await context.em.findOne(Entry, { id })
+	if (!entry) {
+		throw new ShareAccessError(404, 'No such entry')
+	}
+	// What the guest added through this link rides along, however little else the link shows.
+	const own = entry.createdVia === context.capability.id
+	if (context.capability.entryId && id !== context.capability.entryId && !own) {
 		const override = await context.em.findOne(Entry, { id, recurringEntryId: context.capability.entryId, sourceId: context.capability.targetSourceId })
 		if (!override) {
 			throw new ShareAccessError(403, 'This link only reaches a single event or its series overrides')
 		}
 		return override
 	}
-	const entry = await context.em.findOne(Entry, { id })
-	if (!entry) {
-		throw new ShareAccessError(404, 'No such entry')
+	if (context.capability.blank && !own) {
+		throw new ShareAccessError(403, 'This link starts blank: only what its guest adds is reachable')
 	}
 	if (!context.capability.reaches(entry.sourceId)) {
 		throw new ShareAccessError(403, 'This entry is outside the shared calendar')
 	}
 	return entry
+}
+
+/** The entries a link reaches by id when it narrows the calendar (single-event or blank); undefined when the whole source scope shows. */
+export async function reachableEntryIds(context: GuestContext): Promise<Array<string> | undefined> {
+	if (!context.capability.entryId && !context.capability.blank) {
+		return undefined
+	}
+	const scope = [...context.scope]
+	const own = await context.em.find(Entry, { sourceId: { $in: scope }, createdVia: context.capability.id, recurrenceId: null })
+	const heads = [...(context.capability.entryId ? [context.capability.entryId] : []), ...own.map(entry => entry.id!)]
+	const overrides = heads.length
+		? await context.em.find(Entry, { recurringEntryId: { $in: heads }, sourceId: { $in: scope } })
+		: []
+	return [...heads, ...overrides.map(entry => entry.id!)]
 }
 
 /** Whether a guest may change `entry`: an edit link, and the entry sitting inside what the link reaches — target or overlays. */
@@ -108,9 +127,12 @@ export async function assertRelationsInScope(context: GuestContext, relations: R
  */
 export async function scopedEntries(context: GuestContext, range?: DateTimeRange, limit?: number) {
 	if (context.capability.entryId) {
+		// The link's event rides with what its guest added: their own creations show even though the rest hides.
+		const own = await context.em.find(Entry, { sourceId: context.capability.targetSourceId, createdVia: context.capability.id, recurrenceId: null })
+		const ids = [context.capability.entryId, ...own.map(entry => entry.id!)]
 		const entries = await context.em.find(Entry, {
 			$and: [
-				{ id: context.capability.entryId },
+				{ id: { $in: ids } },
 				{ sourceId: context.capability.targetSourceId },
 				{ recurrenceId: null },
 			],
@@ -129,6 +151,7 @@ export async function scopedEntries(context: GuestContext, range?: DateTimeRange
 	const entries = await context.em.find(Entry, {
 		$and: [
 			{ sourceId: { $in: scope } },
+			...(context.capability.blank ? [{ createdVia: context.capability.id }] : []),
 			...(range ? [User.inRange(range)] : []),
 			{ recurrenceId: null },
 		],
@@ -147,8 +170,9 @@ export async function scopedEntries(context: GuestContext, range?: DateTimeRange
 /** The entries a search finds inside the scope, newest first, the availability background left out. */
 export async function searchedEntries(context: GuestContext, query: string) {
 	if (context.capability.entryId) {
+		const own = await context.em.find(Entry, { sourceId: context.capability.targetSourceId, createdVia: context.capability.id, recurrenceId: null })
 		const overrides = await context.em.find(Entry, { recurringEntryId: context.capability.entryId, sourceId: context.capability.targetSourceId })
-		const entryIds = [context.capability.entryId, ...overrides.map(entry => entry.id!)]
+		const entryIds = [context.capability.entryId, ...own.map(entry => entry.id!), ...overrides.map(entry => entry.id!)]
 		const found = await context.em.find(Entry, {
 			$and: [
 				{ id: { $in: entryIds } },
@@ -159,7 +183,7 @@ export async function searchedEntries(context: GuestContext, query: string) {
 		return attachScopedRelations(context, found)
 	}
 	const found = await context.em.find(Entry, {
-		$and: [{ sourceId: { $in: [...context.scope] } }, User.matching(query)],
+		$and: [{ sourceId: { $in: [...context.scope] } }, ...(context.capability.blank ? [{ createdVia: context.capability.id }] : []), User.matching(query)],
 	}, { limit: 20, orderBy: { start: 'desc' } })
 	return attachScopedRelations(context, found)
 }
@@ -176,9 +200,7 @@ function entriesAndOverrides(entries: ReadonlyArray<Entry>) {
 }
 
 async function exposeGuestFilePaths(context: GuestContext, entries: ReadonlyArray<Entry>) {
-	const permittedEntryIds = context.capability.entryId
-		? [context.capability.entryId, ...(await context.em.find(Entry, { recurringEntryId: context.capability.entryId, sourceId: context.capability.targetSourceId })).map(entry => entry.id!)]
-		: undefined
+	const permittedEntryIds = await reachableEntryIds(context)
 	const localFileOf = (id: string) => context.em.findOne(EntryFile, {
 		id,
 		userId: { $ne: null },

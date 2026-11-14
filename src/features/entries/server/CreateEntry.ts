@@ -14,7 +14,7 @@ import { EntryPatch } from '../EntryPatch.js'
 @tool({ name: 'create_entry' })
 @updates('entries')
 export class CreateEntry extends Operation<EntryPatch, Entry> {
-	async run({ em, user }: OperationContext) {
+	async run({ em, user, shareCapabilityId }: OperationContext) {
 		const patch = this.parameters
 		const to = patch.sourceId ? await user.getSource(em, patch.sourceId) : await user.getDefaultSource(em, patch.type)
 		patch.sourceId = to.id
@@ -27,6 +27,8 @@ export class CreateEntry extends Operation<EntryPatch, Entry> {
 		if (patch.reminders === undefined && change.edited.holds('reminders')) {
 			change.edited.reminders = user.reminderDefaults.for(change.edited)
 		}
+		// A guest's creation is marked with its link, so a link that hides the calendar still shows what they added.
+		change.edited.createdVia = shareCapabilityId
 		const reached = patch.relations && await user.getRelationGraph(em, change.related)
 		const errors = [...await fileStore.claim(user.id, patch.files ?? []), ...change.validate({ graph: reached })]
 		if (errors.length) {

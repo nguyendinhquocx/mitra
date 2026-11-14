@@ -25,6 +25,7 @@ import { Migration20261112100000_ShareTarget } from './Migration20261112100000_S
 import { Migration20261113120000_ShareEntryScope } from './Migration20261113120000_ShareEntryScope.js'
 import { Migration20261113150000_ShareFileGrant } from './Migration20261113150000_ShareFileGrant.js'
 import { Migration20261114000000_ShareCapabilityToken } from './Migration20261114000000_ShareCapabilityToken.js'
+import { Migration20261114110000_ShareLinkViewModes } from './Migration20261114110000_ShareLinkViewModes.js'
 /** A migration's name as its file spells it, which keys the log: esbuild renames a class that refers to itself (`_Migration…`). */
 export const nameOf = (migration: Constructor<Migration>) => migration.name.replace(/^_/, '')
 
@@ -58,4 +59,5 @@ export const migrations: Array<Constructor<Migration>> = [
 	Migration20261113120000_ShareEntryScope,
 	Migration20261113150000_ShareFileGrant,
 	Migration20261114000000_ShareCapabilityToken,
+	Migration20261114110000_ShareLinkViewModes,
 ]

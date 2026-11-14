@@ -223,9 +223,16 @@ export class Dialog extends Component {
 		`
 	}
 
+	// A click on the dialog itself is a click on the backdrop: outside the panel, so it answers as a cancellation.
+	private readonly handleClick = (event: MouseEvent) => {
+		if (event.target === this.dialog) {
+			this.handleAction(DialogActionKey.Cancellation)
+		}
+	}
+
 	protected override get template() {
 		return html`
-			<dialog part="dialog" .closedBy=${this.standalone ? 'any' : 'closerequest'} @cancel=${this.handleCancel}>
+			<dialog part="dialog" .closedBy=${this.standalone ? 'any' : 'closerequest'} @cancel=${this.handleCancel} @click=${this.handleClick}>
 				<div class="panel">
 					<header class="header" ?data-headingless=${!this.heading}>
 						<slot name="leading"></slot>

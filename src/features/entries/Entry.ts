@@ -364,6 +364,9 @@ export class Entry extends Entity implements Validatable {
 
 	@property({ type: 'string', nullable: true }) recurringEntryId?: string
 
+	/** The share link that created this entry, kept so a guest sees their own additions on a link that hides the owner's. */
+	@property({ type: 'string', nullable: true, fieldName: 'created_via' }) createdVia?: string
+
 	@Entry.date() recurrenceId?: DateTime
 
 	/** Unknown while absent, as a provider may not say; none is an empty collection. The lines it owns are saved as rows, those pointing at it a read attaches. */

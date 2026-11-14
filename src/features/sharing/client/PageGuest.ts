@@ -175,7 +175,7 @@ export class PageGuest extends PageComponent {
 		void this.fetcher.run()
 	}
 
-	private readonly canEdit = () => this.phase === 'ready' && this.guestRole === 'edit' && !this.isSingleEvent
+	private readonly canEdit = () => this.phase === 'ready' && this.guestRole === 'edit'
 
 	// The app's stylesheet lives in the document; a shadow root would wall the guest surface off from it.
 	protected override createRenderRoot() { return this }
