@@ -20,3 +20,5 @@ Artifact này là receipt của thao tác archive, không phải nơi sửa spec
 - Implementation ref: `44e4bead7879013f65e844455a1edbb67c562edb`
 - Spec file: `docs/specs/SPEC-2026-11-10-calendarx-minimalist-sharing/SPEC.md`
 - Index file: `docs/specs/INDEX.md`
+
+- Note: `source_sha256` binds the raw working-source bytes at archive time (pre-clear); the cleared husk no longer matches it by design. Recompute integrity against the archived `SPEC.md` content instead.
