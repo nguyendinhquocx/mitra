@@ -1,0 +1,82 @@
+Wireframe #calendar-view w=1440 h=900
+  Stack row 100% 100%
+    Box 256px *
+      Stack column spacing=1
+        Typography h5 "CalendarX"
+        Button "Lịch"
+        Button "Lên kế hoạch"
+        Typography subtitle2 "Lịch"
+        Stack column spacing=0
+          Typography "Công việc"
+          Typography "Ngủ"
+          Typography "Việc cần làm"
+          Typography "Học và đọc"
+    Stack column * *
+      AppBar
+        Toolbar
+          Typography h4 "Tháng 11 năm 2026"
+          Spacer
+          Button "Tuần" contained
+          Button "Tháng" text
+          Button "Hôm nay" text
+          Button "Tạo" contained
+          Icon "Share" to=#calendar-share
+      Calendar week value=7 events
+
+Wireframe #event-share-entry w=520 h=300
+  Dialog sm
+    DialogHeader "Chi tiết sự kiện"
+    DialogContent
+      Typography h6 "Cuộc hẹn với khách"
+      Typography body2 "Thứ Ba · 14:00–15:00"
+      Button "Chia sẻ sự kiện" text to=#calendar-share
+      Typography caption "Liên kết mở lịch chung tại sự kiện này."
+
+Wireframe #calendar-guest w=390 h=844
+  Stack column 100% 100%
+    AppBar
+      Toolbar
+        Typography h6 "CalendarX"
+        Spacer
+        Typography caption "Chỉ xem"
+    Calendar week value=7 events
+
+Wireframe #calendar-guest-edit w=390 h=844
+  Stack column 100% 100%
+    AppBar
+      Toolbar
+        Typography h6 "CalendarX"
+        Spacer
+        Button "Tạo" contained
+    Calendar week value=7 events
+
+Wireframe #calendar-revoked w=390 h=320
+  Dialog sm
+    DialogHeader "Liên kết không còn hoạt động"
+    DialogContent
+      Typography body2 "Yêu cầu chủ lịch gửi liên kết mới."
+    DialogActions
+      Button "Đóng" contained
+
+Wireframe #calendar-share w=900 h=720
+  Dialog md
+    DialogHeader "Chia sẻ lịch"
+    DialogContent
+      Select "Lịch đích" value="CalendarX Shared"
+      Stack row spacing=2
+        Control radio checked
+        Typography "Chỉ xem"
+        Control radio
+        Typography "Chỉnh sửa"
+      Stack column spacing=0
+        Typography body2 "Link là quyền truy cập; thu hồi được."
+        Typography caption "Chỉnh sửa bao trùm toàn bộ lịch đích; lịch Google có sẵn gồm mọi event trong lịch đó."
+      Stack row spacing=1
+        Control switch
+        Typography "Hiện lịch cá nhân (chỉ xem)"
+      Stack row spacing=1
+        Typography body2 "calendar.quoc.app/s#••••"
+        Button "Sao chép" text
+    DialogActions
+      Button "Thu hồi link" text
+      Button "Đóng" contained
