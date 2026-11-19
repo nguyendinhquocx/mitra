@@ -1,10 +1,17 @@
 ---
-title: Monitoraggio delle routine, Todoist, stato degli eventi e scadenze a colpo d'occhio
+title: Routine e serie, Todoist, stato degli eventi e scadenze a colpo d'occhio
 ---
-Mitra 0.8 ti aiuta a mantenere le cose che fai ancora e ancora, e tiene traccia di ciò che non è successo.
+Mitra 0.8 dà alle tue routine un posto tutto loro, dove vedi come va ciascuna e mantieni viva la sua serie. Mitra si collega anche a Todoist, mostra quando scade un'attività e se un evento è ancora confermato, e arriva in quattro lingue in più, con tanti miglioramenti e correzioni più piccoli.
 
-## Monitoraggio delle routine
-Mitra raccoglie già in routine le cose che fai spesso, come la palestra o un taglio di capelli ogni cinque settimane. Ora hanno un posto tutto loro, dove vedi a colpo d'occhio gli ultimi giorni di ogni routine: quanti ne hai rispettati e quali hai annullato o saltato. Puoi rinominare una routine, unirne due che vanno insieme, o dire a Mitra che qualcosa non è una routine. Le routine restano anche stabili nelle viste mese e anno, per quanto tu scorra, e il tuo connettore IA può dirti come stanno andando.
+## Routine e serie
+Mitra raccoglie già in routine le cose che fai spesso, come la palestra o un taglio di capelli ogni cinque settimane. Ora hanno un posto tutto loro, dove una fiamma mostra a colpo d'occhio la serie di ogni routine, e il suo dettaglio i giorni che hai rispettato, annullato o saltato. Puoi rinominare una routine, unirne due che vanno insieme, o dire a Mitra che qualcosa non è una routine. Le routine restano anche stabili nelle viste mese e anno, per quanto tu scorra, e il tuo connettore IA può dirti come stanno andando. La scheda mostra prima le routine di **Oggi**, poi quelle **In corso**, e raccoglie sotto **Passate** quelle di molto tempo fa. Per escludere le routine di un calendario, come quelle del calendario di lavoro, scegli **Nascondi le sue routine** nel suo menu.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="routines-dark.webp">
+	<img src="routines-light.webp" alt="La scheda Routine accanto alla vista mese, ogni routine con la sua serie, con il dettaglio della palestra aperto accanto">
+</picture>
+
+Documentazione: [Routine](../../docs/routines.md)
 
 ## Stessa ora ovunque
 Alcune cose non dipendono dal tuo fuso orario: la medicina delle 7:30 si prende alle 7:30, a casa come in viaggio. Scegli **Stessa ora ovunque** in cima ai fusi orari di una voce, e resta a quell'ora ovunque tu sia, segnata da un globo barrato. Anche le voci che arrivano da altre app senza fuso orario lo mostrano. Prima che tu ne sposti una in un calendario che non ha orari così, come Google Calendar, Mitra ti avvisa che riceverà un fuso orario fisso.
@@ -27,10 +34,34 @@ Un evento ora ha uno stato tutto suo, come un'attività: **Confermato**, **Forse
 Documentazione: [Stato dell'evento](../../docs/entries.md#event-status)
 
 ## Scadenze a colpo d'occhio
-Il giorno di scadenza di un'attività appare sulla sua bandierina, e puntando l'attività quel giorno viene segnato nel calendario. Anche la cronologia lo segna, e la tabella ha una colonna apposita.
+Un'attività pianificata ora mostra la sua scadenza direttamente sulla bandierina, come un'ora, un giorno della settimana o una data, a seconda di quanto è vicina. Punta un'attività nella vista settimana o mese, o sulla cronologia, e si allunga fino alla sua scadenza, così vedi quanto margine ti resta. Se hai pianificato un'attività in modo che finisca dopo la scadenza, la bandierina diventa rossa. E la tabella ha una nuova colonna per le scadenze.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="due-stretch-dark.webp">
+	<img src="due-stretch-light.webp" alt="Puntando l'attività di martedì, si allunga fino alla sua data di scadenza, quando inizia la riunione di pianificazione di mercoledì">
+</picture>
+
+Documentazione: [Impostare una data di scadenza](../../docs/planning.md#set-a-due-date)
 
 ## Personalizzazione
-Dai a ogni calendario uno di due nuovi colori, o il colore che preferisci. Rinomina l'intestazione di un account con un doppio clic e nascondi tutti i suoi calendari in una volta. Per tutto il resto, cambia lo stile di Mitra con un CSS tutto tuo: per te nelle Impostazioni, o per tutti sul tuo server tramite un file nella sua cartella dei dati. Chi gestisce il server ha una sezione tutta sua nelle Impostazioni.
+Dai a ogni calendario uno di due nuovi colori, o il colore che preferisci. Rinomina l'intestazione di un account con un doppio clic e nascondi tutti i suoi calendari in una volta.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="personalization-dark.webp">
+	<img src="personalization-light.webp" alt="Il menu di un calendario aperto nella barra laterale, con i suoi colori accanto ai calendari che colorano">
+</picture>
+
+## CSS personalizzato
+L'aspetto di Mitra è normale CSS, e ora puoi aggiungere il tuo sopra. Apri **Impostazioni → Generale → CSS personalizzato** e scrivi una regola: Mitra la applica mentre scrivi e la conserva nel tuo account, così ti segue su ogni dispositivo. Dai a Mitra il tuo colore preferito, rendi squadrati tutti gli angoli o nascondi quello che non usi mai. Dove si accede con un account, chi amministra il server trova anche **CSS personalizzato per tutti** in **Amministrazione**, per dare il suo aspetto a tutto il server.
+
+**Condividi su GitHub**, sotto il riquadro, apre un post nelle [discussioni Custom CSS](https://github.com/a11delavar/mitra/discussions/categories/custom-css) con il tuo foglio di stile già dentro, ed è lì che trovi anche quello che hanno fatto gli altri. Fino a Mitra 1.0, un aggiornamento può cambiare ciò a cui puntano le tue regole, quindi dai un'occhiata dopo ogni aggiornamento.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="custom-css-dark.webp">
+	<img src="custom-css-light.webp" alt="Mitra nell'oro del suo logo, con la regola di CSS personalizzato che lo fa aperta nelle impostazioni">
+</picture>
+
+Documentazione: [CSS personalizzato](../../docs/custom-css.md)
 
 ## Duplica in altri giorni
 Alcune cose cadono in giorni che nessuna ripetizione sa descrivere. Una prescrizione di otto sedute di fisioterapia si incastra negli orari liberi dello studio, e un cliente ti prenota per il 3, il 9 e il 17. Aggiungi la prima, scegli **Duplica in altri giorni** nel suo menu ⋯ e segna le altre sui due mesi mostrati. Tieni premuto Maiusc per scegliere più giorni di fila in una volta. Ogni giorno riceve una copia alla stessa ora, una voce a sé che puoi spostare o modificare come qualsiasi altra.
@@ -61,4 +92,7 @@ Mitra sta imparando l'arabo, il russo, il polacco e il neerlandese. Con ogni ver
 </picture>
 
 ## Collaboratori
-- [@jkngale](https://github.com/jkngale): le basi per Todoist
+- [@a11delavar](https://github.com/a11delavar)
+- [@jkngale](https://github.com/jkngale)
+- [@d8monx](https://github.com/d8monx)
+- [@libnewton](https://github.com/libnewton)

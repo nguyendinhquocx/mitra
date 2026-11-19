@@ -1,9 +1,9 @@
 ---
 title: Rutinas
-description: "Cómo muestran las vistas de mes y año lo que haces a menudo, como un entrenamiento diario, con pequeñas marcas en lugar de una barra por cada vez."
+description: "Cómo Mitra lleva la cuenta de lo que haces a menudo, como una medicación diaria o el gimnasio, y lo muestra como pequeñas marcas en las vistas de mes y año."
 ---
 
-Algunas cosas ocurren con tanta frecuencia que una barra para cada una llenaría el mes de copias: un entrenamiento diario, tu medicación, una reunión de equipo cada día laborable. En las vistas de mes y año, Mitra las dibuja como una **rutina**: una línea fina bajo los días, con una marca en cada día en que ocurre la rutina.
+Algunas cosas ocurren con tanta frecuencia que una barra para cada una llenaría el mes de copias: un entrenamiento diario, tu medicación, una reunión de equipo cada día laborable. En las vistas de mes y año, Mitra las dibuja como una **rutina**: una línea fina bajo los días, con una marca en cada día en que ocurre la rutina. La pestaña **Rutinas** de la barra lateral lleva la cuenta de cómo fue cada rutina.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/month-detail-dark.webp">
@@ -22,7 +22,7 @@ En la vista de año, donde cada día es pequeño, las rutinas son lo que más se
 Las entradas forman una rutina cuando están en el mismo calendario y tienen el mismo título. Mitra reconoce una rutina cuando las entradas se guardan o se sincronizan, y la conserva.
 
 - Una entrada que se repite es una rutina desde el principio, sea cual sea su frecuencia, siempre que tenga al menos cuatro fechas.
-- Las entradas que no se repiten forman una en cuanto hay al menos cuatro y aparecen más o menos cada cinco semanas o con más frecuencia, o mantienen un ritmo regular, como una vez al año. Así, varias entradas separadas llamadas «Correr» forman una rutina igual que una serie diaria.
+- Las entradas que no se repiten forman una en cuanto hay al menos cuatro y mantienen un ritmo regular, como cada pocos días, cada semana o una vez al año. Así, varias entradas separadas llamadas «Correr» forman una rutina igual que una serie diaria, mientras que unas pocas seguidas y luego un largo vacío, como los vuelos de dos viajes, no.
 
 Los calendarios que solo puedes leer, como las suscripciones, no forman rutinas.
 
@@ -32,6 +32,37 @@ La frecuencia de una rutina decide cómo la muestran las vistas:
 
 - En la vista de mes, una rutina que aparece más de una vez por semana se muestra como marcas. Algo semanal sigue siendo una barra.
 - En la vista de año, una rutina que aparece más o menos cada cinco semanas o con más frecuencia se muestra como marcas, así que también las semanales y mensuales. Una menos frecuente, como un cumpleaños, sigue siendo una barra.
+
+## La pestaña Rutinas
+
+Abre **Rutinas** en la barra lateral, junto a Calendarios y Planificación, o escribe su nombre en la paleta de comandos. **Hoy** muestra las rutinas de hoy, según su hora, y **En curso** las demás, por su próxima fecha. Las rutinas que no aparecieron en los últimos tres meses y no tienen nada por delante se pliegan en **Pasadas**, la más reciente primero. Para dejar fuera las rutinas de un calendario, como las de tu calendario de trabajo, elige **Ocultar sus rutinas** en su menú de la barra lateral. Cada fila muestra el nombre de la rutina, cuándo aparece y su racha: una llama del color de su calendario con cuántas repeticiones seguidas cumpliste. Una que faltaste o cancelaste termina la racha, y la llama se vuelve gris.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/routines-detail-dark.webp">
+  <img src="../assets/screenshots/routines-detail-light.webp" alt="La pestaña Rutinas en la barra lateral, cada rutina con su racha, con el detalle del gimnasio abierto al lado" />
+</picture>
+
+El detalle de una rutina muestra sus últimas semanas como una cuadrícula, una casilla por día:
+
+- Una casilla llena se cumplió: un evento que tuvo lugar o una tarea que marcaste.
+- Una casilla hueca se perdió: una tarea que quedó abierta después de su día.
+- Un guion se canceló, y cuenta como no cumplida, igual que una perdida.
+- Una casilla con borde es la de hoy, todavía abierta.
+- Una casilla tenue es un día en que no ocurre.
+
+Mitra solo cuenta lo que está en tu calendario. Una repetición que eliminas desaparece y no cuenta, así que para que una sesión saltada quede registrada, cancélala en lugar de eliminarla; consulta [Estado del evento](entries.md#event-status). Los eventos no tienen nada que marcar: un evento tuvo lugar a menos que se cancelara.
+
+El estado de hoy está al final de la fila de una rutina: la casilla de una tarea, que la marca como hecha igual que la del calendario, y el de un evento cuando lo cancelas, para que puedas cambiarlo de nuevo. La insignia de la pestaña cuenta las tareas de rutina que siguen abiertas hoy. Un calendario que ocultas saca sus rutinas de la pestaña.
+
+## El detalle de una rutina
+
+Haz clic en una fila para ver más: desde cuándo existe la rutina, sus últimas semanas como una cuadrícula de días y, debajo, tres recuadros: su racha, encabezada por cómo va, como **En marcha** o **Flaqueando**, **Nada por delante** cuando no hay ninguna fecha prevista o **Terminada** cuando pasó a **Pasadas**, con tu mejor racha; cuánto del último año cumpliste; y el día de la semana en que más falla. Su menú **⋯** ofrece **Hecho hoy** para una tarea, **Cancelado** para cancelar la repetición de hoy y **Mostrar en el calendario** para abrir la siguiente. Desmarca allí **Seguir cómo va** para una rutina que solo cumples, como una factura o una reunión: entonces no muestra racha, y su detalle solo la cuadrícula.
+
+## Corregir una rutina
+
+Mitra encuentra las rutinas por sí mismo, y el menú **⋯** del detalle lo corrige donde se equivocó. **Renombrar…** le da a la rutina un nombre propio; también puedes hacer clic en su nombre y escribir. El botón junto a un nombre propio, o volver a escribir el título de sus entradas, la nombra otra vez según sus entradas. **Fusionar con** abre las demás rutinas del mismo calendario; elegir una une las dos, para un hábito con dos títulos, como «Pastillas de la mañana» y «Pastillas de la noche». **No es una rutina** la saca de la pestaña para siempre: las entradas con su título ya no se agrupan en una rutina y siguen en tu calendario. Lo que marcaste como no rutina espera al final de la pestaña, plegado bajo **No son rutinas**; ábrelo para volver a hacerlo una rutina.
+
+El editor de una entrada tiene una fila **Rutina** después de sus fechas, que aparece cuando la entrada pertenece a una rutina o podría pertenecer. Elige allí otra rutina de su calendario, **Nueva rutina** para empezar una a partir de la entrada, a la que se unen las entradas posteriores con su título, o **No es una rutina** para sacarla para siempre, como un almuerzo que solo comparte el título con un hábito. La fila muestra la racha de la rutina junto a su nombre.
 
 ## Usar una rutina
 

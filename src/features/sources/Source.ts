@@ -2,7 +2,7 @@ import { converter } from '@a11d/converter'
 import { EntryType, EntryTypes, Entry, EntryChange, type EntryPatch } from '#features/entries'
 import { ReminderDefaults } from '#features/reminders/ReminderDefaults.js'
 import { Integration } from '#integrations'
-import { model, Entity, identity, equality, entity, primaryKey, property, manyToOne, include } from '#infrastructure/model'
+import { model, Entity, identity, equality, entity, primaryKey, property, manyToOne, include, instant } from '#infrastructure/model'
 import { Color } from './Color.js'
 
 @model('Source')
@@ -98,6 +98,7 @@ export class Source extends Entity {
 	}
 
 	/** When its first import finished; none while it imports. */
+	@converter(instant)
 	@property({ type: 'Date', nullable: true }) importedAt?: Date
 
 	get importing() {
@@ -120,6 +121,10 @@ export class Source extends Entity {
 	}
 
 	@property({ type: 'json', nullable: true }) syncState?: Record<string, any>
+
+	/** Whether the Routines tab leaves out what this calendar keeps doing: a work calendar's meetings are no routine of the person's. */
+	@equality()
+	@property({ type: 'boolean', fieldName: 'routines_disabled' }) routinesDisabled = false
 
 	/**
 	 * Whether entries of `type` can live here. The provider's list decides for events and tasks. Availability

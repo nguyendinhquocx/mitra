@@ -1,10 +1,17 @@
 ---
-title: Seguimiento de rutinas, Todoist, estado de eventos y vencimientos de un vistazo
+title: Rutinas y rachas, Todoist, estado de eventos y vencimientos de un vistazo
 ---
-Mitra 0.8 te ayuda a mantener las cosas que haces una y otra vez, y guarda constancia de lo que no llegó a pasar.
+Mitra 0.8 da a tus rutinas un lugar propio, donde ves cómo va cada una y mantienes viva su racha. Mitra también se conecta con Todoist, muestra cuándo vence una tarea y si un evento sigue en pie, y llega en cuatro idiomas más, con muchas mejoras y correcciones más pequeñas.
 
-## Seguimiento de rutinas
-Mitra ya agrupa en rutinas lo que haces a menudo, como ir al gimnasio o cortarte el pelo cada cinco semanas. Ahora tienen un lugar propio, donde ves de un vistazo los últimos días de cada rutina: cuántos cumpliste y cuáles cancelaste o te saltaste. Puedes cambiar el nombre de una rutina, unir dos que van juntas o decirle a Mitra que algo no es una rutina. Las rutinas también se mantienen estables en las vistas de mes y año por mucho que te desplaces, y tu conector de IA puede decirte cómo van.
+## Rutinas y rachas
+Mitra ya agrupa en rutinas lo que haces a menudo, como ir al gimnasio o cortarte el pelo cada cinco semanas. Ahora tienen un lugar propio, donde una llama muestra de un vistazo la racha de cada rutina, y su detalle los días que cumpliste, cancelaste o te saltaste. Puedes cambiar el nombre de una rutina, unir dos que van juntas o decirle a Mitra que algo no es una rutina. Las rutinas también se mantienen estables en las vistas de mes y año por mucho que te desplaces, y tu conector de IA puede decirte cómo van. La pestaña muestra primero las rutinas de **Hoy**, luego las que están **En curso**, y pliega bajo **Pasadas** las que quedaron muy atrás. Para dejar fuera las rutinas de un calendario, como las de tu calendario del trabajo, elige **Ocultar sus rutinas** en su menú.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="routines-dark.webp">
+	<img src="routines-light.webp" alt="La pestaña Rutinas junto a la vista de mes, cada rutina con su racha, con el detalle del gimnasio abierto al lado">
+</picture>
+
+Docs: [Rutinas](../../docs/routines.md)
 
 ## La misma hora en todas partes
 Algunas cosas no dependen de tu zona horaria: la medicación de las 7:30 es a las 7:30, en casa o de viaje. Elige **La misma hora en todas partes** al principio de las zonas horarias de una entrada, y se queda a esa hora estés donde estés, marcada con un globo tachado. Las entradas que llegan de otras aplicaciones sin zona horaria también lo muestran. Antes de que muevas una a un calendario que no tiene esas horas, como Google Calendar, Mitra te avisa de que recibirá una zona horaria fija.
@@ -27,10 +34,34 @@ Un evento tiene ahora un estado propio, como una tarea: **Confirmado**, **Quizá
 Docs: [Estado del evento](../../docs/entries.md#event-status)
 
 ## Vencimientos de un vistazo
-El día de vencimiento de una tarea aparece en su bandera, y al señalar la tarea se marca ese día en el calendario. El cronograma también lo marca, y la tabla gana una columna para él.
+Una tarea programada ahora muestra en su propia bandera cuándo vence, como una hora, un día de la semana o una fecha, según lo pronto que sea. Señala una tarea en la vista de semana o de mes, o en el cronograma, y se estira hasta su fecha de vencimiento, para que veas cuánto margen te queda. Si programaste una tarea para terminar después de su vencimiento, la bandera se vuelve roja. Y la tabla tiene una columna nueva para las fechas de vencimiento.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="due-stretch-dark.webp">
+	<img src="due-stretch-light.webp" alt="Al señalar la tarea del martes, se estira hasta su fecha de vencimiento, cuando empieza la reunión de planificación del miércoles">
+</picture>
+
+Docs: [Fijar una fecha de vencimiento](../../docs/planning.md#set-a-due-date)
 
 ## Personalización
-Da a cada calendario uno de dos colores más, o el color que quieras. Cambia el nombre del encabezado de una cuenta con un doble clic y oculta todos sus calendarios a la vez. Para todo lo demás, cambia el estilo de Mitra con tu propio CSS: para ti en Ajustes, o para todos en tu servidor con un archivo en su carpeta de datos. Quien administra el servidor tiene una sección propia en Ajustes.
+Da a cada calendario uno de dos colores más, o el color que quieras. Cambia el nombre del encabezado de una cuenta con un doble clic y oculta todos sus calendarios a la vez.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="personalization-dark.webp">
+	<img src="personalization-light.webp" alt="El menú de un calendario abierto en la barra lateral, con sus colores junto a los calendarios que pintan">
+</picture>
+
+## CSS personalizado
+El aspecto de Mitra es CSS normal, y ahora puedes añadir el tuyo encima. Abre **Ajustes → General → CSS personalizado** y escribe una regla: Mitra la aplica mientras escribes y la guarda en tu cuenta, así que te sigue a todos tus dispositivos. Dale a Mitra tu color favorito, cuadra todas las esquinas u oculta lo que nunca usas. Donde se inicia sesión, quien administra el servidor encuentra además **CSS personalizado para todos** en **Administración**, para darle su aspecto a todo el servidor.
+
+**Compartir en GitHub**, bajo el cuadro, abre una publicación en las [discusiones de Custom CSS](https://github.com/a11delavar/mitra/discussions/categories/custom-css) con tu hoja de estilos ya dentro, y allí también encontrarás lo que han hecho otros. Hasta Mitra 1.0, una actualización puede cambiar aquello a lo que apuntan tus reglas, así que échale un vistazo después de actualizar.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="custom-css-dark.webp">
+	<img src="custom-css-light.webp" alt="Mitra en el dorado de su logotipo, con la regla de CSS personalizado que lo hace abierta en los ajustes">
+</picture>
+
+Docs: [CSS personalizado](../../docs/custom-css.md)
 
 ## Duplicar en otros días
 Algunas cosas ocurren en días que ninguna repetición puede describir. Una receta de ocho sesiones de fisioterapia se reparte entre los huecos libres de la consulta, y un cliente te reserva el 3, el 9 y el 17. Añade la primera, elige **Duplicar en otros días** en su menú ⋯ y marca las demás en los dos meses que aparecen. Mantén pulsado Mayús para elegir varios días seguidos de una vez. Cada día recibe una copia a la misma hora, una entrada propia que puedes mover o cambiar como cualquier otra.
@@ -61,4 +92,7 @@ Mitra está aprendiendo árabe, ruso, polaco y neerlandés. Con cada versión, M
 </picture>
 
 ## Colaboradores
-- [@jkngale](https://github.com/jkngale): las bases para Todoist
+- [@a11delavar](https://github.com/a11delavar)
+- [@jkngale](https://github.com/jkngale)
+- [@d8monx](https://github.com/d8monx)
+- [@libnewton](https://github.com/libnewton)

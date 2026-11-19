@@ -15,6 +15,7 @@ import { ParticipantFaces } from '#features/participants/client/ParticipantFaces
 import { EntryLink } from '#features/relations/client/EntryLink.js'
 import { MapLink } from '#features/locations/client/MapLink.js'
 import { Day } from '#features/calendar/client/Day.js'
+import { DueMark } from '#features/calendar/client/DueMark.js'
 import { EntrySegmentComponent } from '#features/entries/client/EventSegment.js'
 import { AvailabilitySegment } from '#features/availability/client/AvailabilitySegment.js'
 import { EntryConnections } from '#features/relations/client/EntryConnections.js'
@@ -55,8 +56,16 @@ import { DialogRelationFailed } from '#features/relations/client/DialogRelationF
 import { EntryDetailsWhen } from '#features/entries/client/EntryDetailsWhen.js'
 import { EntryDetailsSharing } from '#features/entries/client/EntryDetailsSharing.js'
 import { EntryStore } from '#features/entries/client/EntryStore.js'
+import { RoutinesTab } from '#features/routines/client/RoutinesTab.js'
+import { RoutineRow } from '#features/routines/client/RoutineRow.js'
+import { RoutineFlame } from '#features/routines/client/RoutineFlame.js'
+import { RoutineDetails } from '#features/routines/client/RoutineDetails.js'
+import { DialogDissolveRoutine } from '#features/routines/client/DialogDissolveRoutine.js'
+import { RoutineField } from '#features/routines/client/RoutineField.js'
 import { ScrollDeviceController } from '#features/calendar/client/ScrollDeviceController.js'
 import { hierarchy } from '#features/relations/client/Hierarchy.js'
+import { CustomCss } from '#features/customization/client/CustomCss.js'
+import { CustomCssEditor } from '#features/customization/client/CustomCssEditor.js'
 import { DialogIntegration } from '#integrations/client/DialogIntegration.js'
 import { IcsSubscription } from '#integrations/ics/IcsSubscription.js'
 import '#integrations/demo/client/language.js'
@@ -97,6 +106,8 @@ export class Mitra extends Application {
 		const pendingIntegrationId = Mitra.consumePendingIntegrationParameter()
 		const subscribeUrl = consumeSubscribeParameter()
 		await Promise.all([Calendars.fetch(), session.fetchUser(), session.fetchInstance()])
+		// Before the router renders the calendar, so the account's stylesheet is worn from its first paint.
+		CustomCss.wearStored()
 		// After the integrations, so a linked language switches the sample calendar too.
 		LocaleSetting.followAccount()
 		LocaleSetting.rememberLinkedLanguage()
@@ -184,7 +195,13 @@ export class Mitra extends Application {
 		return id
 	}
 
+	/** In the document, Mitra's rules sit in one cascade layer, so a custom stylesheet, unlayered, wins whatever its selector. */
 	static override get styles() {
+		return css`@layer mitra { ${Mitra.rules} }`
+	}
+
+	/** Every light-DOM component's styles, unlayered: a dialog's shadow root wears them as they are. */
+	static get rules() {
 		return css`
 			${super.styles}
 
@@ -215,6 +232,10 @@ export class Mitra extends Application {
 				-webkit-user-select: text;
 			}
 
+			::selection {
+				background-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+			}
+
 			${focusRingStyles}
 			${kbdStyles}
 			${windowDragStyles}
@@ -228,6 +249,12 @@ export class Mitra extends Application {
 			${CommandPalette.styles}
 			${Sidebar.styles}
 			${Planning.styles}
+			${RoutinesTab.styles}
+			${RoutineRow.styles}
+			${RoutineFlame.styles}
+			${RoutineDetails.styles}
+			${DialogDissolveRoutine.styles}
+			${RoutineField.styles}
 			${Weeks.styles}
 			${Months.styles}
 			${Days.styles}
@@ -240,6 +267,7 @@ export class Mitra extends Application {
 			${EntryLink.styles}
 			${MapLink.styles}
 			${Day.styles}
+			${DueMark.styles}
 			${EntrySegmentComponent.styles}
 			${AvailabilitySegment.styles}
 			${EntryConnections.styles}
@@ -255,6 +283,7 @@ export class Mitra extends Application {
 			${DialogKeyboardShortcuts.styles}
 			${DialogSettings.styles}
 			${SettingRow.styles}
+			${CustomCssEditor.styles}
 			${NotificationDevices.styles}
 			${DialogNewAccessToken.styles}
 			${DialogAccessToken.styles}

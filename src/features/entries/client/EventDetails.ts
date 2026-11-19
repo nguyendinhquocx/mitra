@@ -4,7 +4,9 @@ import { centered, type Popover, startedInField, scrollbar } from '#design'
 import { type Source, Color } from '#features/sources'
 import { Calendars } from '#features/sources/client/Calendars.js'
 import { hierarchy } from '#features/relations/client/Hierarchy.js'
+import { RoutineField } from '#features/routines/client/RoutineField.js'
 import { type EntryTypeValue } from '../EntryType.js'
+import { EntryStatus } from '../EntryStatus.js'
 import type { EntrySegment } from './EntrySegment.js'
 import { EntryStore, reportSaveError } from './EntryStore.js'
 import { EntryEditorIntent } from './EntryEditorIntent.js'
@@ -83,6 +85,11 @@ export class EntryDetailsComponent extends Component {
 			return
 		}
 		this.close()
+		if (scope.cancel) {
+			entry.status = EntryStatus.Cancelled
+			EntryStore.notify()
+			return EntryStore.commit(entry, scope.recurrence).catch(reportSaveError)
+		}
 		return hierarchy.deleteScoped(entry, scope).catch(error =>
 			console.error('Deleting the entry failed, so it was restored in the view:', error))
 	}
@@ -193,7 +200,7 @@ export class EntryDetailsComponent extends Component {
 					margin: 0 0.25rem;
 					padding: 0;
 					border: none;
-					border-radius: 0.5rem;
+					border-radius: calc(var(--border-radius) * 2);
 					background: none;
 					backdrop-filter: none;
 					box-shadow: 0px 24px 48px -8px rgba(0,0,0,0.48), 0px 4px 12px -1px rgba(0,0,0,0.24);
@@ -219,7 +226,7 @@ export class EntryDetailsComponent extends Component {
 					background: var(--mitra-entry-surface);
 					backdrop-filter: blur(10px);
 					border: var(--border);
-					border-radius: 0.5rem;
+					border-radius: calc(var(--border-radius) * 2);
 					overflow: clip;
 
 					/* A row turning up while it is open grows into place, and the editor with it, which its rows size. Not
@@ -229,7 +236,8 @@ export class EntryDetailsComponent extends Component {
 						animation: mitra-editor-arrived 0s 0.2s both;
 
 						@container style(--mitra-editor-arrived: true) {
-							li {
+							/* Never the description's lists: a ticked box renders it anew, which grew every item from nothing. */
+							li:not(mitra-markdown li) {
 								transition: block-size 0.2s cubic-bezier(0.2, 0, 0, 1), min-block-size 0.2s cubic-bezier(0.2, 0, 0, 1);
 								overflow-block: clip;
 								overflow-clip-margin: 2px;
@@ -546,7 +554,7 @@ export class EntryDetailsComponent extends Component {
 		const entry = this.segment!.entry
 		const groups = [
 			// Rendered for an UNDATED entry too, where it shows just the way in (see EntryDetailsWhen).
-			[html`<mitra-entry-details-when .entry=${entry} @change=${this.handleInPlaceEdit}></mitra-entry-details-when>`],
+			[html`<mitra-entry-details-when .entry=${entry} @change=${this.handleInPlaceEdit}></mitra-entry-details-when>`, this.routineTemplate],
 			[this.locationTemplate, this.participantsTemplate, this.hyperlinksTemplate, this.attachmentsTemplate, this.descriptionTemplate],
 			[
 				!EntryDetailsSharing.applies(entry) ? html.nothing : html`
@@ -611,6 +619,17 @@ export class EntryDetailsComponent extends Component {
 						`)}
 				</mitra-select>
 			</span>
+		`
+	}
+
+	/** After the dates and their Repeat row: the routine it belongs to, or could. */
+	private get routineTemplate() {
+		const entry = this.segment!.entry
+		return !RoutineField.showsFor(entry) || !entry.editable ? html.nothing : html`
+			<li class="routine field">
+				<mitra-icon icon="activity"></mitra-icon>
+				<mitra-routine-field .entry=${entry}></mitra-routine-field>
+			</li>
 		`
 	}
 

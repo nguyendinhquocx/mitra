@@ -1,9 +1,9 @@
 ---
 title: Rotinas
-description: "Como as vistas de mês e de ano mostram o que você faz com frequência, como um treino diário, em pequenas marcas em vez de uma barra para cada ocorrência."
+description: "Como o Mitra conta o que você faz com frequência, como um remédio diário ou a academia, e mostra isso como pequenas marcas nas visualizações de mês e ano."
 ---
 
-Algumas coisas acontecem com tanta frequência que uma barra para cada uma encheria o mês de cópias: um treino diário, seu remédio, uma reunião rápida nos dias úteis. Nas vistas de mês e de ano, o Mitra as desenha como uma **rotina**: uma linha fina sob os dias, com uma marca em cada dia em que a rotina acontece.
+Algumas coisas acontecem com tanta frequência que uma barra para cada uma encheria o mês de cópias: um treino diário, seu remédio, uma reunião rápida nos dias úteis. Nas vistas de mês e de ano, o Mitra as desenha como uma **rotina**: uma linha fina sob os dias, com uma marca em cada dia em que a rotina acontece. A aba **Rotinas** na barra lateral conta como cada rotina foi.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/month-detail-dark.webp">
@@ -22,7 +22,7 @@ Na vista de ano, em que cada dia é pequeno, as rotinas são o que mais aparece:
 As entradas formam uma rotina quando estão no mesmo calendário e têm o mesmo título. O Mitra reconhece uma rotina quando as entradas são salvas ou sincronizadas, e a mantém.
 
 - Uma entrada recorrente é uma rotina desde o início, não importa com que frequência se repita, desde que tenha pelo menos quatro datas.
-- Entradas que não se repetem formam uma assim que houver pelo menos quatro delas e elas aparecerem mais ou menos a cada cinco semanas ou com mais frequência, ou mantiverem um ritmo regular, como uma vez por ano. Assim, entradas separadas chamadas "Corrida" formam uma rotina como uma série diária formaria.
+- Entradas que não se repetem formam uma assim que houver pelo menos quatro delas e elas mantiverem um ritmo regular, como a cada poucos dias, toda semana ou uma vez por ano. Assim, entradas separadas chamadas "Corrida" formam uma rotina como uma série diária formaria, enquanto algumas próximas umas das outras e depois um longo intervalo, como os voos de duas viagens, não.
 
 Calendários que você só pode ler, como as assinaturas, não formam rotinas.
 
@@ -32,6 +32,37 @@ A frequência de uma rotina decide como as vistas a mostram:
 
 - Na vista de mês, uma rotina que aparece mais de uma vez por semana é mostrada como marcas. Algo semanal continua sendo uma barra.
 - Na vista de ano, uma rotina que aparece mais ou menos a cada cinco semanas ou com mais frequência é mostrada como marcas, então as semanais e mensais também. Uma mais rara, como um aniversário, continua sendo uma barra.
+
+## A aba Rotinas
+
+Abra **Rotinas** na barra lateral, ao lado de Calendários e Planeamento, ou digite o nome na paleta de comandos. **Hoje** mostra as rotinas de hoje, pela hora, e **Em curso** as restantes, pela próxima data. As rotinas que não aconteceram nos últimos três meses e não têm nada pela frente recolhem-se em **Passadas**, a mais recente primeiro. Para deixar de fora as rotinas de um calendário, como as do seu calendário de trabalho, escolha **Ocultar as rotinas** no menu dele na barra lateral. Cada linha mostra o nome da rotina, quando ela acontece e a sua sequência: uma chama da cor do seu calendário com quantas ocorrências seguidas você cumpriu. Uma perdida ou cancelada termina a sequência, e a chama fica cinza.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/routines-detail-dark.webp">
+  <img src="../assets/screenshots/routines-detail-light.webp" alt="A aba Rotinas na barra lateral, cada rotina com a sua sequência, com o detalhe do ginásio aberto ao lado" />
+</picture>
+
+O detalhe de uma rotina mostra as suas últimas semanas como uma grade, uma célula por dia:
+
+- Uma célula cheia foi cumprida: um evento que aconteceu, ou uma tarefa que você marcou.
+- Uma célula vazia foi perdida: uma tarefa que ficou em aberto depois do seu dia.
+- Um traço foi cancelado, e conta como não cumprida, como uma perdida.
+- Uma célula contornada é a de hoje, ainda em aberto.
+- Uma célula ténue é um dia em que ela não acontece.
+
+O Mitra só conta o que está no seu calendário. Uma ocorrência que você exclui desaparece e não conta, então para manter uma sessão pulada no histórico, cancele-a em vez de excluí-la; veja [Estado do evento](entries.md#event-status). Eventos não têm nada para marcar: um evento aconteceu, a menos que tenha sido cancelado.
+
+O estado de hoje fica no fim da linha de uma rotina: a caixa de seleção de uma tarefa, que a marca como a do calendário, e o de um evento depois de o cancelar, para o poder mudar de novo. O selo da aba conta as tarefas de rotina ainda em aberto hoje. Um calendário que você oculta tira as suas rotinas da aba.
+
+## O detalhe de uma rotina
+
+Clique em uma linha para ver mais: desde quando a rotina existe, as suas últimas semanas como uma grade de dias e, abaixo, três blocos: a sua sequência, encabeçada por como ela vai, como **Nos trilhos** ou **Perdendo o ritmo**, **Nada pela frente** quando nenhuma data está planejada, ou **Terminou** quando passou para **Passadas**, com o seu recorde; quanto do último ano você cumpriu; e o dia da semana em que ela mais falha. O seu menu **⋯** oferece **Feito hoje** para uma tarefa, **Cancelado** para cancelar a ocorrência de hoje e **Mostrar no calendário** para abrir a próxima. Desmarque ali **Acompanhar como vai** para uma rotina que você apenas cumpre, como uma conta ou uma reunião: ela deixa de mostrar sequência, e o seu detalhe só a grade.
+
+## Corrigir uma rotina
+
+O Mitra encontra as rotinas sozinho, e o menu **⋯** do detalhe o corrige onde ele errou. **Renomear…** dá à rotina um nome seu; você também pode clicar no nome dela e digitar. O botão ao lado de um nome seu, ou digitar de novo o título das suas entradas, volta a nomeá-la pelas entradas. **Mesclar com** abre as outras rotinas do mesmo calendário; escolher uma junta as duas, para um hábito com dois títulos, como "Comprimidos da manhã" e "Comprimidos da noite". **Não é uma rotina** tira-a da aba de vez: as entradas com o seu título deixam de ser reunidas numa rotina e continuam no seu calendário. O que você disse não ser uma rotina fica no fim da aba, recolhido em **Não são rotinas**; abra para voltar a torná-lo uma rotina.
+
+O editor de uma entrada tem uma linha **Rotina** depois das suas datas, mostrada quando a entrada pertence a uma rotina ou poderia pertencer. Escolha ali outra rotina do seu calendário, **Nova rotina** para começar uma a partir da entrada, à qual as entradas seguintes com o seu título se juntam, ou **Não é uma rotina** para tirá-la de vez, como um almoço que só partilha o título com um hábito. A linha mostra a sequência da rotina ao lado do seu nome.
 
 ## Usar uma rotina
 

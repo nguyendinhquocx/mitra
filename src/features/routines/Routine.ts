@@ -1,6 +1,8 @@
 import { converter } from '@a11d/converter'
+import type { DateTime } from '@3mo/date-time'
 import type { EntityManager } from '@mikro-orm/core'
 import { Source } from '#features/sources'
+import type { Entry } from '#features/entries'
 import { Recurrence } from '#features/recurrence/Recurrence.js'
 import { TimeZone } from '#features/time/TimeZone.js'
 import { EntryTimeZone } from '#features/time/EntryTimeZone.js'
@@ -22,24 +24,27 @@ export class Routine extends Entity {
 	}
 
 	/**
-	 * Tells each of `routines` how often it comes, on the days of `zone`: its members' rules beside the cadence of those
-	 * that are entries of their own, an override standing in for a date its rule already counts. Read off the members'
-	 * dates and rules alone: the views ask on every refresh, and building every member into an entry took ten to twenty
-	 * times as long.
+	 * Tells each of `routines` how often it comes, on the days of `zone` (its members' rules beside the cadence of those
+	 * that are entries of their own), the titles its members wear, and the day of its first date. An override stands in for a date its rule already
+	 * counts. Read off the members' few columns alone: the views ask on every refresh, and building every member into an
+	 * entry took ten to twenty times as long.
 	 */
 	static async measure(em: EntityManager, routines: ReadonlyArray<Routine>, zone: TimeZone) {
 		const members = !routines.length ? [] : await em.getConnection().execute(
-			`select routine_id, coalesce(start, due) as date, all_day, time_zone, recurrence from entry where recurring_entry_id is null and routine_id in (${routines.map(() => '?').join(', ')})`,
+			`select routine_id, heading, coalesce(start, due) as date, all_day, time_zone, recurrence from entry where recurring_entry_id is null and routine_id in (${routines.map(() => '?').join(', ')}) order by date desc`,
 			routines.map(routine => routine.id),
 			'all',
 			em.getTransactionContext(),
-		) as Array<{ routine_id: string, date: number | null, all_day: number | null, time_zone: string | null, recurrence: string | null }>
+		) as Array<{ routine_id: string, heading: string | null, date: number | null, all_day: number | null, time_zone: string | null, recurrence: string | null }>
 		const byRoutine = Map.groupBy(members, member => member.routine_id)
 		for (const routine of routines) {
 			const own = byRoutine.get(routine.id) ?? []
-			const days = own.flatMap(member => member.recurrence || member.date === null ? []
-				: (member.all_day || member.time_zone === EntryTimeZone.floating.id ? TimeZone.UTC : zone).dayOf(new Date(member.date)))
+			const dayOf = (member: typeof own[number]) => member.date === null ? []
+				: (member.all_day || member.time_zone === EntryTimeZone.floating.id ? TimeZone.UTC : zone).dayOf(new Date(member.date))
+			const days = own.flatMap(member => member.recurrence ? [] : dayOf(member))
 			routine.cadence = RoutineCadence.of(own.flatMap(member => member.recurrence ? Recurrence.fromRRule(member.recurrence)?.strideDays ?? [] : []), RoutineCadence.between(days))
+			routine.titles = [...new Set(own.flatMap(member => member.heading?.trim() || []))]
+			routine.since = own.flatMap(dayOf).sort(Temporal.PlainDate.compare)[0]?.toString()
 		}
 	}
 
@@ -58,11 +63,74 @@ export class Routine extends Entity {
 	@equality()
 	@property({ type: 'boolean', nullable: true }) dissolved?: boolean
 
-	/** How often it comes. Told as it is listed (`Routine.measure`), never stored. */
+	/** Not kept up but kept to, the person said, as a bill or a meeting is: no streak nor any reading of how it goes. */
+	@equality()
+	@property({ type: 'boolean', nullable: true }) untracked?: boolean
+
+	/** How often it comes. Told as it is listed (`Routine.measure`), as `titles` are, never stored. */
 	@converter(RoutineCadence.converter) cadence?: RoutineCadence
+
+	/** The titles its members wear, the newest first, as they spell them. Told as it is listed, never stored. */
+	titles?: ReadonlyArray<string>
+
+	/** The day of its first date, ISO: what a rule starts from, or its first entry of its own. Told as it is listed, never stored. */
+	since?: string
 
 	constructor(init?: Partial<Routine>) {
 		super()
 		Object.assign(this, init)
+	}
+
+	/** Takes `entry` in, as the person chose: it names this routine from now on, and is declined by none any more. */
+	adopt(entry: Entry) {
+		entry.routineId = this.id
+		entry.routineDeclined = undefined
+	}
+
+	/** Gives it the person's name; none, or a blank one, names it after its members again. */
+	rename(name: string | null | undefined) {
+		const named = name?.trim()
+		// Its entries' titles again, typed out, are no name of the person's own: it follows them as they change.
+		this.name = named && named !== this.titled ? named : undefined
+	}
+
+	/** Not a routine after all: it keeps its members, and those that join it later, out of sight. */
+	dissolve() {
+		this.dissolved = true
+	}
+
+	/** A routine again, after it was dissolved. */
+	restart() {
+		this.dissolved = undefined
+	}
+
+	/** Whether it is kept up, so its streak and how it goes are read; a schedule of the person's is not. */
+	get tracked() {
+		return !this.untracked
+	}
+
+	/** Its streak and how it goes are read, as they are for every routine at first. */
+	track() {
+		this.untracked = undefined
+	}
+
+	/** Just a schedule, not something kept up: no streak, nor any reading of how it goes. */
+	untrack() {
+		this.untracked = true
+	}
+
+	/** What it is called: the person's name, else the titles its members wear, the newest first. */
+	get label() {
+		return this.name ?? this.titled
+	}
+
+	/** What its entries call it: the titles they wear, the newest first. */
+	get titled() {
+		return this.titles?.slice(0, 3).format() ?? ''
+	}
+
+	/** How often it comes, in the reader's language: `rule`, its entries' tightest, from `start` on, else its cadence. */
+	frequency(rule?: Recurrence, start?: DateTime) {
+		return rule?.format(start) ?? this.cadence?.format()
 	}
 }

@@ -1,9 +1,9 @@
 ---
 title: Routine
-description: "Come le viste mensile e annuale mostrano ciò che fai spesso, come un allenamento quotidiano, con piccoli segni invece di una barra ciascuno."
+description: "Come Mitra tiene il conto di ciò che fai spesso, come una medicina quotidiana o la palestra, e lo mostra come piccoli segni nelle viste mese e anno."
 ---
 
-Alcune cose accadono così spesso che una barra per ciascuna riempirebbe un mese di copie: un allenamento quotidiano, le medicine, uno standup nei giorni feriali. Nelle viste mensile e annuale, Mitra le disegna invece come una **routine**: una linea sottile sotto i giorni, con un segno su ogni giorno in cui la routine ha luogo.
+Alcune cose accadono così spesso che una barra per ciascuna riempirebbe un mese di copie: un allenamento quotidiano, le medicine, uno standup nei giorni feriali. Nelle viste mensile e annuale, Mitra le disegna invece come una **routine**: una linea sottile sotto i giorni, con un segno su ogni giorno in cui la routine ha luogo. La scheda **Routine** nella barra laterale tiene il conto di come è andata ogni routine.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/month-detail-dark.webp">
@@ -22,7 +22,7 @@ Nella vista annuale, dove ogni giorno è piccolo, le routine sono ciò che vedi 
 Le voci formano una routine quando sono nello stesso calendario e hanno lo stesso titolo. Mitra riconosce una routine quando le voci vengono salvate o sincronizzate, e la conserva.
 
 - Una voce ricorrente è una routine fin dall'inizio, per quanto spesso si ripeta, purché abbia almeno quattro date.
-- Le voci che non si ripetono ne formano una non appena ce ne sono almeno quattro e si presentano circa ogni cinque settimane o più spesso, oppure mantengono un ritmo regolare, per esempio una volta all'anno. Così voci separate chiamate «Corsa» formano una routine proprio come una serie giornaliera.
+- Le voci che non si ripetono ne formano una non appena ce ne sono almeno quattro e mantengono un ritmo regolare, per esempio ogni pochi giorni, ogni settimana o una volta all'anno. Così voci separate chiamate «Corsa» formano una routine proprio come una serie giornaliera, mentre alcune ravvicinate e poi una lunga pausa, come i voli di due viaggi, no.
 
 I calendari che puoi solo leggere, come gli abbonamenti, non formano routine.
 
@@ -32,6 +32,37 @@ La frequenza di una routine decide come la mostrano le viste:
 
 - Nella vista mensile, una routine che si presenta più di una volta a settimana appare come segni. Qualcosa di settimanale resta una barra.
 - Nella vista annuale, una routine che si presenta circa ogni cinque settimane o più spesso appare come segni, quindi anche quelle settimanali e mensili. Una più rara, come un compleanno, resta una barra.
+
+## La scheda Routine
+
+Apri **Routine** nella barra laterale, accanto a Calendari e Pianificazione, oppure scrivine il nome nella tavolozza dei comandi. **Oggi** mostra le routine di oggi, nell’ordine del loro orario, e **In corso** le altre, secondo la prossima data. Le routine che non si sono presentate negli ultimi tre mesi e non hanno nulla davanti si raccolgono sotto **Passate**, la più recente per prima. Per escludere le routine di un calendario, come quelle del tuo calendario di lavoro, scegli **Nascondi le sue routine** nel suo menu nella barra laterale. Ogni riga mostra il nome della routine, quando si presenta e la sua serie: una fiamma del colore del suo calendario con quante occorrenze di fila hai rispettato. Una saltata o annullata interrompe la serie, e la fiamma diventa grigia.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/routines-detail-dark.webp">
+  <img src="../assets/screenshots/routines-detail-light.webp" alt="La scheda Routine nella barra laterale, ogni routine con la sua serie, con il dettaglio della palestra aperto accanto" />
+</picture>
+
+Il dettaglio di una routine mostra le sue ultime settimane come griglia, una casella per giorno:
+
+- Una casella piena è stata rispettata: un evento che si è svolto, o un’attività che hai spuntato.
+- Una casella vuota è stata saltata: un’attività rimasta aperta dopo il suo giorno.
+- Un trattino è stato annullato, e conta come non rispettato, come una saltata.
+- Una casella cerchiata è quella di oggi, ancora aperta.
+- Una casella tenue è un giorno in cui non si presenta.
+
+Mitra conta solo ciò che è nel tuo calendario. Un’occorrenza che elimini sparisce e non conta, quindi per tenere traccia di una sessione saltata annullala invece di eliminarla; vedi [Stato dell'evento](entries.md#event-status). Gli eventi non hanno nulla da spuntare: un evento si è svolto a meno che non sia stato annullato.
+
+Lo stato di oggi sta alla fine della riga di una routine: la casella di un’attività, che la spunta come quella del calendario, e quello di un evento una volta annullato, così puoi cambiarlo di nuovo. Il badge della scheda conta le attività di routine ancora aperte oggi. Un calendario che nascondi toglie le sue routine dalla scheda.
+
+## Il dettaglio di una routine
+
+Fai clic su una riga per vedere di più: da quando esiste la routine, le sue ultime settimane come griglia di giorni e, sotto, tre riquadri: la sua serie, intitolata a come procede, ad esempio **In carreggiata** o **In calo**, **Niente in programma** quando non è prevista nessuna data, o **Interrotta** quando è passata in **Passate**, con il tuo record; quanto dell’ultimo anno hai rispettato; e il giorno della settimana in cui cede più spesso. Il suo menu **⋯** offre **Fatto oggi** per un’attività, **Annullato** per annullare l’occorrenza di oggi e **Mostra nel calendario** per aprire la successiva. Togli lì la spunta da **Segui come va** per una routine che rispetti senza coltivarla, come una bolletta o una riunione: non mostra più una serie, e il suo dettaglio solo la griglia.
+
+## Correggere una routine
+
+Mitra trova le routine da solo, e il menu **⋯** del dettaglio lo corregge dove ha sbagliato. **Rinomina…** dà alla routine un nome tuo; puoi anche fare clic sul suo nome e scrivere. Il pulsante accanto a un nome tuo, o riscrivere il titolo delle sue voci, le ridà il nome delle sue voci. **Unisci a** apre le altre routine dello stesso calendario; sceglierne una unisce le due, per un’abitudine con due titoli, come «Pillole del mattino» e «Pillole della sera». **Non è una routine** la toglie dalla scheda per sempre: le voci con il suo titolo non vengono più raccolte in una routine e restano nel tuo calendario. Ciò che hai detto non essere una routine resta in fondo alla scheda, chiuso sotto **Non sono routine**; aprilo per renderlo di nuovo una routine.
+
+L’editor di una voce ha una riga **Routine** dopo le sue date, mostrata quando la voce appartiene a una routine o potrebbe appartenervi. Scegli lì un’altra routine del suo calendario, **Nuova routine** per iniziarne una dalla voce, a cui si uniscono le voci successive con il suo titolo, oppure **Non è una routine** per toglierla per sempre, come un pranzo che con un’abitudine condivide solo il titolo. La riga mostra la serie della routine accanto al suo nome.
 
 ## Usare una routine
 

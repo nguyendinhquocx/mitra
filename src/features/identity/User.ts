@@ -16,6 +16,9 @@ import { ValidationError } from '#infrastructure/validation'
 import { AccessToken } from './AccessToken.js'
 import { Identity, type IdentityClaims } from './Identity.js'
 
+/** What a person may do on the instance: an administrator also looks after it, saying what holds for everyone on it. */
+export type UserRole = 'administrator' | 'member'
+
 interface EntryFilter {
 	readonly range?: DateTimeRange
 	readonly search?: string
@@ -32,6 +35,8 @@ export class User {
 
 	@primaryKey() id: string = crypto.randomUUID()
 	@property({ type: 'string', unique: true }) username!: string
+
+	@property({ type: 'string', default: 'member' }) role: UserRole = 'member'
 
 	@embedded(() => Identity, { prefix: 'oidc_', nullable: true }) identity?: Identity
 
@@ -58,8 +63,16 @@ export class User {
 			return existing
 		}
 		const user = new User({ username: claims.sub, identity: Identity.fromClaims(issuer, claims) })
+		// The first to sign in looks after the instance while nobody who signs in does (the local account can't once anyone does).
+		if (!await em.count(User, { role: 'administrator', identity: { issuer: { $ne: null } } })) {
+			user.role = 'administrator'
+		}
 		em.persist(user)
 		return user
+	}
+
+	get administers() {
+		return this.role === 'administrator'
 	}
 
 	hasSeen(version: string) {
@@ -134,15 +147,11 @@ export class User {
 		return found
 	}
 
-	/** The one local account single-user mode signs every request in as, made on first use. */
+	/** The one local account single-user mode signs every request in as, made on first use, and administering the instance it has to itself. */
 	static async local(em: EntityManager) {
-		const existing = await em.findOne(User, { username: User.default.username })
-		if (existing) {
-			return existing
-		}
-		const user = User.default
-		em.persist(user)
-		await em.flush()
+		const user = await em.findOne(User, { username: User.default.username }) ?? User.default
+		user.role = 'administrator'
+		await em.persist(user).flush()
 		return user
 	}
 
@@ -179,11 +188,51 @@ export class User {
 		return entries
 	}
 
-	/** The routines of the user's enabled calendars that were not dissolved, each told how often it comes. */
-	async getRoutines(em: EntityManager) {
-		const routines = await em.find(Routine, { $and: [{ dissolved: null }, this.inCalendars({ enabled: true }) as FilterQuery<Routine>] })
+	/** The routines of the user's enabled calendars that were not dissolved, each told how often it comes and the titles its entries wear. */
+	getRoutines(em: EntityManager, where: FilterQuery<Routine> = {}) {
+		return this.findRoutines(em, { $and: [{ dissolved: null }, where] })
+	}
+
+	/** One of {@link getRoutines}; another user's, or one dissolved, is not found (404). */
+	async getRoutine(em: EntityManager, id: string) {
+		return this.foundRoutine(await this.getRoutines(em, { id }), id)
+	}
+
+	/** Those the person said are no routines, each told the titles its entries wear, as {@link getRoutines} are. */
+	getDissolvedRoutines(em: EntityManager, where: FilterQuery<Routine> = {}) {
+		return this.findRoutines(em, { $and: [{ dissolved: true }, where] })
+	}
+
+	/** One of {@link getDissolvedRoutines}; another user's, or one not dissolved, is not found (404). */
+	async getDissolvedRoutine(em: EntityManager, id: string) {
+		return this.foundRoutine(await this.getDissolvedRoutines(em, { id }), id)
+	}
+
+	/** The routines of the user's enabled calendars `where` picks, measured. */
+	private async findRoutines(em: EntityManager, where: FilterQuery<Routine>) {
+		const routines = await em.find(Routine, { $and: [where, this.inCalendars({ enabled: true }) as FilterQuery<Routine>] })
 		await Routine.measure(em, routines, this.timeZones?.home?.zone ?? TimeZone.default)
 		return routines
+	}
+
+	private foundRoutine([routine]: ReadonlyArray<Routine>, id: string) {
+		if (!routine) {
+			throw new NotFoundError(`Routine ${id} not found`)
+		}
+		return routine
+	}
+
+	/**
+	 * The entries of `routines`, as stored: each recurring one whole with its overrides inside it, an override naming a
+	 * routine as an entry of its own too. With `since`, the others only from that instant on.
+	 */
+	getRoutineEntries(em: EntityManager, routines: ReadonlyArray<Routine>, { since }: { since?: Date } = {}) {
+		return !routines.length ? Promise.resolve([]) : this.filterEntries(em, {
+			where: {
+				routineId: { $in: routines.map(routine => routine.id) },
+				...since ? { $or: [{ recurrence: { $ne: null } }, { start: { $gte: since } }, { start: null, due: { $gte: since } }] } : {},
+			},
+		})
 	}
 
 	private static inRange({ start, end }: DateTimeRange): FilterQuery<Entry> {

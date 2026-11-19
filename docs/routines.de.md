@@ -1,9 +1,9 @@
 ---
 title: Routinen
-description: "Wie die Monats- und Jahresansicht Dinge zeigen, die du oft tust, etwa ein tägliches Training, als kleine Markierungen statt als je einen Balken."
+description: "Wie Mitra mitzählt, was du oft tust, etwa ein tägliches Medikament oder das Fitnessstudio, und es in der Monats- und Jahresansicht als kleine Markierungen zeigt."
 ---
 
-Manche Dinge geschehen so oft, dass ein Balken für jedes einen Monat mit Kopien füllen würde: ein tägliches Training, deine Medikamente, ein Standup an Werktagen. In der Monats- und Jahresansicht zeichnet Mitra sie stattdessen als **Routine**: eine dünne Linie unter den Tagen, mit einer Markierung an jedem Tag, an dem die Routine stattfindet.
+Manche Dinge geschehen so oft, dass ein Balken für jedes einen Monat mit Kopien füllen würde: ein tägliches Training, deine Medikamente, ein Standup an Werktagen. In der Monats- und Jahresansicht zeichnet Mitra sie stattdessen als **Routine**: eine dünne Linie unter den Tagen, mit einer Markierung an jedem Tag, an dem die Routine stattfindet. Der Tab **Routinen** in der Seitenleiste zählt mit, wie jede Routine gelaufen ist.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/month-detail-dark.webp">
@@ -22,7 +22,7 @@ In der Jahresansicht, in der jeder Tag klein ist, sind Routinen das, was du am m
 Einträge bilden eine Routine, wenn sie im selben Kalender liegen und denselben Titel haben. Mitra erkennt eine Routine, wenn Einträge gespeichert oder synchronisiert werden, und behält sie.
 
 - Ein wiederkehrender Eintrag ist von Anfang an eine Routine, egal wie oft er sich wiederholt, sofern er mindestens vier Termine hat.
-- Einträge, die sich nicht wiederholen, werden zur Routine, sobald es mindestens vier davon gibt und sie etwa alle fünf Wochen oder öfter vorkommen oder einen regelmäßigen Rhythmus halten, etwa einmal im Jahr. So ergeben einzelne Einträge namens „Laufen“ eine Routine, genau wie eine tägliche Serie.
+- Einträge, die sich nicht wiederholen, werden zur Routine, sobald es mindestens vier davon gibt und sie einen regelmäßigen Rhythmus halten, etwa alle paar Tage, wöchentlich oder einmal im Jahr. So ergeben einzelne Einträge namens „Laufen“ eine Routine, genau wie eine tägliche Serie, ein paar dicht aufeinanderfolgende und dann eine lange Pause, wie die Flüge zweier Reisen, dagegen nicht.
 
 Kalender, die du nur lesen kannst, etwa Abonnements, bilden keine Routinen.
 
@@ -32,6 +32,37 @@ Wie oft eine Routine vorkommt, entscheidet, wie die Ansichten sie zeigen:
 
 - In der Monatsansicht erscheint eine Routine als Markierungen, wenn sie öfter als einmal pro Woche vorkommt. Etwas Wöchentliches bleibt ein Balken.
 - In der Jahresansicht erscheint eine Routine als Markierungen, wenn sie etwa alle fünf Wochen oder öfter vorkommt, also auch wöchentliche und monatliche. Eine seltenere, etwa ein Geburtstag, bleibt ein Balken.
+
+## Der Tab Routinen
+
+Öffne **Routinen** in der Seitenleiste, neben Kalender und Planung, oder tippe den Namen in die Befehlspalette. **Heute** zeigt die Routinen, die heute vorkommen, nach ihrer Uhrzeit, und **Laufend** die übrigen, nach ihrem nächsten Termin. Routinen, die in den letzten drei Monaten nicht vorkamen und nichts mehr vor sich haben, klappen unter **Vergangen** weg, die jüngste zuerst. Um die Routinen eines Kalenders wegzulassen, etwa die deines Arbeitskalenders, wähle in seinem Menü in der Seitenleiste **Routinen ausblenden**. Jede Zeile zeigt den Namen der Routine, wann sie vorkommt, und ihre Serie: eine Flamme in der Farbe ihres Kalenders mit der Zahl der Wiederholungen, die du in Folge eingehalten hast. Eine verpasste oder abgesagte beendet die Serie, und die Flamme wird grau.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/routines-detail-dark.webp">
+  <img src="../assets/screenshots/routines-detail-light.webp" alt="Der Tab Routinen in der Seitenleiste, jede Routine mit ihrer Serie, daneben die Details des Fitnessstudios" />
+</picture>
+
+Die Details einer Routine zeigen ihre letzten Wochen als Raster, ein Feld pro Tag:
+
+- Ein volles Feld wurde eingehalten: ein Termin, der stattgefunden hat, oder eine Aufgabe, die du abgehakt hast.
+- Ein hohles Feld wurde verpasst: eine Aufgabe, die nach ihrem Tag offen geblieben ist.
+- Ein Strich wurde abgesagt; das zählt als nicht eingehalten, wie ein verpasstes.
+- Ein umrandetes Feld ist das von heute, noch offen.
+- Ein blasses Feld ist ein Tag, an dem sie nicht vorkommt.
+
+Mitra zählt nur, was in deinem Kalender steht. Eine Wiederholung, die du löschst, ist weg und zählt nicht; damit eine ausgelassene Einheit im Verlauf bleibt, sag sie ab, statt sie zu löschen, siehe [Terminstatus](entries.md#event-status). Termine haben nichts zum Abhaken: Ein Termin hat stattgefunden, sofern er nicht abgesagt wurde.
+
+Der heutige Status steht am Ende der Zeile einer Routine: bei einer Aufgabe ihr Kontrollkästchen, das sie abhakt wie das im Kalender, und bei einem Termin, sobald du ihn absagst, damit du das wieder ändern kannst. Das Abzeichen am Tab zählt die Routineaufgaben, die heute noch offen sind. Ein Kalender, den du ausblendest, nimmt seine Routinen aus dem Tab.
+
+## Die Details einer Routine
+
+Klick auf eine Zeile, um mehr zu sehen: seit wann die Routine läuft, ihre letzten Wochen als Raster von Tagen und darunter drei Kacheln: ihre Serie, überschrieben mit einem Wort, wie es läuft, etwa **Auf Kurs** oder **Lässt nach**, **Nichts geplant**, sobald kein Termin mehr geplant ist, oder **Beendet**, sobald sie unter **Vergangen** gewandert ist, mit deinem Bestwert; wie viel des vergangenen Jahres du eingehalten hast; und an welchem Wochentag sie am ehesten ausfällt. Ihr Menü **⋯** bietet **Heute erledigt** für eine Aufgabe, **Abgebrochen**, um die heutige Wiederholung abzusagen, und **Im Kalender zeigen**, um die nächste zu öffnen. Entferne dort den Haken bei **Verlauf verfolgen** für eine Routine, die du nur einhältst, statt sie zu pflegen, etwa eine Rechnung oder ein Meeting: Sie zeigt dann keine Serie und in ihren Details nur das Raster.
+
+## Eine Routine korrigieren
+
+Mitra findet Routinen von selbst, und das Menü **⋯** in den Details korrigiert es, wo es sich geirrt hat. **Umbenennen…** gibt der Routine einen eigenen Namen; du kannst auch auf ihren Namen klicken und tippen. Die Schaltfläche neben einem eigenen Namen, oder den Titel ihrer Einträge wieder eintippen, benennt sie wieder nach ihren Einträgen. **Zusammenführen mit** öffnet die anderen Routinen desselben Kalenders; eine davon fügt die beiden zusammen, für eine Gewohnheit mit zwei Titeln, etwa „Tabletten morgens“ und „Tabletten abends“. **Keine Routine** nimmt sie dauerhaft aus dem Tab: Einträge mit ihrem Titel werden nicht mehr zu einer Routine zusammengefasst und bleiben in deinem Kalender. Was du als keine Routine markiert hast, wartet zusammengeklappt am Ende des Tabs unter **Keine Routinen**; dort machst du es wieder zur Routine.
+
+Der Editor eines Eintrags hat nach seinen Daten eine Zeile **Routine**, die erscheint, wenn der Eintrag zu einer Routine gehört oder gehören könnte. Wähle dort eine andere Routine seines Kalenders, **Neue Routine**, um eine aus dem Eintrag zu beginnen, der spätere Einträge mit seinem Titel beitreten, oder **Keine Routine**, um ihn dauerhaft herauszunehmen, etwa ein Mittagessen, das nur den Titel mit einer Gewohnheit teilt. Die Zeile zeigt neben dem Namen die Serie der Routine.
 
 ## Eine Routine nutzen
 

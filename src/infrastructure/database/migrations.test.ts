@@ -311,7 +311,7 @@ describe('migrate', () => {
 			const connection = orm.em.getConnection()
 			await orm.migrator.up()
 			const columnsOf = async (table: string) => (await connection.execute(`select name from pragma_table_info('${table}')`) as Array<{ name: string }>).map(column => column.name)
-			assert.deepEqual(await columnsOf('routine'), ['id', 'source_id', 'name', 'dissolved'])
+			assert.deepEqual(await columnsOf('routine'), ['id', 'source_id', 'name', 'dissolved', 'untracked'])
 			assert.ok((await columnsOf('entry')).includes('routine_id') && (await columnsOf('entry')).includes('routine_declined'))
 			assert.deepEqual(await connection.execute('select `key` from `state` where `key` like \'backfill:%\''), [{ key: 'backfill:recognize-stored-entries' }])
 
@@ -321,5 +321,25 @@ describe('migrate', () => {
 		} finally {
 			await orm.close()
 		}
+	})
+
+	it('makes the first account that signs in the administrator, else the local one, never a sandbox', async () => {
+		const roles = async (...users: Array<[username: string, issuer?: string]>) => {
+			const orm = await inMemoryOrm()
+			try {
+				const connection = orm.em.getConnection()
+				await orm.migrator.up({ to: 'Migration20261114184035_RoutineUntracked' })
+				for (const [username, issuer] of users) {
+					await connection.execute('insert into `user` (`id`, `username`, `oidc_issuer`) values (?, ?, ?)', [username, username, issuer ?? null])
+				}
+				await orm.migrator.up()
+				return Object.fromEntries((await connection.execute<Array<{ username: string, role: string }>>('select `username`, `role` from `user`')).map(({ username, role }) => [username, role]))
+			} finally {
+				await orm.close()
+			}
+		}
+		assert.deepEqual(await roles(['demo-1'], ['[default_local_user]'], ['person-1', 'https://idp.example.com'], ['person-2', 'https://idp.example.com']),
+			{ 'demo-1': 'member', '[default_local_user]': 'member', 'person-1': 'administrator', 'person-2': 'member' })
+		assert.deepEqual(await roles(['demo-1'], ['[default_local_user]']), { 'demo-1': 'member', '[default_local_user]': 'administrator' })
 	})
 })

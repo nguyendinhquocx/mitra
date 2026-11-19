@@ -42,6 +42,11 @@ export class ModalSheet extends Component {
 				--mo-sheet-travel-size: 100%;
 			}
 
+			/* The size is this sheet's alone: a sheet opened from inside it, such as a routine's from the sidebar, sizes its own way. */
+			slot {
+				--mitra-modal-sheet-size: initial;
+			}
+
 			/* Separate animations, so that a settled sheet exits with the full duration. */
 			@keyframes slide-in {
 				from { translate: var(--mo-sheet-motion-origin); }
@@ -102,16 +107,16 @@ export class ModalSheet extends Component {
 				&[data-placement=block-end] [part=panel] {
 					--_travel: 0 var(--mo-sheet-travel-size);
 					inset-block-end: 0;
-					border-start-start-radius: 1.25rem;
-					border-start-end-radius: 1.25rem;
+					border-start-start-radius: calc(var(--border-radius) * 5);
+					border-start-end-radius: calc(var(--border-radius) * 5);
 					padding-block-end: env(safe-area-inset-bottom);
 				}
 
 				&[data-placement=block-start] [part=panel] {
 					--_travel: 0 calc(-1 * var(--mo-sheet-travel-size));
 					inset-block-start: 0;
-					border-end-start-radius: 1.25rem;
-					border-end-end-radius: 1.25rem;
+					border-end-start-radius: calc(var(--border-radius) * 5);
+					border-end-end-radius: calc(var(--border-radius) * 5);
 				}
 
 				&[data-placement^=inline] {

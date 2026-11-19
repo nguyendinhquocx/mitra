@@ -1,10 +1,17 @@
 ---
-title: Śledzenie rutyn, Todoist, status wydarzeń i terminy na pierwszy rzut oka
+title: Rutyny i serie, Todoist, status wydarzeń i terminy na pierwszy rzut oka
 ---
-Mitra 0.8 pomaga ci wytrwać w tym, co robisz regularnie, i zapisuje, co się nie odbyło.
+Mitra 0.8 daje twoim rutynom własne miejsce, w którym widzisz, jak idzie każda z nich, i podtrzymujesz jej serię. Mitra łączy się też z Todoist, pokazuje, kiedy mija termin zadania i czy wydarzenie jest nadal aktualne, a do tego jest dostępna w czterech kolejnych językach, z wieloma mniejszymi ulepszeniami i poprawkami.
 
-## Śledzenie rutyn
-Mitra już wcześniej zbierała w rutyny to, co robisz często, na przykład siłownię albo strzyżenie co pięć tygodni. Teraz rutyny mają własne miejsce, w którym na pierwszy rzut oka widzisz ostatnie dni każdej z nich: ile razy się udało, a które wystąpienia zostały anulowane lub pominięte. Możesz zmienić nazwę rutyny, połączyć dwie, które do siebie należą, albo zaznaczyć, że coś wcale nie jest rutyną. W widokach miesiąca i roku rutyny wyglądają tak samo bez względu na to, jak daleko przewiniesz, a twój konektor AI potrafi podsumować, jak ci idą.
+## Rutyny i serie
+Mitra już wcześniej zbierała w rutyny to, co robisz często, na przykład siłownię albo strzyżenie co pięć tygodni. Teraz rutyny mają własne miejsce, w którym płomień na pierwszy rzut oka pokazuje serię każdej z nich, a jej szczegóły dni wykonane, anulowane lub pominięte. Możesz zmienić nazwę rutyny, połączyć dwie, które do siebie należą, albo zaznaczyć, że coś wcale nie jest rutyną. W widokach miesiąca i roku rutyny wyglądają tak samo bez względu na to, jak daleko przewiniesz, a twój konektor AI potrafi podsumować, jak ci idą. Karta pokazuje najpierw rutyny na **Dzisiaj**, potem **Trwające**, a te sprzed dawna zwija pod **Minione**. Aby pominąć rutyny jakiegoś kalendarza, na przykład kalendarza pracy, wybierz w jego menu **Ukryj jego rutyny**.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="routines-dark.webp">
+	<img src="routines-light.webp" alt="Karta Rutyny obok widoku miesiąca, każda rutyna ze swoją serią, obok otwarte szczegóły siłowni">
+</picture>
+
+Dokumentacja: [Rutyny](../../docs/routines.md)
 
 ## Wszędzie ta sama godzina
 Niektóre rzeczy nie zależą od strefy czasowej: lek o 7:30 bierzesz o 7:30, w domu i w podróży. Wybierz **Wszędzie ta sama godzina** na początku listy stref czasowych wpisu, a wpis pozostanie o tej godzinie, gdziekolwiek jesteś. Oznacza go przekreślony globus. To ustawienie mają też wpisy, które trafiają z innych aplikacji bez strefy czasowej. Zanim przeniesiesz taki wpis do kalendarza, który nie obsługuje takich godzin, na przykład do Kalendarza Google, Mitra uprzedzi cię, że otrzyma on stałą strefę czasową.
@@ -27,10 +34,34 @@ Wydarzenie ma teraz własny status, tak jak zadanie: **Potwierdzone**, **Być mo
 Dokumentacja: [Status wydarzenia](../../docs/entries.md#event-status)
 
 ## Terminy na pierwszy rzut oka
-Dzień terminu zadania widnieje na jego fladze, a gdy wskażesz zadanie, ten dzień zostaje zaznaczony w kalendarzu. Oś czasu też go zaznacza, a tabela ma na niego osobną kolumnę.
+Zaplanowane zadanie pokazuje teraz termin wprost na swojej fladze, jako godzinę, dzień tygodnia albo datę, zależnie od tego, jak blisko jest. Wskaż zadanie w widoku tygodnia lub miesiąca albo na osi czasu, a rozciągnie się do swojego terminu, więc od razu widać, ile zostało zapasu. Jeśli zaplanujesz zadanie tak, że skończy się po terminie, flaga zrobi się czerwona. A tabela ma nową kolumnę z terminami.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="due-stretch-dark.webp">
+	<img src="due-stretch-light.webp" alt="Wskazanie wtorkowego zadania rozciąga je do terminu, gdy w środę zaczyna się spotkanie planistyczne">
+</picture>
+
+Dokumentacja: [Ustawianie terminu](../../docs/planning.md#set-a-due-date)
 
 ## Personalizacja
-Nadaj każdemu kalendarzowi jeden z dwóch nowych kolorów albo dowolny własny. Zmień nazwę nagłówka konta dwukrotnym kliknięciem i ukryj wszystkie jego kalendarze naraz. Do całej reszty zmień wygląd aplikacji Mitra za pomocą własnych stylów CSS: dla siebie w Ustawieniach albo dla wszystkich na twoim serwerze za pomocą pliku w jego folderze danych. Osoba, która zarządza serwerem, ma w Ustawieniach osobną sekcję.
+Nadaj każdemu kalendarzowi jeden z dwóch nowych kolorów albo dowolny własny. Zmień nazwę nagłówka konta dwukrotnym kliknięciem i ukryj wszystkie jego kalendarze naraz.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="personalization-dark.webp">
+	<img src="personalization-light.webp" alt="Menu kalendarza otwarte na pasku bocznym, z kolorami obok kalendarzy, które barwią">
+</picture>
+
+## Własny CSS
+Wygląd aplikacji Mitra to zwykły CSS, a teraz możesz dodać na nim własny. Otwórz **Ustawienia → Ogólne → Własny CSS** i wpisz regułę: Mitra stosuje ją w trakcie pisania i zapisuje na twoim koncie, więc towarzyszy ci na każdym urządzeniu. Nadaj aplikacji swój ulubiony kolor, wyprostuj wszystkie zaokrąglone rogi albo ukryj to, czego nigdy nie używasz. Tam, gdzie loguje się wiele osób, administrator znajdzie też w **Administracja** ustawienie **Własny CSS dla wszystkich**, które nadaje wygląd całemu serwerowi.
+
+**Udostępnij na GitHubie** pod polem otwiera wpis w [dyskusjach Custom CSS](https://github.com/a11delavar/mitra/discussions/categories/custom-css) z twoim arkuszem stylów już w środku, a tam znajdziesz też to, co zrobili inni. Do wersji Mitra 1.0 aktualizacja może zmienić to, na co celują twoje reguły, więc po aktualizacji rzuć okiem, czy wszystko działa.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="custom-css-dark.webp">
+	<img src="custom-css-light.webp" alt="Mitra w złocie swojego logo, z otwartą w ustawieniach regułą Własnego CSS, która to robi">
+</picture>
+
+Dokumentacja: [Własny CSS](../../docs/custom-css.md)
 
 ## Duplikowanie na inne dni
 Niektóre rzeczy wypadają w dni, których żadne powtarzanie nie opisze. Skierowanie na osiem zabiegów fizjoterapii rozkłada się na wolne terminy gabinetu, a klient rezerwuje cię na 3., 9. i 17. Dodaj pierwszy, wybierz **Duplikuj na inne dni** w jego menu ⋯ i zaznacz pozostałe w dwóch pokazanych miesiącach. Przytrzymaj Shift, aby wybrać od razu kilka dni z rzędu. Każdy dzień dostaje kopię o tej samej godzinie, osobny wpis, który możesz przesunąć lub zmienić jak każdy inny.
@@ -61,4 +92,7 @@ Mitra uczy się arabskiego, rosyjskiego, polskiego i niderlandzkiego. Każde kol
 </picture>
 
 ## Współtwórcy
-- [@jkngale](https://github.com/jkngale): podstawy integracji z Todoist
+- [@a11delavar](https://github.com/a11delavar)
+- [@jkngale](https://github.com/jkngale)
+- [@d8monx](https://github.com/d8monx)
+- [@libnewton](https://github.com/libnewton)

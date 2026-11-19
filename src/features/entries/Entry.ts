@@ -11,7 +11,7 @@ import { TimeZone } from '#features/time/TimeZone.js'
 import { EntryTimeZone } from '#features/time/EntryTimeZone.js'
 import { Routine } from '#features/routines/Routine.js'
 import type { OwnedField } from '#integrations'
-import { model, Entity, identity, equality, entity, primaryKey, property, enum as enumType, unique, manyToOne, children, include } from '#infrastructure/model'
+import { model, Entity, identity, equality, entity, primaryKey, property, enum as enumType, unique, manyToOne, children, include, instant } from '#infrastructure/model'
 import { type Validatable, ValidationError } from '#infrastructure/validation'
 import { ScheduleDefaults } from './ScheduleDefaults.js'
 import { EntryType, type EntryTypeValue } from './EntryType.js'
@@ -217,15 +217,10 @@ export class Entry extends Entity implements Validatable {
 	/** Taken out of every routine by its person, so recognition leaves it in none. */
 	@property({ type: 'boolean', nullable: true }) routineDeclined?: boolean
 
-	/** The title a routine tells it by, which entries of one routine share. */
-	get routineTitle() {
-		return Routine.titleOf(this.heading)
-	}
-
-	/** The day it starts, or is due, in `zone`. An all-day entry's and a floating time's is the one written, wherever it is read. */
-	dayIn(zone: TimeZone) {
-		const date = this.start ?? this.due
-		return date && (this.allDay || this.floating ? TimeZone.localOrDefault : zone).dayOf(date)
+	/** Leaves its routine, and joins none again by its title: the person said it is no part of one. */
+	declineRoutines() {
+		this.routineId = undefined
+		this.routineDeclined = true
 	}
 
 	get progress(): number | undefined {
@@ -479,13 +474,17 @@ export class Entry extends Entity implements Validatable {
 		return !data.allDay && !!EntryTimeZone.parse(data.timeZone)?.floating
 	}
 
-	/** A date the wire carries, as `TimeZone.local` holds it: a day as the midnight that begins it there, a floating time at its wall clock there. */
+	/**
+	 * A date the wire carries, as `TimeZone.local` holds it: a day as the midnight that begins it there, a floating time at its
+	 * wall clock there. Text is read here, as nothing revives dates on its own (`instant`).
+	 */
 	static shownDay(value: Date | string | null | undefined, data: EntryClock) {
+		const date = typeof value === 'string' ? new DateTime(instant.read(value).getTime()) : value
 		const zone = TimeZone.local
-		return !zone || !value ? value
-			: data.allDay ? new DateTime(zone.midnightOf(TimeZone.UTC.dayOf(new Date(value))).getTime())
-				: Entry.floats(data) ? new DateTime(zone.atWallClockOf(new Date(value), TimeZone.UTC).getTime())
-					: value
+		return !zone || !date ? date
+			: data.allDay ? new DateTime(zone.midnightOf(TimeZone.UTC.dayOf(date)).getTime())
+				: Entry.floats(data) ? new DateTime(zone.atWallClockOf(date, TimeZone.UTC).getTime())
+					: date
 	}
 
 	/** A date `TimeZone.local` holds, as the wire carries it: a day as its UTC midnight, a floating time's wall clock as if in UTC. */

@@ -1,10 +1,18 @@
 ---
-title: Routine tracker, Todoist, event status and due dates at a glance
+title: Routines & streaks, Todoist, event status and due dates at a glance
+date: 2026-11-15
 ---
-Mitra 0.8 helps you keep up the things you do again and again, and keeps a record of what didn't happen.
+Mitra 0.8 gives your routines a home of their own, where you see how each one is going and keep up its streak. Mitra also connects to Todoist, shows when a task is due and whether an event is still on, and comes in four more languages, with many smaller improvements and fixes.
 
-## Routine tracker
-Mitra already gathers the things you do often, such as the gym or a haircut every five weeks, into routines. Now they get a place of their own, where you see each routine's recent days at a glance: how many you kept, and which you cancelled or missed. You can rename a routine, merge two that belong together, or tell Mitra that something isn't a routine at all. Routines also stay steady in the month and year views however far you scroll, and your AI connector can tell you how they are going.
+## Routines & streaks
+Mitra already gathers the things you do often, such as the gym or a haircut every five weeks, into routines. Now they get a place of their own, where a flame shows each routine's streak at a glance, and its detail the days you kept, cancelled or missed. You can rename a routine, merge two that belong together, or tell Mitra that something isn't a routine at all. Routines also stay steady in the month and year views however far you scroll, and your AI connector can tell you how they are going. The tab lists the routines that come **Today** first, then the **Ongoing** ones, and folds those that came long ago away under **Past**. To leave out a calendar's routines, such as your work calendar's, choose **Hide its routines** in its menu.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="routines-dark.webp">
+	<img src="routines-light.webp" alt="The Routines tab beside the month view, each routine with its streak, with the gym's detail open beside its row">
+</picture>
+
+Docs: [Routines](../../docs/routines.md)
 
 ## Same time everywhere
 Some things don't depend on your time zone: medication at 7:30 is at 7:30, at home or when you travel. Choose **Same time everywhere** at the top of an entry's time zones, and it stays at that hour wherever you are, marked with a crossed-out globe. Entries that come from other apps without a time zone show it too. Before you move one to a calendar that has no such times, such as Google Calendar, Mitra tells you it will get a fixed time zone.
@@ -27,10 +35,34 @@ An event now has a status of its own, as a task does: **Confirmed**, **Maybe** o
 Docs: [Event status](../../docs/entries.md#event-status)
 
 ## Due dates at a glance
-A task's due day shows on its flag, and pointing at the task marks that day in the calendar. The timeline marks it too, and the table gets a column for it.
+A scheduled task now shows when it's due right on its flag, as a time, a weekday or a date, depending on how soon it is. Point at a task in the week or month view, or on the timeline, and it stretches out to its due date, so you can see how much room is left. If you've scheduled a task to finish after it's due, the flag turns red. And the table has a new column for due dates.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="due-stretch-dark.webp">
+	<img src="due-stretch-light.webp" alt="Pointing at Tuesday's task stretches it to its due date, when Wednesday's planning meeting starts">
+</picture>
+
+Docs: [Planning](../../docs/planning.md#set-a-due-date)
 
 ## Personalization
-Give each calendar one of two more colors, or any color you like. Rename an account's heading by double-clicking it, and hide all of its calendars at once. For everything beyond that, restyle Mitra with CSS of your own: for yourself in Settings, or for everyone on your server through a file in its data folder. Whoever runs the server gets a section of their own in Settings.
+Give each calendar one of two more colors, or any color you like. Rename an account's heading by double-clicking it, and hide all of its calendars at once.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="personalization-dark.webp">
+	<img src="personalization-light.webp" alt="A calendar's menu open in the sidebar, its colors offered beside the calendars they paint">
+</picture>
+
+## Custom CSS
+Mitra's look is plain CSS, and now you can add your own on top of it. Open **Settings → General → Custom CSS** and type a rule: Mitra wears it as you type and keeps it on your account, so it follows you to every device. Give Mitra your favorite color, square off every corner or hide what you never use. Where people sign in, an administrator also finds **Custom CSS for everyone** under **Administration**, to give the whole server its look.
+
+**Share on GitHub** under the box starts a post in the [Custom CSS discussions](https://github.com/a11delavar/mitra/discussions/categories/custom-css) with your stylesheet already in it, and that's where to find what others made too. Until Mitra 1.0, an update can change what your rules target, so take a look after updating.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="custom-css-dark.webp">
+	<img src="custom-css-light.webp" alt="Mitra in the gold of its logo, with the Custom CSS rule that does it open in the settings">
+</picture>
+
+Docs: [Custom CSS](../../docs/custom-css.md)
 
 ## Duplicate to other days
 Some things happen on days no repeat can describe. A prescription for eight physiotherapy sessions lands wherever the practice has a free slot, and a client books you for the 3rd, the 9th and the 17th. Add the first one, choose **Duplicate to other days** in its ⋯ menu, and tick the rest on the two months it shows. Hold Shift to take a run of days at once. Each day gets a copy at the same time, an entry of its own that you can move or change like any other.
@@ -61,4 +93,7 @@ Mitra is learning Arabic, Russian, Polish and Dutch. Each release has made Mitra
 </picture>
 
 ## Contributors
-- [@jkngale](https://github.com/jkngale): the groundwork for Todoist
+- [@a11delavar](https://github.com/a11delavar)
+- [@jkngale](https://github.com/jkngale)
+- [@d8monx](https://github.com/d8monx)
+- [@libnewton](https://github.com/libnewton)

@@ -1,9 +1,9 @@
 ---
 title: Routines
-description: "Comment les vues mois et année montrent ce que vous faites souvent, comme un entraînement quotidien, sous forme de petites marques plutôt qu'une barre chacun."
+description: "Comment Mitra compte ce que vous faites souvent, comme un médicament quotidien ou la salle de sport, et l’affiche en petites marques dans les vues mois et année."
 ---
 
-Certaines choses reviennent si souvent qu'une barre pour chacune remplirait un mois de copies : un entraînement quotidien, vos médicaments, un point d'équipe chaque jour ouvré. Dans les vues mois et année, Mitra les dessine plutôt comme une **routine** : un fin trait sous les jours, avec une marque sur chaque jour où la routine a lieu.
+Certaines choses reviennent si souvent qu'une barre pour chacune remplirait un mois de copies : un entraînement quotidien, vos médicaments, un point d'équipe chaque jour ouvré. Dans les vues mois et année, Mitra les dessine plutôt comme une **routine** : un fin trait sous les jours, avec une marque sur chaque jour où la routine a lieu. L’onglet **Routines** de la barre latérale compte comment chaque routine s’est passée.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/month-detail-dark.webp">
@@ -22,7 +22,7 @@ Dans la vue année, où chaque jour est petit, les routines sont ce que vous voy
 Des entrées forment une routine lorsqu'elles sont dans le même calendrier et portent le même titre. Mitra reconnaît une routine quand les entrées sont enregistrées ou synchronisées, et la conserve.
 
 - Une entrée récurrente est une routine dès le départ, quelle que soit sa fréquence, à condition d'avoir au moins quatre dates.
-- Des entrées qui ne se répètent pas en forment une dès qu'il y en a au moins quatre et qu'elles reviennent environ toutes les cinq semaines ou plus souvent, ou qu'elles gardent un rythme régulier, par exemple une fois par an. Ainsi, des entrées séparées appelées « Course » forment une routine comme le ferait une série quotidienne.
+- Des entrées qui ne se répètent pas en forment une dès qu'il y en a au moins quatre et qu'elles gardent un rythme régulier, par exemple tous les quelques jours, chaque semaine ou une fois par an. Ainsi, des entrées séparées appelées « Course » forment une routine comme le ferait une série quotidienne, alors que quelques-unes rapprochées puis un long intervalle, comme les vols de deux voyages, non.
 
 Les calendriers que vous pouvez seulement lire, comme les abonnements, ne forment aucune routine.
 
@@ -32,6 +32,37 @@ La fréquence d'une routine décide de la façon dont les vues l'affichent :
 
 - Dans la vue mois, une routine qui revient plus d'une fois par semaine s'affiche en marques. Ce qui est hebdomadaire reste une barre.
 - Dans la vue année, une routine qui revient environ toutes les cinq semaines ou plus souvent s'affiche en marques, les hebdomadaires et mensuelles comprises. Une routine plus rare, comme un anniversaire, reste une barre.
+
+## L’onglet Routines
+
+Ouvrez **Routines** dans la barre latérale, à côté d’Agendas et Planification, ou tapez son nom dans la palette de commandes. **Aujourd’hui** montre les routines du jour, dans l’ordre de leur heure, et **En cours** les autres, selon leur prochaine date. Les routines qui ne sont pas revenues depuis trois mois et n’ont plus rien à venir se replient sous **Passées**, la plus récente d’abord. Pour écarter les routines d’un agenda, comme celles de votre agenda de travail, choisissez **Masquer ses routines** dans son menu de la barre latérale. Chaque ligne montre le nom de la routine, quand elle revient, et sa série : une flamme de la couleur de son calendrier avec le nombre d’occurrences tenues d’affilée. Une occurrence manquée ou annulée met fin à la série, et la flamme devient grise.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/routines-detail-dark.webp">
+  <img src="../assets/screenshots/routines-detail-light.webp" alt="L’onglet Routines dans la barre latérale, chaque routine avec sa série, avec le détail de la salle de sport ouvert à côté" />
+</picture>
+
+Le détail d’une routine montre ses dernières semaines en grille, une case par jour :
+
+- Une case pleine a été tenue : un événement qui a eu lieu, ou une tâche que vous avez cochée.
+- Une case vide a été manquée : une tâche restée ouverte après son jour.
+- Un tiret a été annulé, ce qui compte comme non tenu, comme une occurrence manquée.
+- Une case cerclée est celle d’aujourd’hui, encore ouverte.
+- Une case pâle est un jour où elle ne revient pas.
+
+Mitra ne compte que ce qui est dans votre calendrier. Une occurrence que vous supprimez disparaît et ne compte pas : pour qu’une séance sautée reste dans l’historique, annulez-la au lieu de la supprimer ; voir [Statut d'un événement](entries.md#event-status). Les événements n’ont rien à cocher : un événement a eu lieu sauf s’il a été annulé.
+
+Le statut du jour se trouve au bout de la ligne d’une routine : la case à cocher d’une tâche, qui la coche comme celle du calendrier, et celui d’un événement une fois annulé, pour pouvoir le changer à nouveau. Le badge de l’onglet compte les tâches de routine encore ouvertes aujourd’hui. Un calendrier que vous masquez retire ses routines de l’onglet.
+
+## Le détail d’une routine
+
+Cliquez sur une ligne pour en voir plus : depuis quand la routine existe, ses dernières semaines en grille de jours, et dessous trois tuiles : sa série, titrée par la façon dont elle se passe, comme **Sur les rails** ou **En perte de vitesse**, **Rien à venir** dès qu’aucune date n’est prévue, ou **Terminée** dès qu’elle est passée dans **Passées**, avec votre record ; la part de l’année écoulée que vous avez tenue ; et le jour de la semaine où elle flanche le plus. Son menu **⋯** propose **Fait aujourd’hui** pour une tâche, **Annulé** pour annuler l’occurrence du jour, et **Afficher dans le calendrier** pour ouvrir la suivante. Décochez-y **Suivre son évolution** pour une routine que vous respectez sans l’entretenir, comme une facture ou une réunion : elle ne montre alors plus de série, et son détail seulement sa grille.
+
+## Corriger une routine
+
+Mitra trouve les routines de lui-même, et le menu **⋯** du détail le corrige là où il s’est trompé. **Renommer…** donne à la routine un nom à vous ; vous pouvez aussi cliquer sur son nom et taper. Le bouton à côté d’un nom à vous, ou retaper le titre de ses entrées, la nomme de nouveau d’après ses entrées. **Fusionner avec** ouvre les autres routines du même calendrier ; en choisir une réunit les deux, pour une habitude qui porte deux titres, comme « Comprimés du matin » et « Comprimés du soir ». **Pas une routine** la retire de l’onglet pour de bon : les entrées portant son titre ne sont plus regroupées en routine et restent dans votre calendrier. Ce que vous avez dit ne pas être une routine attend en bas de l’onglet, replié sous **Pas des routines** ; ouvrez-le pour en refaire une routine.
+
+L’éditeur d’une entrée a une ligne **Routine** après ses dates, affichée quand l’entrée appartient à une routine ou pourrait y appartenir. Choisissez-y une autre routine de son calendrier, **Nouvelle routine** pour en commencer une à partir de l’entrée, que les entrées suivantes portant son titre rejoignent, ou **Pas une routine** pour l’en retirer pour de bon, comme un déjeuner qui ne partage que son titre avec une habitude. La ligne montre la série de la routine à côté de son nom.
 
 ## Utiliser une routine
 

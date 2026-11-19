@@ -52,9 +52,11 @@ function fakeServer(listings: ReadonlyArray<Listing>, collection: Collection = [
 				...collection.map(member => ({ href: member.href, status: 200, ok: true, props: member.etag ? { getetag: member.etag } : {} })),
 			])
 		},
-		fetchCalendarObjects: ({ objectUrls }: { objectUrls: Array<string> }) => {
-			multigets.push([...objectUrls])
-			return Promise.resolve(objectUrls.map(url => ({ url, etag: `etag-${url}`, data: ics(url, url.split('/').pop()!.replace('.ics', '')) })))
+		// tsdav's own default filter, which drops every address without `.ics` unless the caller passes its own.
+		fetchCalendarObjects: ({ objectUrls, urlFilter = url => url.includes('.ics') }: { objectUrls: Array<string>, urlFilter?: (url: string) => boolean }) => {
+			const fetched = objectUrls.filter(urlFilter)
+			multigets.push(fetched)
+			return Promise.resolve(fetched.map(url => ({ url, etag: `etag-${url}`, data: ics(url, url.split('/').pop()!.replace('.ics', '')) })))
 		},
 	}
 	const integration = new CalDAV({ credentials: { username: 'u', password: 'p' } })
@@ -291,6 +293,22 @@ describe('CalDAV sync lists a calendar that refuses sync-collection by its etags
 		assert.deepEqual(fetched, [`${COLLECTION}bare.ics`])
 	})
 
+	for (const failure of [403, 405, 501]) {
+		it(`lists by etags a calendar answering ${failure}, as some Google calendars do`, async () => {
+			const [kept, gone] = [fetchedEntry('kept', 'etag-1'), fetchedEntry('gone', 'etag-1')]
+			const { em, propfinds } = await sync([{ members: [], failure }], [kept, gone], undefined, [{ href: '/cal/kept.ics', etag: 'etag-1' }])
+			assert.equal(propfinds, 1)
+			assert.deepEqual(em.removed, [gone])
+		})
+	}
+
+	it('removes what the listing leaves out though a token was stored, and drops the token the server refused', async () => {
+		const [kept, gone] = [fetchedEntry('kept', 'etag-1'), fetchedEntry('gone', 'etag-1')]
+		const { em, source } = await sync([{ members: [], failure: 403 }], [kept, gone], 'token-0', [{ href: '/cal/kept.ics', etag: 'etag-1' }])
+		assert.deepEqual(em.removed, [gone])
+		assert.deepEqual(source.syncState, { syncToken: undefined })
+	})
+
 	it('deletes nothing and leaves the import open when the listing by etags fails too', async () => {
 		const entries = [fetchedEntry('a', 'etag-1'), fetchedEntry('b', 'etag-1')]
 		const { em, source, changed, fetched } = await sync(refused, entries, undefined, { failure: 403 })
@@ -330,5 +348,12 @@ describe('CalDAV multiget batching', () => {
 		const { multigets, fetched } = await sync([{ members, token: 'token-1' }])
 		assert.deepEqual(multigets.map(batch => batch.length), [100, 100, 50])
 		assert.equal(new Set(fetched).size, 250)
+	})
+})
+
+describe('CalDAV sync reads members whatever their address ends in', () => {
+	it('imports a member named without .ics, as Stalwart names what it made over JMAP', async () => {
+		const { em } = await sync([{ members: [{ href: '/cal/aB3dE5fG7h' }, { href: '/cal/b.ics' }], token: 'token-1' }])
+		assert.deepEqual(em.persisted.map(entry => entry.heading), ['aB3dE5fG7h', 'b'])
 	})
 })

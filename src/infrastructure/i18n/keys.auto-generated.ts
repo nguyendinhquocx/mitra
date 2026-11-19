@@ -10,8 +10,13 @@ declare global {
 		"\"${heading}\" could not be added: ${message}": unknown
 		"\"${heading}\" could not be copied: ${message}": unknown
 		"\"${heading}\" is closed, but ${count:pluralityNumber} of its subtasks are still open.": unknown
+		"\"${name}\" leaves the Routines tab, and entries with its title are no longer gathered into a routine. Its entries stay on your calendar.": unknown
 		"${browser} on ${platform}": unknown
+		"${count:number} in a row": unknown
+		"${count:number} min": unknown
 		"${count:number} more": unknown
+		"${count:number} of ${total:number}": unknown
+		"${count:number} of ${total:number} kept": unknown
 		"${count:pluralityNumber} are availability": unknown
 		"${count:pluralityNumber} are marked as free": unknown
 		"${count:pluralityNumber} are now in both calendars": unknown
@@ -22,6 +27,7 @@ declare global {
 		"${count:pluralityNumber} carry a progress percentage": unknown
 		"${count:pluralityNumber} carry a visibility": unknown
 		"${count:pluralityNumber} copies could not be taken back and are now in both calendars.": unknown
+		"${count:pluralityNumber} days": unknown
 		"${count:pluralityNumber} documentation changes": unknown
 		"${count:pluralityNumber} entries": unknown
 		"${count:pluralityNumber} entries added to ${name}": unknown
@@ -32,6 +38,7 @@ declare global {
 		"${count:pluralityNumber} get a fixed time zone": unknown
 		"${count:pluralityNumber} go back to To Do": unknown
 		"${count:pluralityNumber} have participants": unknown
+		"${count:pluralityNumber} hours": unknown
 		"${count:pluralityNumber} improvements": unknown
 		"${count:pluralityNumber} landed anyway and could not be taken back. Delete them in ${name} by hand.": unknown
 		"${count:pluralityNumber} lose their attachments": unknown
@@ -57,6 +64,7 @@ declare global {
 		"${count:pluralityNumber} selected": unknown
 		"${count:pluralityNumber} stayed in ${name}": unknown
 		"${count:pluralityNumber} stop being all-day": unknown
+		"${count:pluralityNumber} weeks": unknown
 		"${count:pluralityNumber} were left out": unknown
 		"${count:pluralityNumber} yes": unknown
 		"${done:number} of ${total:pluralityNumber} checklist items done": unknown
@@ -80,6 +88,8 @@ declare global {
 		"${status}. Click for options": unknown
 		"${status}. Click to toggle, Alt-click for options": unknown
 		"About": unknown
+		"About every ${count:pluralityNumber} days": unknown
+		"About every ${count:pluralityNumber} weeks": unknown
 		"About.Keywords": unknown
 		"Access": unknown
 		"Access tokens": unknown
@@ -136,8 +146,11 @@ declare global {
 		"Availability": unknown
 		"Availability leaves the week view. It stays in its calendars, and busy availability still shows as busy to others.": unknown
 		"Back": unknown
+		"Back on track": unknown
 		"before": unknown
 		"before at ${time}": unknown
+		"best ${count:number}": unknown
+		"best ${count:number} in a row": unknown
 		"Blocked": unknown
 		"Blocked by": unknown
 		"Blocks": unknown
@@ -151,6 +164,7 @@ declare global {
 		"Calendar URL": unknown
 		"Calendars": unknown
 		"Calendars stored in Mitra itself, no account needed": unknown
+		"Cancel or delete?": unknown
 		"Cancelled": unknown
 		"Cancelled tasks and events leave the calendar. Search still finds them, and a cancelled task still counts towards progress.": unknown
 		"Change ${name}…": unknown
@@ -215,8 +229,12 @@ declare global {
 		"Current time zone": unknown
 		"Current time zone. Switch to ${city} time to change the zone": unknown
 		"Custom color": unknown
+		"Custom CSS": unknown
+		"Custom CSS for everyone": unknown
+		"Custom CSS is off for this load.": unknown
 		"Custom range": unknown
 		"Custom…": unknown
+		"CustomCssSetting.Keywords": unknown
 		"Dark": unknown
 		"Date": unknown
 		"days": unknown
@@ -254,11 +272,13 @@ declare global {
 		"Doing": unknown
 		"Done": unknown
 		"Done tasks leave the calendar. Search still finds them, and they still count towards progress.": unknown
+		"Done today": unknown
 		"Double-click to rename": unknown
 		"Draft": unknown
 		"drag": unknown
 		"Drag onto another entry to make it wait for this one": unknown
 		"Due ${date}": unknown
+		"Due ${date}, before its scheduled end": unknown
 		"Due ${when}": unknown
 		"Due date": unknown
 		"Duplicate": unknown
@@ -273,6 +293,7 @@ declare global {
 		"Edit repeating entry": unknown
 		"Email participants": unknown
 		"End date": unknown
+		"Ended": unknown
 		"Ends": unknown
 		"Entries": unknown
 		"Estimate": unknown
@@ -320,6 +341,7 @@ declare global {
 		"Hide cancelled": unknown
 		"Hide column": unknown
 		"Hide done tasks": unknown
+		"Hide its routines": unknown
 		"Hide the other time zones": unknown
 		"HideAvailabilitySetting.Keywords": unknown
 		"HideCancelledSetting.Keywords": unknown
@@ -328,19 +350,25 @@ declare global {
 		"Home": unknown
 		"hours": unknown
 		"How to connect": unknown
+		"How to restyle Mitra": unknown
 		"Ics.UrlHint": unknown
+		"If a rule hides the way back, add ?css=off to the address.": unknown
 		"Importing entries…": unknown
 		"Improvements": unknown
 		"In progress": unknown
 		"Install as an App": unknown
 		"Install mitra as an app. It gets its own window, and notifications appear under its own name and icon": unknown
+		"InstanceCssSetting.Keywords": unknown
 		"Integration options": unknown
 		"Integration Token": unknown
 		"Interval": unknown
+		"Its routine counts it as not kept": unknown
 		"Join ${service}": unknown
 		"Keep": unknown
+		"Keep it": unknown
 		"Keep the calendar": unknown
 		"Keep the chain intact": unknown
+		"Kept": unknown
 		"Keyboard Shortcuts": unknown
 		"KeyboardShortcuts.Keywords": unknown
 		"Language": unknown
@@ -356,15 +384,19 @@ declare global {
 		"Make attendance optional": unknown
 		"Make attendance optional for everyone": unknown
 		"Make home": unknown
+		"Make it a routine again": unknown
 		"Mark all as done": unknown
 		"Mark all optional": unknown
 		"Mark all required": unknown
 		"Mark as cancelled": unknown
 		"Mark as done": unknown
+		"Mark it cancelled": unknown
 		"Match the system": unknown
 		"Maybe": unknown
 		"McpSetting.Keywords": unknown
+		"Merge into": unknown
 		"minutes": unknown
+		"Missed": unknown
 		"Mitra": unknown
 		"Mitra.Hint": unknown
 		"modified": unknown
@@ -391,6 +423,7 @@ declare global {
 		"MoveSourceEntries.Keywords": unknown
 		"Moving ${count:pluralityNumber} entries…": unknown
 		"Name": unknown
+		"Name after its entries": unknown
 		"navigate": unknown
 		"Navigation": unknown
 		"never": unknown
@@ -398,6 +431,7 @@ declare global {
 		"never used": unknown
 		"New calendar": unknown
 		"New dev build: ${count:pluralityNumber} commits ahead": unknown
+		"New routine": unknown
 		"New task": unknown
 		"New token": unknown
 		"Next": unknown
@@ -417,7 +451,12 @@ declare global {
 		"No matches": unknown
 		"No matching entries": unknown
 		"No release notes available": unknown
+		"No routine": unknown
 		"None": unknown
+		"Not a routine": unknown
+		"Not a routine?": unknown
+		"Not routines": unknown
+		"Nothing ahead": unknown
 		"Nothing from the file was added.": unknown
 		"Nothing is deleted here until its copy has landed": unknown
 		"Nothing planned yet. Draw a task on the row below": unknown
@@ -431,14 +470,17 @@ declare global {
 		"Numbers": unknown
 		"Occurrences": unknown
 		"of event at ${time}": unknown
+		"Off and on": unknown
 		"On": unknown
 		"on ${date}": unknown
 		"on ${weekday}": unknown
 		"on the ${ordinal}": unknown
 		"on the ${ordinal} ${weekday}": unknown
 		"on the last ${weekday}": unknown
+		"On track": unknown
 		"One calendar to plan your events and tasks": unknown
 		"One for each connection, so you can revoke each on its own": unknown
+		"Ongoing": unknown
 		"Only Show ${name}": unknown
 		"Only show this calendar": unknown
 		"Only the organizer can change participants": unknown
@@ -457,7 +499,9 @@ declare global {
 		"Participants": unknown
 		"Password": unknown
 		"Password (optional)": unknown
+		"Past": unknown
 		"Past 30 days": unknown
+		"Past year": unknown
 		"Patches": unknown
 		"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": unknown
 		"Pick the calendars and task lists to show. Recolor, rename or hide them in the sidebar anytime.": unknown
@@ -503,6 +547,7 @@ declare global {
 		"Rename": unknown
 		"Rename this device": unknown
 		"Rename time zone": unknown
+		"Rename…": unknown
 		"Repeat": unknown
 		"Repeating": unknown
 		"Repeating entries cannot repeat in ${name}": unknown
@@ -511,7 +556,11 @@ declare global {
 		"Reset columns": unknown
 		"Reset to calendar color": unknown
 		"Reset to default color": unknown
+		"Restyle Mitra for everyone on this server. Each person's own CSS comes after it, so theirs wins.": unknown
+		"Restyle Mitra with your own CSS, on every device you sign in on. An update can change what your rules target.": unknown
 		"Revoke this token": unknown
+		"Routine": unknown
+		"Routines": unknown
 		"Same time everywhere": unknown
 		"Sample calendars filled with generated data, rebuilt daily": unknown
 		"Save": unknown
@@ -530,11 +579,14 @@ declare global {
 		"Server URL": unknown
 		"Set as the default for new entries": unknown
 		"Settings": unknown
+		"Share on GitHub": unknown
 		"Show all calendars": unknown
 		"Show as busy or free": unknown
 		"Show calendar": unknown
 		"Show fewer participants": unknown
+		"Show in calendar": unknown
 		"Show in description": unknown
+		"Show its routines": unknown
 		"Show only one calendar, or bring the rest back": unknown
 		"Show previously visible calendars": unknown
 		"Show Previously Visible Calendars": unknown
@@ -544,8 +596,13 @@ declare global {
 		"Shown above the time axis. Leave empty to use the automatic name.": unknown
 		"ShowOnlySource.Keywords": unknown
 		"ShowPreviouslyVisibleSources.Keywords": unknown
+		"ShowRoutines.Keywords": unknown
 		"Sign out": unknown
+		"since ${date}": unknown
+		"Since ${date}": unknown
 		"Site URL": unknown
+		"Slipping": unknown
+		"Slips most on": unknown
 		"Snap to": unknown
 		"SnapSetting.Keywords": unknown
 		"Snooze ${count} min": unknown
@@ -553,7 +610,9 @@ declare global {
 		"Sort descending": unknown
 		"Sources": unknown
 		"Start date": unknown
+		"Starting": unknown
 		"Status": unknown
+		"Still open": unknown
 		"Stop notifying this device": unknown
 		"Subtask of": unknown
 		"Subtasks": unknown
@@ -580,6 +639,7 @@ declare global {
 		"the last ${weekday}": unknown
 		"The originals stay exactly where they are": unknown
 		"The step dragging and resizing land on": unknown
+		"The streak ended": unknown
 		"The task databases of your workspace": unknown
 		"The tasks of your Todoist projects": unknown
 		"Their copies landed but the originals could not be deleted. Delete them here by hand.": unknown
@@ -619,6 +679,7 @@ declare global {
 		"ToggleSidebar.Keywords": unknown
 		"Token": unknown
 		"Tomorrow": unknown
+		"Track how it goes": unknown
 		"Type": unknown
 		"unchanged": unknown
 		"Unit": unknown
@@ -628,6 +689,7 @@ declare global {
 		"Unscheduled": unknown
 		"Until": unknown
 		"Untitled": unknown
+		"Upcoming": unknown
 		"Update available": unknown
 		"Update available: ${version}": unknown
 		"Uploading…": unknown
@@ -646,6 +708,7 @@ declare global {
 		"WeekView.Keywords": unknown
 		"Welcome to ${name}": unknown
 		"What it is for, like Laptop or Claude": unknown
+		"What you keep doing shows up here: an entry that repeats, or four entries with one title.": unknown
 		"What's New": unknown
 		"WhatsNew.Keywords": unknown
 		"When": unknown

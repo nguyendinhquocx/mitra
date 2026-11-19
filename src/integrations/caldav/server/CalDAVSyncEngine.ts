@@ -122,6 +122,9 @@ export class CalDAVSyncEngine implements SourceSyncEngine {
 		}).filter(source => source.entryTypes.length > 0)
 	}
 
+	/** tsdav fetches only addresses containing `.ics` unless told otherwise, and Stalwart names what it made over JMAP without an extension. */
+	private static readonly anyMember = (url: string) => Boolean(url)
+
 	private static readonly multigetBatchSize = 100
 
 	private async fetchObjects(
@@ -143,14 +146,14 @@ export class CalDAVSyncEngine implements SourceSyncEngine {
 		objectUrls: Array<string>,
 	): Promise<Awaited<ReturnType<typeof client.fetchCalendarObjects>>> {
 		try {
-			return await client.fetchCalendarObjects({ calendar, objectUrls })
+			return await client.fetchCalendarObjects({ calendar, objectUrls, urlFilter: CalDAVSyncEngine.anyMember })
 		} catch (error) {
 			logger.warn(`Multiget of ${objectUrls.length} object(s) from ${calendar.url} failed (${error instanceof Error ? error.message : error}); refetching individually and skipping any that are gone`)
 			const objects: Awaited<ReturnType<typeof client.fetchCalendarObjects>> = []
 			let skipped = 0
 			for (const url of objectUrls) {
 				try {
-					objects.push(...await client.fetchCalendarObjects({ calendar, objectUrls: [url] }))
+					objects.push(...await client.fetchCalendarObjects({ calendar, objectUrls: [url], urlFilter: CalDAVSyncEngine.anyMember }))
 				} catch {
 					skipped++
 					logger.debug(`Skipped unfetchable object ${url}`)
@@ -162,6 +165,12 @@ export class CalDAVSyncEngine implements SourceSyncEngine {
 	}
 
 	private static readonly maxListingRequests = 50
+
+	/**
+	 * What a collection answers `sync-collection` with when it keeps no delta (Nextcloud's generated Deck calendars 415, some
+	 * Google calendars 403, 405 or 501), or a stored token it no longer knows (403, RFC 6578 §3.2): read whole, by etags.
+	 */
+	private static readonly refusesDelta = new Set([403, 405, 415, 501])
 
 	/** Paginates through `sync-collection` to collect changed and deleted member URLs. */
 	private async listMembers(
@@ -180,7 +189,7 @@ export class CalDAVSyncEngine implements SourceSyncEngine {
 				syncToken,
 			})
 			const failure = result.find(r => (r.status ?? 200) >= 400 && r.status !== 507 && (!r.href || CalDAV.isCollectionHref(source.uri, r.href)))
-			if (failure?.status === 415) {
+			if (failure?.status && CalDAVSyncEngine.refusesDelta.has(failure.status)) {
 				return this.listByEtags(client, source)
 			}
 			if (failure) {
@@ -218,7 +227,7 @@ export class CalDAVSyncEngine implements SourceSyncEngine {
 		}
 	}
 
-	/** Lists a collection that refuses `sync-collection` (Nextcloud's generated Deck calendars answer 415) whole, by its members' etags. */
+	/** Lists a collection that refuses `sync-collection` whole, by its members' etags. */
 	private async listByEtags(
 		client: Awaited<ReturnType<typeof createDAVClient>>,
 		source: Source,
@@ -259,7 +268,8 @@ export class CalDAVSyncEngine implements SourceSyncEngine {
 			? await this.fetchObjects(client, remoteCalendar, fetchedUrls)
 			: []
 
-		if (!priorToken && complete) {
+		// A listing by etags names every member, so whatever it leaves out is gone, whatever token was stored before.
+		if ((!priorToken || etags) && complete) {
 			const remoteUris = new Set(changedUrls)
 			const alreadyReported = new Set(deletedUrls)
 			for (const entry of existingEntries) {
@@ -364,7 +374,7 @@ export class CalDAVSyncEngine implements SourceSyncEngine {
 
 	private async refetchResource(integration: CalDAV, entry: Entry): Promise<{ raw: string, etag?: string } | undefined> {
 		const client = await this.getClient(integration)
-		const objects = await client.fetchCalendarObjects({ calendar: { url: new URL('.', entry.uri).href }, objectUrls: [entry.uri!] })
+		const objects = await client.fetchCalendarObjects({ calendar: { url: new URL('.', entry.uri).href }, objectUrls: [entry.uri!], urlFilter: CalDAVSyncEngine.anyMember })
 		return objects[0]?.data ? { raw: objects[0].data, etag: objects[0].etag || undefined } : undefined
 	}
 
@@ -447,11 +457,7 @@ export class CalDAVSyncEngine implements SourceSyncEngine {
 			}
 
 			if (keys.includes('color')) {
-				if (incoming.color) {
-					component.updatePropertyWithValue('color', incoming.color.value)
-				} else {
-					component.removeProperty('color')
-				}
+				CalDAV.writeColor(component, incoming.color)
 			}
 
 			if (overrideShift !== undefined) {
@@ -586,7 +592,7 @@ export class CalDAVSyncEngine implements SourceSyncEngine {
 			!entry.start ? void 0 : CalDAV.writeDate(comp, component, 'dtstart', entry.start, entry.allDay, { zone: entry.timeZone })
 			!entry.end ? void 0 : CalDAV.writeDate(comp, component, 'dtend', entry.end, entry.allDay, { zone: entry.timeZone })
 		}
-		!entry.color ? void 0 : component.updatePropertyWithValue('color', entry.color.value)
+		CalDAV.writeColor(component, entry.color)
 		!entry.recurrence ? void 0 : component.updatePropertyWithValue('rrule', ICAL.Recur.fromString(entry.recurrence.toRRule(entry.allDay)))
 		entry.exdates?.forEach(ms => CalDAV.writeDate(comp, component, 'exdate', new Date(ms), entry.allDay, { zone: entry.timeZone, append: true }))
 		if (isTask) {

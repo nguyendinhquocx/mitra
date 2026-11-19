@@ -1,7 +1,7 @@
 import { Component, component, html, css, property, state, event, eventListener, unsafeCSS, ifDefined } from '@a11d/lit'
 import { ReorderabilityController, ReorderabilityState } from '@3mo/reorderability'
 import { MediaQueryController } from '@3mo/media-query-observer'
-import { RenameSource, RecolorSource, CreateSource, ReimportSource, SetDefaultCalendar, DisconnectIntegration, ReimportIntegration, RenameIntegration } from '#operations'
+import { RenameSource, RecolorSource, SetSourceRoutines, CreateSource, ReimportSource, SetDefaultCalendar, DisconnectIntegration, ReimportIntegration, RenameIntegration } from '#operations'
 import { focusRing, windowDragHandle, scrollbar } from '#design'
 import { Calendars } from '#features/sources/client/Calendars.js'
 import { DialogAbout } from '#features/about/client/DialogAbout.js'
@@ -11,12 +11,16 @@ import { type Source, Color } from '#features/sources'
 import { EntryStore } from '#features/entries/client/EntryStore.js'
 import type { Entry } from '#features/entries'
 import { Planning } from '#features/planning/client/Planning.js'
+import { RoutineStore } from '#features/routines/client/RoutineStore.js'
+import '#features/routines/client/RoutinesTab.js'
 import { deviceStorage } from '#features/settings/client/Setting.js'
 import { DialogIntegration } from '#integrations/client/DialogIntegration.js'
 import type { Integration } from '#integrations'
 import { session } from '#infrastructure/http/PageSession.js'
 import { PageState } from '#infrastructure/http/PageState.js'
 import { canInstall, promptInstall, onInstallAvailabilityChange } from './pwa.js'
+
+type SidebarTab = 'calendars' | 'planning' | 'routines'
 
 @component('mitra-sidebar')
 export class Sidebar extends Component {
@@ -26,20 +30,34 @@ export class Sidebar extends Component {
 	@event({ bubbles: true, composed: true }) readonly settingsClick!: EventDispatcher
 	@property({ type: Boolean, reflect: true }) open = false
 
-	private static readonly keptTab = deviceStorage<'calendars' | 'planning'>('Mitra.SidebarTab')
+	private static readonly keptTab = deviceStorage<SidebarTab>('Mitra.SidebarTab')
 
 	@state() private tab = Sidebar.keptTab.read() ?? 'calendars'
 
 	readonly store = new EntryStore(this, { shows: () => this.planningCount })
+	readonly routines = new RoutineStore(this)
 	readonly pageState = new PageState(this)
 
 	private get planningCount() {
 		return Planning.pending
 	}
 
-	private setTab(tab: 'calendars' | 'planning') {
+	private setTab(tab: SidebarTab) {
 		this.tab = tab
 		Sidebar.keptTab.write(tab)
+	}
+
+	// The routines' entries are fetched only while their tab is read.
+	protected override willUpdate(changed: Map<PropertyKey, unknown>) {
+		super.willUpdate?.(changed)
+		if (changed.has('tab')) {
+			RoutineStore.showing = this.tab === 'routines'
+		}
+	}
+
+	/** Turns to the routines. */
+	showRoutines() {
+		this.setTab('routines')
 	}
 
 	/** Turns to the planning list and brings `entry`'s row into view there. */
@@ -213,7 +231,7 @@ export class Sidebar extends Component {
 					padding: 0.5rem 0.5rem 0.5rem 0.4375rem;
 					background: var(--color-surface);
 					border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-					border-radius: 0.5rem;
+					border-radius: calc(var(--border-radius) * 2);
 
 					mitra-avatar {
 						--mitra-avatar-size: 2rem;
@@ -276,7 +294,7 @@ export class Sidebar extends Component {
 					margin-top: -1.5rem;
 					padding-inline: 0.5rem;
 					cursor: pointer;
-					border-radius: 0.375rem;
+					border-radius: calc(var(--border-radius) * 1.5);
 
 					/* The global button skin's hover/active box is far too loud for a brand mark. The only
 					   affordance is the version whisper waking up. */
@@ -401,15 +419,38 @@ export class Sidebar extends Component {
 					min-height: 0;
 				}
 
+				/* Every panel reaches the sidebar's edge and is padded back by its inset, so a list's thumb can ride that
+				   edge inside its own panel. A list reaching past its panel instead widens the last one, and with it the
+				   strip the tabs' position is read from. */
+				mitra-tabs::part(panels) {
+					margin-inline-end: calc(-1 * var(--sidebar-inset));
+				}
+
+				mitra-tab-panel {
+					box-sizing: border-box;
+					padding-inline-end: var(--sidebar-inset);
+				}
+
 				mitra-tab-panel > .integrations,
-				mitra-tab-panel > mitra-planning {
+				mitra-tab-panel > mitra-planning,
+				mitra-tab-panel > mitra-routines {
 					flex: 1;
 					min-height: 0;
 				}
 
-				/* Align the planning headings with the account headings grid column. */
+				/* Planning's and the routines' headings, counts and cards share one edge on each side, the account
+				   headings' gap in from the content. Their lists scroll as the source list does: the thumb rides the
+				   sidebar's edge in a lane reserved whether or not it shows, so the cards never move by its width. */
 				mitra-tab-panel > mitra-planning > section > header {
-					padding-inline-start: var(--sidebar-gap);
+					padding-inline: var(--sidebar-gap);
+				}
+
+				mitra-tab-panel > mitra-planning > section > .entries,
+				mitra-tab-panel > mitra-routines {
+					margin-inline-end: calc(-1 * var(--sidebar-inset));
+					${scrollbar};
+					padding-inline: var(--sidebar-gap) calc(var(--sidebar-inset) - var(--scrollbar-width) + var(--sidebar-gap));
+					scrollbar-gutter: stable;
 				}
 
 				mitra-tab-panel > .action {
@@ -508,7 +549,7 @@ export class Sidebar extends Component {
 
 				.sources > .source {
 					min-height: 1.75rem;
-					border-radius: 0.375rem;
+					border-radius: calc(var(--border-radius) * 1.5);
 					/* The whole row is its own drag handle: a mouse drag must never start a text
 					   selection, and the grab cursor is the affordance; the row's own controls keep their
 					   pointer cursors, and the rename field restores text behaviour below. */
@@ -547,7 +588,7 @@ export class Sidebar extends Component {
 						all: unset;
 						grid-column: 2;
 						display: inline-flex;
-						border-radius: 0.375rem;
+						border-radius: calc(var(--border-radius) * 1.5);
 						cursor: pointer;
 						${focusRing};
 					}
@@ -596,7 +637,7 @@ export class Sidebar extends Component {
 				.sources > .source[data-reorderability=${unsafeCSS(ReorderabilityState.Dragging)}], .integration[data-reorderability=${unsafeCSS(ReorderabilityState.Dragging)}] {
 					z-index: 5;
 					background-color: var(--color-background);
-					border-radius: 0.375rem;
+					border-radius: calc(var(--border-radius) * 1.5);
 					box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.25);
 					cursor: grabbing;
 				}
@@ -662,6 +703,12 @@ export class Sidebar extends Component {
 	}
 
 	protected override createRenderRoot() { return this }
+
+	private async toggleRoutines(source: Source) {
+		await SetSourceRoutines.call({ id: source.id, disabled: !source.routinesDisabled })
+		source.routinesDisabled = !source.routinesDisabled
+		PageState.changed()
+	}
 
 	private async setSourceColor(source: Source, color: Color | undefined, popover: HTMLElement) {
 		if (color) {
@@ -935,12 +982,17 @@ export class Sidebar extends Component {
 						${this.updateHint || !DialogAbout.hasNews ? html.nothing : html`<span class="news-dot" title=${t('What\'s New')}></span>`}
 					</span>
 				</button>
-				<mitra-tabs .selected=${this.tab} @selectedChange=${(e: CustomEvent<string>) => this.setTab(e.detail as 'calendars' | 'planning')}>
+				<mitra-tabs compact .selected=${this.tab} @selectedChange=${(e: CustomEvent<string>) => this.setTab(e.detail as SidebarTab)}>
 					<mitra-tab name="calendars" icon="calendar-days">${t('Calendars')}</mitra-tab>
 					<mitra-tab-panel name="calendars">${this.calendarsTemplate}</mitra-tab-panel>
 
-					<mitra-tab name="planning" icon="list-todo" .badge=${this.planningCount}>${t('Planning')}</mitra-tab>
+					<mitra-tab name="planning" icon="goal" .badge=${this.planningCount}>${t('Planning')}</mitra-tab>
 					<mitra-tab-panel name="planning">${this.planningTemplate}</mitra-tab-panel>
+
+					<mitra-tab name="routines" icon="activity" .badge=${RoutineStore.dueToday}>${t('Routines')}</mitra-tab>
+					<mitra-tab-panel name="routines">
+						<mitra-routines></mitra-routines>
+					</mitra-tab-panel>
 				</mitra-tabs>
 				<div class="footer">
 					${session.user?.identity ? html.nothing : html`
@@ -1021,6 +1073,7 @@ export class Sidebar extends Component {
 						` : html`
 							<mitra-menu-item icon="scan-eye" ?disabled=${this.isOnlyVisible(source)} @click=${() => this.toggleSolo(source)}>${t('Only show this calendar')}</mitra-menu-item>
 						`}
+						<mitra-menu-item icon="activity" @click=${() => this.toggleRoutines(source)}>${source.routinesDisabled ? t('Show its routines') : t('Hide its routines')}</mitra-menu-item>
 						<mitra-menu-item icon="arrow-up" ?disabled=${index === 0} @click=${() => this.moveSource(integration, source, -1)}>${t('Move up')}</mitra-menu-item>
 						<mitra-menu-item icon="arrow-down" ?disabled=${index === count - 1} @click=${() => this.moveSource(integration, source, 1)}>${t('Move down')}</mitra-menu-item>
 						${!Calendars.canCopyEntriesOut(source) ? html.nothing : html`

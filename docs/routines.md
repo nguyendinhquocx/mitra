@@ -1,9 +1,9 @@
 ---
 title: Routines
-description: "How the month and year views show things you do often, such as a daily workout, as small marks instead of a bar each."
+description: "How Mitra keeps count of what you do often, such as a daily medication or the gym, and shows it as small marks in the month and year views."
 ---
 
-Some things happen so often that a bar for each would fill a month with copies: a daily workout, your medication, a weekday standup. In the month and year views, Mitra draws them as a **routine** instead: a thin line under the days, with a mark on each day the routine happens.
+Some things happen so often that a bar for each would fill a month with copies: a daily workout, your medication, a weekday standup. In the month and year views, Mitra draws them as a **routine** instead: a thin line under the days, with a mark on each day the routine happens. The **Routines** tab in the sidebar keeps count of how each routine went.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/month-detail-dark.webp">
@@ -22,7 +22,7 @@ In the year view, where every day is small, routines are what you see most: each
 Entries form a routine when they're in the same calendar and have the same title. Mitra recognizes a routine as entries are saved or synced, and keeps it.
 
 - A repeating entry is a routine from the start, however often it repeats, as long as it has at least four dates.
-- Entries that don't repeat become one once there are at least four of them, and they come about every five weeks or more often, or keep a regular rhythm, such as once a year. So separate entries called "Run" make a routine just as a daily series does.
+- Entries that don't repeat become one once there are at least four of them and they keep a regular rhythm, such as every few days, weekly or once a year. So separate entries called "Run" make a routine just as a daily series does, while a few close together and then a long gap, like the flights of two trips, don't.
 
 Calendars you can only read, such as subscriptions, form no routines.
 
@@ -32,6 +32,37 @@ How often a routine comes decides how the views draw it:
 
 - In the month view, a routine that comes more often than once a week shows as marks. Something weekly stays a bar.
 - In the year view, a routine that comes about every five weeks or more often shows as marks, so weekly and monthly ones do too. A rarer one, such as a birthday, stays a bar.
+
+## The Routines tab
+
+Open **Routines** in the sidebar, beside Calendars and Planning, or type its name in the command palette. **Today** lists the routines that come today, in the order of their time of day, and **Ongoing** the rest, by their next date. Routines that came nowhere in the last three months and have nothing ahead fold away under **Past**, the latest first. To leave a calendar's routines out, such as those of your work calendar, choose **Hide its routines** in its menu in the sidebar. Each row shows the routine's name, when it comes, and its streak: a flame in its calendar's colour with how many of its occurrences in a row you kept. A missed or cancelled one ends the streak, and the flame turns grey.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/screenshots/routines-detail-dark.webp">
+  <img src="../assets/screenshots/routines-detail-light.webp" alt="The Routines tab in the sidebar, each routine with its streak, with the gym's detail open beside its row" />
+</picture>
+
+A routine's detail shows its recent weeks as a grid, one cell a day:
+
+- A solid cell was kept: an event that took place, or a task you ticked off.
+- A hollow cell was missed: a task left open after its day.
+- A dash was cancelled, which counts as not kept, as a missed one does.
+- A ringed cell is today's, still open.
+- A faint cell is a day it doesn't come on.
+
+Mitra counts only what is on your calendar. An occurrence you delete is gone and isn't counted, so to keep a skipped session on the record, cancel it instead of deleting it; see [Event status](entries.md#event-status). Events have nothing to tick: an event took place unless it was cancelled.
+
+Today's status sits at the end of a routine's row: a task's checkbox, which ticks it off as the one on the calendar does, and an event's once you cancel it, so you can change it back. The badge on the tab counts the routine tasks still open today. A calendar you hide takes its routines out of the tab.
+
+## A routine's detail
+
+Click a row to see more: since when the routine runs, its recent weeks as a grid of days, and three tiles under it: its streak, headed by how it goes, such as **On track** or **Slipping**, **Nothing ahead** once no date is planned, or **Ended** once it moved to Past, with your best; how much of the past year you kept; and the weekday it slips on most. Its **⋯** menu has **Done today** for a task, **Cancelled** for today's occurrence, and **Show in calendar** to open the next one. Uncheck **Track how it goes** there for a routine you keep to rather than keep up, such as a bill or a meeting: it then shows no streak, and its detail only its grid.
+
+## Correct a routine
+
+Mitra finds routines by itself, and the detail's **⋯** menu corrects it where it got one wrong. **Rename…** gives the routine a name of your own; you can also click its name and type. The button beside a name of your own, or typing its entries' title back, names it after its entries again. **Merge into** opens the other routines of the same calendar; picking one joins the two, for one habit that goes by two titles, such as "Morning pills" and "Evening pills". **Not a routine** takes it out of the tab for good: entries with its title are no longer gathered into a routine, and they stay on your calendar. What you said isn't a routine waits at the end of the tab, folded away under **Not routines**; open it to make one a routine again.
+
+An entry's editor has a **Routine** row after its dates, shown when the entry belongs to a routine or could. Choose another routine of its calendar there, **New routine** to start one from the entry, which later entries with its title join, or **Not a routine** to take it out for good, such as a lunch that only shares its title with a habit. The row shows the routine's streak beside its name.
 
 ## Use a routine
 

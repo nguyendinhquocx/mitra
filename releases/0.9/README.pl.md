@@ -1,7 +1,37 @@
 ---
-title: Lepsze podzadania
+title: Lepsze podzadania, TickTick, własne grupowanie kalendarzy i zaawansowany kreator ustawień regionalnych
 ---
-Mitra 0.9 pokazuje, jak większe przedsięwzięcia składają się w całość.
+Mitra 0.9 jest wciąż planowana. Łączy większe przedsięwzięcia i pokazuje, co można zrobić dalej, pozwala pasku bocznemu podążać za twoim sposobem myślenia i zapisuje daty tak, jak je czytasz.
 
 ## Lepsze podzadania
-W widokach miesiąca i roku podzadania dzielą jeden pas ze swoim wpisem, więc projekt widać jako jedną linię, w którą wpisują się jego krótkie podzadania. Tabela zagnieżdża podzadania pod zadaniem nadrzędnym, a widok roku potrafi je ukryć. Postęp zadania uwzględnia wielkość każdego podzadania, więc długie podzadanie liczy się bardziej niż szybkie. Podzadanie bez własnego terminu przejmuje termin zadania nadrzędnego.
+W widokach miesiąca i roku podzadania dzielą jeden pas ze swoim wpisem, więc projekt widać jako jedną linię, w którą wpisują się jego krótkie podzadania. Tabela zagnieżdża podzadania pod zadaniem nadrzędnym, a widok roku potrafi je ukryć. Postęp zadania uwzględnia wielkość każdego podzadania, więc długie podzadanie liczy się bardziej niż szybkie, a wydarzenie pokazuje postęp zadań pod nim. Podzadanie bez własnego terminu przejmuje termin zadania nadrzędnego.
+
+## Własne grupowanie kalendarzy
+Grupuj kalendarze na pasku bocznym po swojemu, obok grupowania według konta, i ukrywaj lub pokazuj całą grupę naraz.
+
+## Zaawansowany kreator ustawień regionalnych
+Wybierz więcej niż język i region: kalendarz, w którym zapisywane są twoje daty, cyfry, pierwszy dzień tygodnia i zegar. Obok twoich dat może być widoczny drugi kalendarz, na przykład perski, a swoją bieżącą strefę czasową możesz ustawić ręcznie.
+
+## Zadania, które można zrobić teraz
+Planowanie wymienia w osobnej sekcji otwarte zadania, których nie blokuje żadne inne otwarte zadanie, więc od razu wiadomo, nad czym możesz pracować.
+
+## Ostrzeżenie przy zablokowanych zadaniach
+Ukończenie zadania, które wciąż blokuje inne otwarte zadanie, najpierw wymaga potwierdzenia, więc kończenie poza kolejnością jest wyborem, a nie przypadkiem.
+
+## Integracja z TickTick
+Połącz swoje konto TickTick, a jego listy trafią do Mitry jako kalendarze zadań, synchronizowane w obie strony.
+
+## Powiadomienia tam, gdzie jesteś
+Przypomnienia docierają do narzędzi, których już używasz, takich jak ntfy, Apprise czy twój własny webhook.
+
+## Więcej języków
+Mitra mówi teraz po japońsku, koreańsku i wietnamsku, a każdy z tych języków jest przetłumaczony w całości, razem z dokumentacją i stroną internetową. Japoński i koreański mają kroje pisma stworzone dla nich.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="japanese-week-dark.webp">
+	<img src="japanese-week-light.webp" alt="Tydzień po japońsku, z powtarzającym się wydarzeniem otwartym w edytorze">
+</picture>
+
+## Współtwórcy
+- [@a11delavar](https://github.com/a11delavar)
+- [@Mugwort150](https://github.com/Mugwort150)
