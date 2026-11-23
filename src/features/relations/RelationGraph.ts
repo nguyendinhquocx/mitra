@@ -126,7 +126,7 @@ export class RelationGraph {
 		return this.walk([...new Set(seeds)], family, 'up').includes(target)
 	}
 
-	/** Subtasks and description checklist items weigh equally; cancelled subtasks are excluded. */
+	/** Subtasks and description checklist items weigh equally, whatever the entry holding them is; cancelled subtasks are excluded, and events beneath it, which are never done. */
 	getRollup(uid: string | undefined, visiting = new Set<string>()): EntryRollup | undefined {
 		if (uid === undefined || visiting.has(uid)) {
 			return undefined
@@ -136,7 +136,7 @@ export class RelationGraph {
 		}
 		visiting.add(uid)
 		const subject = this.getEntry(uid)
-		const checklist = subject?.type.isTask ? subject.checklist : undefined
+		const checklist = subject?.checklist
 		const children = this.getChildren(uid)
 		if (!children.length && !checklist?.total) {
 			this.rollups.set(uid, undefined)

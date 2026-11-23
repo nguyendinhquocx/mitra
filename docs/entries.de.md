@@ -64,6 +64,8 @@ Fertige und abgebrochene Aufgaben sind durchgestrichen. Ein Kalender ohne Status
 
 Ein Termin hat vor seinem Titel ein Statussymbol, im Editor und im Kalender: **Bestätigt**, **Vielleicht** oder **Abgebrochen**. Klicke darauf, um einen Status zu wählen. Ein abgesagter Termin bleibt in deinem Kalender, abgebrochen statt gelöscht: Er wird in jeder Ansicht durchgestrichen und behält seinen Platz, und **Bestätigt** holt ihn zurück. Wiederholt er sich, fragt Mitra, ob du diese Wiederholung, die folgenden oder alle meinst.
 
+Ein Termin mit Teilaufgaben oder einer Checkliste zeigt deren Fortschritt in seinem Statussymbol, siehe [Teilaufgaben](subtasks.md#progress).
+
 Andere Kalender-Apps lesen die Absage ebenfalls. Apple Kalender, Thunderbird und Nextcloud streichen den Termin durch, und ein Termin, der in einer von ihnen abgesagt wurde, erscheint in Mitra durchgestrichen. Mitra-Kalender und CalDAV-Kalender speichern die Absage, und ein Abonnement zeigt, was sein Feed abgesagt hat. Google-, Notion- und Tempo-Kalender speichern sie nicht und bieten sie daher nicht an.
 
 ## Beschäftigt oder verfügbar und Sichtbarkeit

@@ -1,11 +1,11 @@
 import { Component, component, html, css, property, event, type PropertyValues } from '@a11d/lit'
 import { type DateTime } from '@3mo/date-time'
 import { pressable } from '#design'
-import { type Entry, EntryStatus } from '#features/entries'
+import { type Entry } from '#features/entries'
 import { EntryEditorIntent } from '#features/entries/client/EntryEditorIntent.js'
 import { EntryStore, reportSaveError } from '#features/entries/client/EntryStore.js'
 import { Calendars } from '#features/sources/client/Calendars.js'
-import '#features/entries/client/EntryStatus.js'
+import { EntryStatusComponent } from '#features/entries/client/EntryStatus.js'
 
 /**
  * Another entry, named where one entry points at it: a task's status, which can be changed right here,
@@ -116,7 +116,7 @@ export class EntryLink extends Component {
 
 	protected override get template() {
 		return html`
-			${this.entry.type.isTask || (this.entry.status && this.entry.status !== EntryStatus.Confirmed) ? html`
+			${EntryStatusComponent.saysMoreOf(this.entry) ? html`
 				<mitra-entry-status style=${this.entry.effectiveColor ? `color: ${this.entry.effectiveColor};` : ''} .entry=${this.entry} @change=${() => this.handleStatusChange()}></mitra-entry-status>
 			` : html`
 				<mitra-icon class="glyph" icon="calendar" style=${this.entry.effectiveColor ? `color: ${this.entry.effectiveColor};` : ''}></mitra-icon>

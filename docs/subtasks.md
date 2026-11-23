@@ -27,15 +27,17 @@ A task's description can also hold a checklist, written in Markdown:
 - [x] Send the invitations
 ```
 
-Tick a box right in the description to check it off. Mitra changes `[ ]` to `[x]` in the text, so other apps using the calendar see it too. Ticking boxes never changes the task's status on its own. Only tasks count their checklists: an event's boxes can be ticked, but they count towards nothing.
+Tick a box right in the description to check it off. Mitra changes `[ ]` to `[x]` in the text, so other apps using the calendar see it too. Ticking boxes never changes the task's status on its own. An event counts its checklist too, such as the packing list of a trip.
 
 ## Progress
 
-A task with subtasks or a checklist shows its progress. Each subtask and each box counts as one step, all with the same weight, so a task with three boxes and two subtasks has five steps.
+A task or an event with subtasks or a checklist shows its progress. Each subtask and each box counts as one step, all with the same weight, so a task with three boxes and two subtasks has five steps.
 
 A subtask that's partly done counts in part, whether it has a progress of its own or subtasks of its own. If a task has three subtasks, two of them done and the third at 80%, the task is at 93%. Cancelled subtasks don't count, so dropped work never holds the task back. Events linked as subtasks don't count either.
 
 On the calendar, the outline of a task's checkbox fills up as it progresses. Point at the checkbox to see the count, such as "2 of 3 subtasks done", or "2 of 4 steps done" when boxes and subtasks count together. Right-click it, or <kbd>Alt</kbd>-click it, to open the status menu with the exact percentage.
+
+An event can hold the tasks that lead up to it, such as a trip with its bookings: open each task and pick the event under **Subtask of**. The event then wears its glyph on the calendar, and its outline fills up as the tasks get done. Nothing on an event is ticked off, so its progress only follows its subtasks and its checklist. Click the glyph to see the count and the exact percentage below its statuses.
 
 ## Set progress by hand
 

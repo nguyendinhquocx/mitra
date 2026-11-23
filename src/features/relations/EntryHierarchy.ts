@@ -68,6 +68,17 @@ export class EntryHierarchy {
 		return progress !== undefined && progress > 0 && progress < 1
 	}
 
+	/**
+	 * Its progress where its status leaves it unsaid: a task's while partly done, as To Do says none of it and Done all, and
+	 * whatever an event's steps come to, since its status says nothing of them. None once it is closed.
+	 */
+	get statedProgress() {
+		if (this.entry.closed || (this.entry.type.isTask && !this.partlyDone)) {
+			return undefined
+		}
+		return this.progress
+	}
+
 	/** Whether this one can block `dependent`: both saved, the dependent's calendar keeping relations, and no dependency between the two yet, either way, direct or through others. */
 	canBlock(dependent: Entry) {
 		const predecessor = this.entry

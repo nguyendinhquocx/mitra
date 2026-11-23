@@ -246,9 +246,13 @@ describe('RelationGraph', () => {
 				assert.equal(graph.getRollup('parent')!.progress, 0.5)
 			})
 
-			it('leaves an event\'s boxes out, since an event has no progress to state', () => {
-				const graph = RelationGraph.of([entry('e', [], { type: EntryType.Event, start: new DateTime(), description: boxes })])
-				assert.equal(graph.getRollup('e'), undefined)
+			it('counts an event\'s boxes as it does a task\'s, and the tasks beneath it', () => {
+				const graph = RelationGraph.of([
+					entry('e', [], { type: EntryType.Event, start: new DateTime(), description: boxes }),
+					entry('a', [{ type: RelationType.Parent, targetUid: 'e' }], { status: EntryStatus.Done }),
+				])
+				const rollup = graph.getRollup('e')
+				assert.deepEqual([rollup!.done, rollup!.total, rollup!.progress], [2, 4, 0.5])
 			})
 		})
 	})

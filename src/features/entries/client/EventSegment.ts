@@ -7,6 +7,7 @@ import { EntryStatus } from '../EntryStatus.js'
 import { type EntrySegment } from './EntrySegment.js'
 import { EntrySegments } from './EntrySegments.js'
 import { EntryStore, reportSaveError } from './EntryStore.js'
+import { EntryStatusComponent } from './EntryStatus.js'
 import { EntryEditorAnchor } from './EntryEditorAnchor.js'
 import { entryColors } from './entryColors.css.js'
 
@@ -561,8 +562,7 @@ export class EntrySegmentComponent extends Component {
 			`
 		}
 		const attached = this.segment.entry.attachments.length > 0
-		// An event wears its glyph once its status says more than that it takes place; a task its checkbox always.
-		const statused = this.segment.entry.type.isTask || (!!this.segment.entry.status && this.segment.entry.status !== EntryStatus.Confirmed)
+		const statused = EntryStatusComponent.saysMoreOf(this.segment.entry)
 		return html`
 			<div class="heading" ?data-meta=${meta}>
 				${!statused && !meta && !this.segment.occurrence.repeats && !attached ? html.nothing : html`

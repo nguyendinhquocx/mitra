@@ -27,15 +27,17 @@ Phần mô tả của một công việc cũng có thể chứa một danh sách
 - [x] Send the invitations
 ```
 
-Đánh dấu một ô ngay trong phần mô tả để tích nó. Mitra đổi `[ ]` thành `[x]` trong văn bản, nên các ứng dụng khác dùng lịch này cũng thấy. Việc đánh dấu ô không bao giờ tự đổi trạng thái của công việc. Chỉ công việc mới tính danh sách kiểm tra của chúng: ô trong một sự kiện có thể được đánh dấu, nhưng không được tính vào đâu cả.
+Đánh dấu một ô ngay trong phần mô tả để tích nó. Mitra đổi `[ ]` thành `[x]` trong văn bản, nên các ứng dụng khác dùng lịch này cũng thấy. Việc đánh dấu ô không bao giờ tự đổi trạng thái của công việc. Một sự kiện cũng tính danh sách kiểm tra của nó, như danh sách đồ cần mang cho một chuyến đi.
 
 ## Tiến độ
 
-Một công việc có công việc con hoặc danh sách kiểm tra sẽ hiện tiến độ. Mỗi công việc con và mỗi ô được tính là một bước, tất cả có cùng trọng số, nên một công việc có ba ô và hai công việc con có năm bước.
+Một công việc hoặc một sự kiện có công việc con hoặc danh sách kiểm tra sẽ hiện tiến độ. Mỗi công việc con và mỗi ô được tính là một bước, tất cả có cùng trọng số, nên một công việc có ba ô và hai công việc con có năm bước.
 
 Một công việc con mới xong một phần được tính một phần, dù nó có tiến độ riêng hay có công việc con riêng. Nếu một công việc có ba công việc con, hai cái đã xong và cái thứ ba ở mức 80%, công việc đó ở mức 93%. Các công việc con đã hủy không được tính, nên phần việc bị bỏ không bao giờ kéo công việc lại. Các sự kiện được liên kết làm công việc con cũng không được tính.
 
 Trên lịch, viền ô đánh dấu của một công việc đầy dần theo tiến độ. Trỏ vào ô đánh dấu để xem số lượng, như “Đã xong 2/3 công việc con”, hoặc “Đã xong 2/4 bước” khi ô và công việc con được tính cùng nhau. Nhấp chuột phải vào nó, hoặc <kbd>Alt</kbd>-nhấp, để mở menu trạng thái với phần trăm chính xác.
+
+Một sự kiện có thể chứa các công việc dẫn tới nó, như một chuyến đi cùng các việc đặt chỗ: mở từng công việc và chọn sự kiện ở **Công việc con của**. Khi đó sự kiện mang biểu tượng trạng thái của nó trên lịch, và viền biểu tượng đầy dần khi các công việc xong. Một sự kiện không có gì để tích, nên tiến độ của nó chỉ theo công việc con và danh sách kiểm tra của nó. Nhấp vào biểu tượng để xem số lượng và phần trăm chính xác bên dưới các trạng thái.
 
 ## Tự đặt tiến độ
 

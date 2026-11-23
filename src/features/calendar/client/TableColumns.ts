@@ -77,8 +77,8 @@ function reminders(entry: Entry) {
 }
 
 function status(entry: Entry) {
-	const { partlyDone, progress } = entry.hierarchy
-	return text(`${entry.effectiveStatus.format()}${!partlyDone ? '' : ` · ${Math.round(progress! * 100).formatAsPercent()}`}`)
+	const progress = entry.hierarchy.statedProgress
+	return text(`${entry.effectiveStatus.format()}${progress === undefined ? '' : ` · ${Math.round(progress * 100).formatAsPercent()}`}`)
 }
 
 /** A table makes them once: the grid controller syncs its definitions again for every new array. */

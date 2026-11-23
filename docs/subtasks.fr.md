@@ -27,15 +27,17 @@ La description d'une tâche peut aussi contenir une liste de contrôle, écrite 
 - [x] Send the invitations
 ```
 
-Cochez une case directement dans la description pour la valider. Mitra change `[ ]` en `[x]` dans le texte, si bien que les autres applications qui utilisent le calendrier le voient aussi. Cocher des cases ne modifie jamais le statut de la tâche de lui-même. Seules les tâches comptent leurs listes de contrôle : les cases d'un événement peuvent être cochées, mais elles ne comptent pour rien.
+Cochez une case directement dans la description pour la valider. Mitra change `[ ]` en `[x]` dans le texte, si bien que les autres applications qui utilisent le calendrier le voient aussi. Cocher des cases ne modifie jamais le statut de la tâche de lui-même. Un événement compte aussi sa liste de contrôle, comme la liste des affaires à emporter pour un voyage.
 
 ## Progression
 
-Une tâche avec des sous-tâches ou une liste de contrôle affiche sa progression. Chaque sous-tâche et chaque case compte pour une étape, toutes avec le même poids : une tâche avec trois cases et deux sous-tâches a donc cinq étapes.
+Une tâche ou un événement avec des sous-tâches ou une liste de contrôle affiche sa progression. Chaque sous-tâche et chaque case compte pour une étape, toutes avec le même poids : une tâche avec trois cases et deux sous-tâches a donc cinq étapes.
 
 Une sous-tâche en partie terminée compte en partie, qu'elle ait une progression propre ou ses propres sous-tâches. Si une tâche a trois sous-tâches, deux terminées et la troisième à 80 %, la tâche est à 93 %. Les sous-tâches annulées ne comptent pas, si bien qu'un travail abandonné ne retient jamais la tâche. Les événements liés comme sous-tâches ne comptent pas non plus.
 
 Dans le calendrier, le contour de la case à cocher d'une tâche se remplit à mesure qu'elle avance. Pointez la case pour voir le décompte, par exemple « 2 sur 3 sous-tâches terminées », ou « 2 sur 4 étapes terminées » quand cases et sous-tâches comptent ensemble. Faites un clic droit dessus, ou un clic avec <kbd>Alt</kbd>, pour ouvrir le menu de statut avec le pourcentage exact.
+
+Un événement peut regrouper les tâches qui y mènent, comme un voyage avec ses réservations : ouvrez chaque tâche et choisissez l'événement sous **Sous-tâche de**. L'événement porte alors son symbole sur le calendrier, et le contour du symbole se remplit à mesure que les tâches sont terminées. Rien ne se coche sur l'événement lui-même, sa progression ne suit donc que ses sous-tâches et sa liste de contrôle. Cliquez sur le symbole pour voir le décompte et le pourcentage exact sous ses statuts.
 
 ## Régler la progression à la main
 

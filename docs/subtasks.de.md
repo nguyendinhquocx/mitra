@@ -27,15 +27,17 @@ Die Beschreibung einer Aufgabe kann auch eine Checkliste enthalten, in Markdown 
 - [x] Send the invitations
 ```
 
-Hak ein Kästchen direkt in der Beschreibung ab. Mitra ändert im Text `[ ]` zu `[x]`, sodass andere Apps, die den Kalender nutzen, es ebenfalls sehen. Das Abhaken ändert nie von selbst den Status der Aufgabe. Nur Aufgaben zählen ihre Checklisten: Die Kästchen eines Termins lassen sich abhaken, zählen aber für nichts.
+Hak ein Kästchen direkt in der Beschreibung ab. Mitra ändert im Text `[ ]` zu `[x]`, sodass andere Apps, die den Kalender nutzen, es ebenfalls sehen. Das Abhaken ändert nie von selbst den Status der Aufgabe. Auch ein Termin zählt seine Checkliste, etwa die Packliste einer Reise.
 
 ## Fortschritt
 
-Eine Aufgabe mit Teilaufgaben oder einer Checkliste zeigt ihren Fortschritt. Jede Teilaufgabe und jedes Kästchen zählt als ein Schritt, alle mit gleichem Gewicht, eine Aufgabe mit drei Kästchen und zwei Teilaufgaben hat also fünf Schritte.
+Eine Aufgabe oder ein Termin mit Teilaufgaben oder einer Checkliste zeigt den Fortschritt. Jede Teilaufgabe und jedes Kästchen zählt als ein Schritt, alle mit gleichem Gewicht, eine Aufgabe mit drei Kästchen und zwei Teilaufgaben hat also fünf Schritte.
 
 Eine Teilaufgabe, die teilweise erledigt ist, zählt anteilig, egal ob sie einen eigenen Fortschritt oder eigene Teilaufgaben hat. Hat eine Aufgabe drei Teilaufgaben, zwei davon erledigt und die dritte bei 80 %, steht die Aufgabe bei 93 %. Abgebrochene Teilaufgaben zählen nicht, sodass fallengelassene Arbeit die Aufgabe nie aufhält. Als Teilaufgaben verknüpfte Termine zählen ebenfalls nicht.
 
 Im Kalender füllt sich der Rand des Kästchens einer Aufgabe, während sie voranschreitet. Zeig auf das Kästchen, um die Zahl zu sehen, etwa „2 von 3 Teilaufgaben erledigt“, oder „2 von 4 Schritten erledigt“, wenn Kästchen und Teilaufgaben zusammen zählen. Klick es mit rechts an oder mit <kbd>Alt</kbd>-Klick, um das Statusmenü mit dem genauen Prozentwert zu öffnen.
+
+Ein Termin kann die Aufgaben enthalten, die zu ihm hinführen, etwa eine Reise mit ihren Buchungen: Öffne jede Aufgabe und wähle den Termin unter **Teilaufgabe von**. Der Termin trägt dann sein Symbol im Kalender, und der Rand des Symbols füllt sich, während die Aufgaben erledigt werden. An einem Termin selbst wird nichts abgehakt, sein Fortschritt folgt also nur seinen Teilaufgaben und seiner Checkliste. Klick auf das Symbol, um die Zahl und den genauen Prozentwert unter seinen Statusoptionen zu sehen.
 
 ## Den Fortschritt von Hand setzen
 

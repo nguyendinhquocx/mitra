@@ -27,15 +27,17 @@ Opis zadania może też zawierać listę kontrolną zapisaną w formacie Markdow
 - [x] Send the invitations
 ```
 
-Zaznacz pole bezpośrednio w opisie, aby odhaczyć punkt. Mitra zmienia w tekście `[ ]` na `[x]`, więc widzą to także inne aplikacje korzystające z tego kalendarza. Zaznaczanie pól nigdy samo nie zmienia statusu zadania. Listy kontrolne liczą się tylko w zadaniach: w wydarzeniu też można zaznaczać pola, ale nie wpływają one na nic.
+Zaznacz pole bezpośrednio w opisie, aby odhaczyć punkt. Mitra zmienia w tekście `[ ]` na `[x]`, więc widzą to także inne aplikacje korzystające z tego kalendarza. Zaznaczanie pól nigdy samo nie zmienia statusu zadania. Wydarzenie też liczy swoją listę kontrolną, na przykład listę rzeczy do spakowania na wyjazd.
 
 ## Postęp
 
-Zadanie z podzadaniami lub listą kontrolną pokazuje swój postęp. Każde podzadanie i każde pole to jeden krok, wszystkie o tej samej wadze, więc zadanie z trzema polami i dwoma podzadaniami ma pięć kroków.
+Zadanie lub wydarzenie z podzadaniami lub listą kontrolną pokazuje swój postęp. Każde podzadanie i każde pole to jeden krok, wszystkie o tej samej wadze, więc zadanie z trzema polami i dwoma podzadaniami ma pięć kroków.
 
 Częściowo ukończone podzadanie liczy się częściowo, niezależnie od tego, czy ma własny postęp, czy własne podzadania. Jeśli zadanie ma trzy podzadania, z których dwa są gotowe, a trzecie ma 80%, postęp zadania wynosi 93%. Anulowane podzadania się nie liczą, więc porzucona praca nigdy nie blokuje postępu zadania. Wydarzenia powiązane jako podzadania również się nie liczą.
 
 W kalendarzu obrys pola wyboru zadania wypełnia się w miarę postępu. Wskaż pole, aby zobaczyć liczbę, na przykład „Gotowe: 2 z 3 podzadań” albo „Gotowe: 2 z 4 kroków”, gdy pola i podzadania liczą się razem. Kliknij je prawym przyciskiem myszy lub kliknij z <kbd>Alt</kbd>, aby otworzyć menu statusu z dokładnym procentem.
+
+Wydarzenie może zawierać zadania, które do niego prowadzą, na przykład wyjazd z rezerwacjami: otwórz każde zadanie i wybierz wydarzenie w wierszu **Zadanie nadrzędne**. Wydarzenie pokazuje wtedy w kalendarzu swój symbol stanu, a jego obrys wypełnia się w miarę wykonywania zadań. Wydarzenia się nie odhacza, więc jego postęp zależy tylko od podzadań i listy kontrolnej. Kliknij symbol, aby zobaczyć liczbę i dokładny procent pod statusami.
 
 ## Ustaw postęp ręcznie
 

@@ -64,6 +64,8 @@ Gotowe i anulowane zadania są przekreślone. Kalendarz bez statusu „anulowane
 
 Wydarzenie ma przed tytułem symbol stanu, w edytorze i w kalendarzu: **Potwierdzone**, **Być może** lub **Anulowane**. Kliknij go, aby wybrać. Anulowane wydarzenie zostaje w kalendarzu, anulowane zamiast usunięte: jest przekreślone w każdym widoku i zachowuje swoje miejsce, a **Potwierdzone** przywraca je z powrotem. Jeśli się powtarza, Mitra pyta, czy chodzi o to wystąpienie, kolejne czy wszystkie.
 
+Wydarzenie z podzadaniami lub listą kontrolną pokazuje ich postęp w swoim symbolu stanu; zobacz [Podzadania](subtasks.md#progress).
+
 Inne aplikacje kalendarzowe też odczytują anulowanie. Kalendarz Apple, Thunderbird i Nextcloud przekreślają wydarzenie, a wydarzenie anulowane w jednej z nich pojawia się w Mitrze przekreślone. Kalendarze Mitry i kalendarze CalDAV zachowują anulowanie, a subskrypcja pokazuje to, co anulował jej kanał. Kalendarze Google, Notion i Tempo go nie przechowują, więc tam ta opcja się nie pojawia.
 
 ## Zajęty lub wolny oraz widoczność

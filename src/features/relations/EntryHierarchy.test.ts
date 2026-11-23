@@ -26,4 +26,20 @@ describe('EntryHierarchy', () => {
 		assert.equal(parent.hierarchy.progress, 0.5)
 		assert.equal(pending.hierarchy.progress, undefined, 'a task without subtasks has only its own progress')
 	})
+
+	it('states the progress its status leaves unsaid: part of a task, and whatever an event\'s steps come to', () => {
+		const trip = new Entry({ id: 'trip', uid: 'trip', type: EntryType.Event, heading: 'trip' })
+		const step = (uid: string, status?: EntryStatus) => task(uid, { status, relations: EntryRelations.of([{ type: RelationType.Parent, targetUid: 'trip' }]) })
+		const stated = (...entries: Array<Entry>) => {
+			EntryHierarchy.from(() => RelationGraph.of(entries))
+			return entries[0]!.hierarchy.statedProgress
+		}
+		assert.equal(stated(parent, finished, pending), 0.5)
+		assert.equal(stated(parent, pending), undefined, 'a task to do says none of it is done')
+		assert.equal(stated(task('parent', { status: EntryStatus.Done }), finished, pending), undefined, 'a done task says all of it is')
+		assert.equal(stated(trip), undefined, 'an event without steps has no progress')
+		assert.equal(stated(trip, step('booked'), step('packed')), 0)
+		assert.equal(stated(trip, step('booked', EntryStatus.Done), step('packed', EntryStatus.Done)), 1)
+		assert.equal(stated(new Entry({ id: 'trip', uid: 'trip', type: EntryType.Event, heading: 'trip', status: EntryStatus.Cancelled }), step('booked')), undefined, 'a cancelled event is closed')
+	})
 })

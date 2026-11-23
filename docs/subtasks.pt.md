@@ -27,15 +27,17 @@ A descrição de uma tarefa também pode conter uma lista de verificação, escr
 - [x] Send the invitations
 ```
 
-Marque uma caixa direto na descrição para concluí-la. O Mitra troca `[ ]` por `[x]` no texto, então os outros aplicativos que usam o calendário também veem. Marcar caixas nunca muda o status da tarefa por conta própria. Só as tarefas contam suas listas de verificação: as caixas de um evento podem ser marcadas, mas não contam para nada.
+Marque uma caixa direto na descrição para concluí-la. O Mitra troca `[ ]` por `[x]` no texto, então os outros aplicativos que usam o calendário também veem. Marcar caixas nunca muda o status da tarefa por conta própria. Um evento também conta a sua lista de verificação, como a lista de bagagem de uma viagem.
 
 ## Progresso
 
-Uma tarefa com subtarefas ou uma lista de verificação mostra o progresso. Cada subtarefa e cada caixa conta como um passo, todos com o mesmo peso, então uma tarefa com três caixas e duas subtarefas tem cinco passos.
+Uma tarefa ou um evento com subtarefas ou uma lista de verificação mostra o progresso. Cada subtarefa e cada caixa conta como um passo, todos com o mesmo peso, então uma tarefa com três caixas e duas subtarefas tem cinco passos.
 
 Uma subtarefa parcialmente concluída conta em parte, tenha ela um progresso próprio ou subtarefas próprias. Se uma tarefa tem três subtarefas, duas delas concluídas e a terceira em 80%, a tarefa está em 93%. As subtarefas canceladas não contam, então o trabalho abandonado nunca segura a tarefa. Eventos vinculados como subtarefas também não contam.
 
 No calendário, o contorno da caixa de seleção de uma tarefa vai se preenchendo conforme ela avança. Aponte para a caixa para ver a contagem, como "2 de 3 subtarefas concluídas", ou "2 de 4 passos concluídos" quando caixas e subtarefas contam juntas. Clique com o botão direito nela, ou clique com <kbd>Alt</kbd>, para abrir o menu de status com a porcentagem exata.
+
+Um evento pode reunir as tarefas que levam até ele, como uma viagem com as suas reservas: abra cada tarefa e escolha o evento em **Subtarefa de**. O evento passa então a mostrar o seu símbolo de estado no calendário, e o contorno dele vai se preenchendo conforme as tarefas são concluídas. Nada em um evento é marcado como concluído, então o progresso dele só acompanha as suas subtarefas e a sua lista de verificação. Clique no símbolo para ver a contagem e a porcentagem exata abaixo dos estados.
 
 ## Definir o progresso à mão
 

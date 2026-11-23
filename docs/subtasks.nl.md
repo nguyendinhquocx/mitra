@@ -27,15 +27,17 @@ De beschrijving van een taak kan ook een checklist bevatten, geschreven in Markd
 - [x] Send the invitations
 ```
 
-Je kunt een vakje direct in de beschrijving afvinken. Mitra verandert `[ ]` in de tekst in `[x]`, zodat andere apps die de agenda gebruiken het ook zien. Vakjes aanvinken verandert nooit uit zichzelf de status van de taak. Alleen taken tellen hun checklist mee: de vakjes van een afspraak kun je aanvinken, maar ze tellen nergens voor.
+Je kunt een vakje direct in de beschrijving afvinken. Mitra verandert `[ ]` in de tekst in `[x]`, zodat andere apps die de agenda gebruiken het ook zien. Vakjes aanvinken verandert nooit uit zichzelf de status van de taak. Ook een afspraak telt haar checklist mee, zoals de paklijst van een reis.
 
 ## Voortgang
 
-Een taak met subtaken of een checklist toont zijn voortgang. Elke subtaak en elk vakje telt als één stap, allemaal even zwaar, dus een taak met drie vakjes en twee subtaken heeft vijf stappen.
+Een taak of een afspraak met subtaken of een checklist toont de voortgang. Elke subtaak en elk vakje telt als één stap, allemaal even zwaar, dus een taak met drie vakjes en twee subtaken heeft vijf stappen.
 
 Een subtaak die deels klaar is, telt deels mee, of hij nu een eigen voortgang heeft of zelf subtaken. Heeft een taak drie subtaken, waarvan er twee klaar zijn en de derde op 80% staat, dan staat de taak op 93%. Geannuleerde subtaken tellen niet mee, zodat werk dat is geschrapt de taak nooit ophoudt. Afspraken die als subtaak zijn gekoppeld, tellen ook niet mee.
 
 In de agenda vult de rand van het selectievakje van een taak zich naarmate de taak vordert. Wijs het selectievakje aan om de telling te zien, zoals ‘2 van 3 subtaken klaar’, of ‘2 van 4 stappen klaar’ als vakjes en subtaken samen tellen. Klik er met de rechtermuisknop op, of <kbd>Alt</kbd>-klik erop, om het statusmenu met het precieze percentage te openen.
+
+Een afspraak kan de taken bevatten die ernaartoe leiden, zoals een reis met de boekingen: open elke taak en kies de afspraak bij **Subtaak van**. De afspraak krijgt dan haar statussymbool in de agenda, en de rand ervan vult zich naarmate de taken klaar zijn. Een afspraak zelf vink je nooit af, dus haar voortgang volgt alleen haar subtaken en haar checklist. Klik op het symbool om de telling en het precieze percentage onder de statussen te zien.
 
 ## Voortgang zelf instellen
 

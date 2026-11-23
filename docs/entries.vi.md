@@ -64,6 +64,8 @@ Công việc đã xong và đã hủy bị gạch ngang. Một lịch không có
 
 Một sự kiện có biểu tượng trạng thái trước tiêu đề, trong trình chỉnh sửa và trên lịch: **Đã xác nhận**, **Có thể** hoặc **Đã hủy**. Nhấp vào đó để chọn. Một sự kiện đã hủy vẫn ở trên lịch của bạn, được báo hủy thay vì bị xóa: nó bị gạch ngang trong mọi chế độ xem và giữ nguyên vị trí, và **Đã xác nhận** đưa nó trở lại. Nếu nó lặp lại, Mitra sẽ hỏi bạn muốn chọn lần lặp này, các lần sau hay tất cả.
 
+Sự kiện có công việc con hoặc danh sách kiểm hiển thị tiến độ của chúng trong biểu tượng trạng thái; xem [Công việc con](subtasks.md#progress).
+
 Các ứng dụng lịch khác cũng đọc được việc hủy này. Lịch Apple, Thunderbird và Nextcloud gạch ngang sự kiện, và một sự kiện bị hủy trong một trong số đó sẽ hiện bị gạch ngang trong Mitra. Lịch Mitra và lịch CalDAV giữ được nó, còn lịch đăng ký hiển thị những gì nguồn cấp của nó đã hủy. Lịch Google, Notion và Tempo không giữ được, nên không đưa ra tùy chọn này.
 
 ## Bận hoặc rảnh và chế độ hiển thị

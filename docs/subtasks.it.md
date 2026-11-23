@@ -27,15 +27,17 @@ La descrizione di un'attività può contenere anche un elenco di controllo, scri
 - [x] Send the invitations
 ```
 
-Spunta una casella direttamente nella descrizione per segnarla. Mitra cambia `[ ]` in `[x]` nel testo, così lo vedono anche le altre app che usano il calendario. Spuntare le caselle non cambia mai da solo lo stato dell'attività. Solo le attività contano i propri elenchi di controllo: le caselle di un evento si possono spuntare, ma non contano per nulla.
+Spunta una casella direttamente nella descrizione per segnarla. Mitra cambia `[ ]` in `[x]` nel testo, così lo vedono anche le altre app che usano il calendario. Spuntare le caselle non cambia mai da solo lo stato dell'attività. Anche un evento conta il proprio elenco di controllo, come la lista delle cose da mettere in valigia per un viaggio.
 
 ## Avanzamento
 
-Un'attività con attività secondarie o un elenco di controllo mostra il proprio avanzamento. Ogni attività secondaria e ogni casella conta come un passaggio, tutti con lo stesso peso, quindi un'attività con tre caselle e due attività secondarie ha cinque passaggi.
+Un'attività o un evento con attività secondarie o un elenco di controllo mostra il proprio avanzamento. Ogni attività secondaria e ogni casella conta come un passaggio, tutti con lo stesso peso, quindi un'attività con tre caselle e due attività secondarie ha cinque passaggi.
 
 Un'attività secondaria in parte completata conta in parte, che abbia un avanzamento proprio o attività secondarie proprie. Se un'attività ha tre attività secondarie, due completate e la terza all'80%, l'attività è al 93%. Le attività secondarie annullate non contano, così il lavoro abbandonato non frena mai l'attività. Anche gli eventi collegati come attività secondarie non contano.
 
 Nel calendario, il contorno della casella di un'attività si riempie man mano che procede. Passa il puntatore sulla casella per vedere il conteggio, come «2 di 3 attività secondarie completate», o «2 di 4 passaggi completati» quando caselle e attività secondarie contano insieme. Fai clic con il tasto destro, oppure <kbd>Alt</kbd>-clic, per aprire il menu dello stato con la percentuale esatta.
+
+Un evento può raccogliere le attività che portano fino a esso, come un viaggio con le sue prenotazioni: apri ogni attività e scegli l'evento sotto **Attività secondaria di**. L'evento mostra allora il suo simbolo nel calendario, e il contorno del simbolo si riempie man mano che le attività vengono completate. Sull'evento stesso non si spunta nulla, quindi il suo avanzamento segue solo le sue attività secondarie e il suo elenco di controllo. Fai clic sul simbolo per vedere il conteggio e la percentuale esatta sotto i suoi stati.
 
 ## Impostare l'avanzamento a mano
 

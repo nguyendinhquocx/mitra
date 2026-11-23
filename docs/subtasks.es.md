@@ -27,15 +27,17 @@ La descripción de una tarea también puede contener una lista de comprobación,
 - [x] Send the invitations
 ```
 
-Marca una casilla directamente en la descripción para completarla. Mitra cambia `[ ]` por `[x]` en el texto, de modo que otras aplicaciones que usen el calendario también lo ven. Marcar casillas nunca cambia por sí solo el estado de la tarea. Solo las tareas cuentan sus listas de comprobación: las casillas de un evento se pueden marcar, pero no cuentan para nada.
+Marca una casilla directamente en la descripción para completarla. Mitra cambia `[ ]` por `[x]` en el texto, de modo que otras aplicaciones que usen el calendario también lo ven. Marcar casillas nunca cambia por sí solo el estado de la tarea. Un evento también cuenta su lista de comprobación, como la lista de equipaje de un viaje.
 
 ## Progreso
 
-Una tarea con subtareas o con una lista de comprobación muestra su progreso. Cada subtarea y cada casilla cuenta como un paso, todos con el mismo peso, así que una tarea con tres casillas y dos subtareas tiene cinco pasos.
+Una tarea o un evento con subtareas o con una lista de comprobación muestra su progreso. Cada subtarea y cada casilla cuenta como un paso, todos con el mismo peso, así que una tarea con tres casillas y dos subtareas tiene cinco pasos.
 
 Una subtarea a medio hacer cuenta en parte, tanto si tiene un progreso propio como si tiene subtareas propias. Si una tarea tiene tres subtareas, dos hechas y la tercera al 80 %, la tarea está al 93 %. Las subtareas canceladas no cuentan, de modo que el trabajo descartado nunca frena la tarea. Los eventos vinculados como subtareas tampoco cuentan.
 
 En el calendario, el contorno de la casilla de una tarea se va llenando a medida que avanza. Apunta a la casilla para ver el recuento, como «2 de 3 subtareas hechas», o «2 de 4 pasos hechos» cuando cuentan casillas y subtareas juntas. Haz clic derecho en ella, o <kbd>Alt</kbd> + clic, para abrir el menú de estado con el porcentaje exacto.
+
+Un evento puede contener las tareas que llevan hasta él, como un viaje con sus reservas: abre cada tarea y elige el evento en **Subtarea de**. El evento muestra entonces su símbolo en el calendario, y el contorno del símbolo se va llenando a medida que se hacen las tareas. En un evento no se marca nada como hecho, así que su progreso solo sigue a sus subtareas y a su lista de comprobación. Haz clic en el símbolo para ver el recuento y el porcentaje exacto debajo de sus estados.
 
 ## Fijar el progreso a mano
 

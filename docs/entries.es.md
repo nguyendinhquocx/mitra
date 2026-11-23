@@ -64,6 +64,8 @@ Las tareas hechas y canceladas aparecen tachadas. Un calendario sin estado cance
 
 Un evento tiene un símbolo de estado antes de su título, en el editor y en el calendario: **Confirmado**, **Quizá** o **Cancelado**. Haz clic en él para elegir uno. Un evento cancelado se queda en tu calendario, cancelado en vez de eliminado: aparece tachado en todas las vistas y conserva su lugar, y **Confirmado** lo devuelve. Si se repite, Mitra pregunta si te refieres a esta ocurrencia, a las siguientes o a todas.
 
+Un evento con subtareas o una lista de comprobación muestra su progreso en el símbolo de estado; consulta [Subtareas](subtasks.md#progress).
+
 Otras aplicaciones de calendario también leen la cancelación. Apple Calendar, Thunderbird y Nextcloud tachan el evento, y un evento cancelado en una de ellas aparece tachado en Mitra. Los calendarios de Mitra y los calendarios CalDAV la guardan, y una suscripción muestra lo que su fuente canceló. Los calendarios de Google, Notion y Tempo no la guardan, así que no la ofrecen.
 
 ## Ocupado o disponible y visibilidad

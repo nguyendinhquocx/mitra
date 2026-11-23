@@ -1,4 +1,4 @@
-import { Component, component, html, css, property, event, query } from '@a11d/lit'
+import { Component, component, html, svg, css, property, event, query } from '@a11d/lit'
 import type { Slider, Menu } from '#design'
 import { hierarchy } from '#features/relations/client/Hierarchy.js'
 import { type Entry, type EntryRollup } from '../Entry.js'
@@ -7,7 +7,8 @@ import { EntryStore } from './EntryStore.js'
 
 /**
  * The status control of an entry: a task's checkbox, ticked by a click, with its statuses and progress in a menu; an
- * event's glyph, whose click opens the menu of its statuses, since there is nothing to tick.
+ * event's glyph, whose click opens the menu of its statuses, since there is nothing to tick. Either one's outline fills
+ * with the progress of the steps beneath it.
  */
 @component('mitra-entry-status')
 export class EntryStatusComponent extends Component {
@@ -20,8 +21,30 @@ export class EntryStatusComponent extends Component {
 
 	protected override createRenderRoot() { return this }
 
+	/** Whether the control says more of `entry` than what kind it is, so a chip or a link gives it room: a task's checkbox always, an event's glyph once it is a maybe, cancelled, or has steps to count. */
+	static saysMoreOf(entry: Entry) {
+		return entry.type.isTask || (!!entry.status && entry.status !== EntryStatus.Confirmed) || entry.hierarchy.statedProgress !== undefined
+	}
+
+	/** The glyphs as dials: the outline that fills with the progress, drawn from where a box's does, and the marks within it. */
+	private static readonly dials = {
+		task: { frame: 'M3 19V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2', marks: 'M8 12h8' },
+		event: { frame: 'M3 20V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2', marks: 'M8 2v4M16 2v4M3 10h18' },
+		// A maybe's calendar ends where its clock sits, as its glyph's does.
+		maybe: { frame: 'M8.5 22H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1.5', marks: 'M8 2v4M16 2v4M3 10h5M17.5 17.5 16 16.3V14M22 16a6 6 0 1 1-12 0 6 6 0 0 1 12 0' },
+	}
+
 	private get task() {
 		return this.entry?.type.isTask ?? false
+	}
+
+	/** Whether a click ticks it off: a task where its calendar has Done. */
+	private get tickable() {
+		return this.entry.statuses.includes(EntryStatus.Done)
+	}
+
+	private get dial() {
+		return this.task ? EntryStatusComponent.dials.task : this.status === EntryStatus.Tentative ? EntryStatusComponent.dials.maybe : EntryStatusComponent.dials.event
 	}
 
 	/** The status shown: an event with none is on, a task with none to do, and a task in progress reads as Doing where its calendar has it. */
@@ -38,13 +61,10 @@ export class EntryStatusComponent extends Component {
 	}
 
 	private get progress() {
-		return !this.task ? undefined : this.status === EntryStatus.Done ? 1 : this.entry.hierarchy.progress
+		return this.status === EntryStatus.Done ? 1 : this.entry.hierarchy.progress
 	}
 
 	private get progressLabel() {
-		if (!this.task) {
-			return undefined
-		}
 		const rollup = this.entry.hierarchy.rollup
 		if (rollup?.total) {
 			return EntryStatusComponent.summarize(rollup)
@@ -103,7 +123,7 @@ export class EntryStatusComponent extends Component {
 	private readonly onToggle = (e: MouseEvent) => {
 		e.stopPropagation()
 		e.preventDefault()
-		if (e.altKey || !this.task) {
+		if (e.altKey || !this.tickable) {
 			this.menu?.toggle(e.currentTarget as HTMLElement)
 			return
 		}
@@ -273,9 +293,6 @@ export class EntryStatusComponent extends Component {
 	}
 
 	private get progressSectionTemplate() {
-		if (!this.task) {
-			return html.nothing
-		}
 		const rollup = this.entry.hierarchy.rollup
 		if (rollup?.total) {
 			// RFC 5545 §3.8.1.8: a completed task reads 100%.
@@ -334,7 +351,8 @@ export class EntryStatusComponent extends Component {
 	}
 
 	protected override get template() {
-		if (!this.entry?.statuses.length) {
+		// A calendar that holds no status still shows how far the steps of its entries are.
+		if (!this.entry?.statuses.length && this.entry?.hierarchy.statedProgress === undefined) {
 			return html.nothing
 		}
 
@@ -343,9 +361,9 @@ export class EntryStatusComponent extends Component {
 		const readout = this.progressLabel
 		const name = readout ? `${this.status.format()} (${readout})` : this.status.format()
 		const progress = this.progress
-		const showsProgressDial = this.status === EntryStatus.Doing || (this.entry.hierarchy.partlyDone && !this.status.closed)
+		const showsProgressDial = this.status === EntryStatus.Doing || this.entry.hierarchy.statedProgress !== undefined
 		const percent = progress !== undefined ? Math.round(progress * 100) : 50
-		const hint = this.task ? t('${status}. Click to toggle, Alt-click for options', { status: name }) : t('${status}. Click for options', { status: name })
+		const hint = this.tickable ? t('${status}. Click to toggle, Alt-click for options', { status: name }) : t('${status}. Click for options', { status: name })
 		const title = this.entry.editable ? hint : name
 
 		return html`
@@ -355,12 +373,11 @@ export class EntryStatusComponent extends Component {
 				@contextmenu=${this.onContextMenu}>
 				${showsProgressDial ? html`
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<rect class="progress-track" x="3" y="3" width="18" height="18" rx="2"/>
-						<rect class="progress-stroke" x="3" y="3" width="18" height="18" rx="2"
-							pathLength="100"
-							stroke-dasharray="${percent} ${100 - percent}"
-							transform="rotate(-90 12 12)"/>
-						<line x1="8" y1="12" x2="16" y2="12" stroke-width="2"/>
+						<path class="progress-track" d=${this.dial.frame}></path>
+						${!percent ? html.nothing : svg`
+							<path class="progress-stroke" d=${this.dial.frame} pathLength="100" stroke-dasharray="${percent} ${100 - percent}"></path>
+						`}
+						<path d=${this.dial.marks}></path>
 					</svg>
 				` : html`
 					<mitra-icon icon=${this.status.iconFor(this.entry.type)}></mitra-icon>

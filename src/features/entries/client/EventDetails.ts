@@ -524,9 +524,7 @@ export class EntryDetailsComponent extends Component {
 		const entry = this.segment!.entry
 		return html`
 			<div class="title-row">
-				${!entry.statuses.length ? html.nothing : html`
-					<mitra-entry-status .entry=${entry} @change=${this.handleInPlaceEdit}></mitra-entry-status>
-				`}
+				<mitra-entry-status .entry=${entry} @change=${this.handleInPlaceEdit}></mitra-entry-status>
 				<input class="title field" placeholder=${t('Title')}
 					?readonly=${!entry.canEdit('heading')}
 					?data-struck=${entry.closed}

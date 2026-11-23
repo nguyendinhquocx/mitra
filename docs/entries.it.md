@@ -64,6 +64,8 @@ Le attività fatte e annullate sono barrate. Un calendario senza stato annullato
 
 Un evento ha un simbolo di stato prima del titolo, nell’editor e nel calendario: **Confermato**, **Forse** o **Annullato**. Fai clic per sceglierne uno. Un evento annullato resta nel tuo calendario, annullato invece che eliminato: appare barrato in ogni vista e mantiene il suo posto, e **Confermato** lo riporta indietro. Se si ripete, Mitra chiede se intendi questa occorrenza, le successive o tutte.
 
+Un evento con attività secondarie o un elenco di controllo ne mostra l’avanzamento nel suo simbolo di stato; vedi [Attività secondarie](subtasks.md#progress).
+
 Anche le altre app di calendario leggono l’annullamento. Apple Calendario, Thunderbird e Nextcloud barrano l’evento, e un evento annullato in una di esse appare barrato in Mitra. I calendari di Mitra e i calendari CalDAV lo conservano, e un abbonamento mostra ciò che il suo feed ha annullato. I calendari di Google, Notion e Tempo non lo conservano, quindi non lo offrono.
 
 ## Occupato o disponibile e visibilità
