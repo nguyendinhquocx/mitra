@@ -52,7 +52,7 @@ export const editorFieldStyles = css`
 			}
 
 			&:where(
-				:is(input, textarea, :has(:is(input:not([type=checkbox], [type=radio]), textarea))):focus-within,
+				:is(input, textarea, :has(:is(input:not([type=checkbox], [type=radio]), textarea, [contenteditable=true]))):focus-within,
 				:is(mitra-date-field, mitra-time-field, mitra-date-time-field, mitra-duration-field, :has(mitra-date-field, mitra-time-field, mitra-date-time-field, mitra-duration-field)):focus-within,
 				:open, :has(input:open, :popover-open, mitra-select[open]),
 				:focus-visible, ${focusedField}, :has(:focus-visible, ${focusedField})

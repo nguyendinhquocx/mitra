@@ -85,4 +85,5 @@ Mitra가 마찬가지로 CalDAV로 연결하는 [Google 캘린더](google.md)와
 - 캘린더가 보이지 않으면 꺼져 있는 것입니다. 연결할 때 끈 캘린더와, 나중에 서버에서 만들어져 Mitra가 꺼진 상태로 추가한 캘린더가 그렇습니다. 계정의 **⋯ → 편집**에서 켜고 **저장**을 누르세요. 거기 있는 **새로 고침**을 누르면 마지막 동기화 이후 서버에서 만든 캘린더가 목록에 나옵니다.
 - Mitra가 "This account is already connected"라고 하면 계정이 이미 사이드바에 있는 것입니다. 새 비밀번호를 입력하는 등의 변경은 그 계정의 **⋯ → 편집**에서 하세요.
 - 연결이 안 되면 서버 URL이 `https://`로 시작하는지, 로그인하는 웹 페이지가 아니라 CalDAV 주소를 가리키는지 확인하세요. Mitra가 서버에 보내는 모든 요청을 보려면 [로그 수준](../logging.md)을 `debug`로 설정하세요.
+- Mitra에 "only reaches public addresses on the standard web ports"라고 나오면 운영자가 [`MITRA_BLOCK_PRIVATE_NETWORK`](../configuration.md#single-sign-on)를 설정했거나 Mitra 공개 데모인 것입니다. 이때 Mitra는 자신의 네트워크나 다른 포트에 있는 서버에 연결하지 않습니다.
 - Mitra를 업데이트한 뒤 캘린더가 이상하게 보이면 캘린더의 **⋯** 메뉴에서 **항목 다시 가져오기**를 쓰세요. 동기화는 서버에서 바뀐 것만 가져오므로 바뀌지 않은 항목은 다시 읽지 않습니다. 다시 가져오기는 모두 읽습니다. [캘린더 다시 가져오기](../calendars.md#re-import-a-calendar)를 참고하세요.

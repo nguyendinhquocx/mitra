@@ -45,6 +45,8 @@ Mitra prosi o zakresy `openid profile email`. Zakres `openid` jest wymagany, a d
 
 Każdy, kogo przepuści twój dostawca, przy pierwszym logowaniu dostaje konto w aplikacji Mitra. W aplikacji Mitra nie ma listy użytkowników do zarządzania, więc o tym, kto może się logować, decydujesz u dostawcy: za pomocą grup, przypisań do aplikacji lub w inny sposób, w jaki dostawca zarządza dostępem. Imię i nazwisko oraz adres e-mail każdej osoby są aktualizowane na podstawie danych od dostawcy przy każdym logowaniu.
 
+Mitra łączy się z serwerami CalDAV i subskrypcjami kalendarzy, dokądkolwiek wskazuje ich adres, także w sieci twojego serwera i na innych portach. Jeśli mogą się logować osoby, których nie znasz, ustaw [`MITRA_BLOCK_PRIVATE_NETWORK`](configuration.md#single-sign-on) na `true`, aby nikt, kto się loguje, nie mógł przez twój serwer dotrzeć do maszyn obok.
+
 ## Jak działa logowanie
 
 Samo logowanie odbywa się na serwerze (przepływ kodu autoryzacji z PKCE). Przeglądarka dostaje tylko plik cookie, a w jej pamięci nie są przechowywane żadne tokeny, więc złośliwy skrypt na stronie nie ma czego ukraść.

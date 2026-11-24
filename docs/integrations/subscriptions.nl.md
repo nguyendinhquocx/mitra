@@ -54,3 +54,4 @@ Ziet de agenda er ooit verkeerd uit, dan leest **Items opnieuw importeren** in h
 - Meldt Mitra ‘No calendar was found at that address’, controleer de link dan op typefouten. Een geheim adres werkt ook niet meer als de eigenaar het opnieuw heeft ingesteld.
 - Meldt Mitra ‘The address did not return a calendar’, dan leidt de link naar een webpagina in plaats van naar de feed. Zoek naar een link met iCal, ICS of Abonneren.
 - Meldt Mitra ‘The calendar is too large to subscribe to’, dan is de feed groter dan 20 MB, en die leest Mitra niet.
+- Meldt Mitra dat het ‘only reaches public addresses on the standard web ports’, dan heeft wie Mitra beheert [`MITRA_BLOCK_PRIVATE_NETWORK`](../configuration.md#single-sign-on) gezet, of is het de openbare demo van Mitra, en dan leest Mitra geen feeds in zijn eigen netwerk of op andere poorten.

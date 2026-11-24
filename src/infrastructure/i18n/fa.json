@@ -308,6 +308,7 @@
 	"How to connect": "نحوه اتصال",
 	"Address": "نشانی",
 	"Copy the address": "کپی نشانی",
+	"Copy the code": "کپی کد",
 	"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": "در این Mitra کسی وارد حساب نمی‌شود، پس اتصال‌دهنده‌ها به توکن نیاز ندارند. هر کسی که به این نشانی دسترسی داشته باشد می‌تواند از آن استفاده کند.",
 	"Access tokens": "توکن‌های دسترسی",
 	"One for each connection, so you can revoke each on its own": "برای هر اتصال یکی، تا بتوانید هر کدام را جداگانه لغو کنید",

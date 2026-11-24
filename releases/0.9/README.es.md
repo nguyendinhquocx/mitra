@@ -3,6 +3,14 @@ title: Mejores subtareas, TickTick, agrupación propia de calendarios y un confi
 ---
 Mitra 0.9 todavía se está planificando. Reúne los trabajos más grandes y muestra qué se puede hacer a continuación, deja que la barra lateral siga tu forma de pensar y escribe las fechas como tú las lees.
 
+## Editor de Markdown en vivo
+La descripción de una entrada es ahora un solo editor: los títulos, las listas, los enlaces, los avisos y las tablas se ven con formato mientras escribes, y solo la línea en la que estás muestra su Markdown. Marca un elemento de una lista de comprobación justo donde está, y pon el texto en negrita o cursiva con Ctrl+B y Ctrl+I (⌘B y ⌘I en un Mac).
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="markdown-description-dark.webp">
+	<img src="markdown-description-light.webp" alt="La descripción de una tarea con un título, una lista de comprobación, un aviso y una tabla, con una línea que muestra su Markdown">
+</picture>
+
 ## Mejores subtareas
 Las subtareas de una entrada comparten un carril en las vistas de mes y año, así que un proyecto se lee como una sola línea, con sus subtareas cortas plegadas dentro. La tabla anida las subtareas bajo su entrada principal, y la vista de año puede ocultarlas. El progreso de una tarea pondera cada subtarea según su tamaño, así que un trabajo largo cuenta más que uno rápido, y un evento muestra el progreso de las tareas que tiene debajo. Una subtarea sin fecha de vencimiento propia toma la de su entrada principal.
 

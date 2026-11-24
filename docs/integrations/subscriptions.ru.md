@@ -54,3 +54,4 @@ Mitra синхронизирует каждую подписку раз в 15 м
 - Если Mitra сообщает «No calendar was found at that address», проверьте ссылку на опечатки. Кроме того, секретный адрес перестаёт работать, когда владелец его сбрасывает.
 - Если Mitra сообщает «The address did not return a calendar», ссылка ведёт на веб-страницу, а не на ленту. Поищите ссылку с подписью iCal, ICS или «Подписаться».
 - Если Mitra сообщает «The calendar is too large to subscribe to», лента больше 20 МБ, а такие Mitra не читает.
+- Если Mitra сообщает «only reaches public addresses on the standard web ports», значит, тот, кто администрирует Mitra, установил [`MITRA_BLOCK_PRIVATE_NETWORK`](../configuration.md#single-sign-on) или это публичное демо Mitra, и тогда Mitra не читает ленты в своей сети или на других портах.

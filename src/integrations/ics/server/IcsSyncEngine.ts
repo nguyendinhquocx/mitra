@@ -6,12 +6,13 @@ import { Entry, EntryType } from '#features/entries'
 import type { Integration, SourceSyncEngine } from '#integrations'
 import { CalDAV } from '#integrations/caldav/CalDAV.js'
 import { createLogger } from '#infrastructure/logging/Logger.js'
+import { environment } from '#infrastructure/server/Environment.js'
+import { fetch } from 'undici'
+import { OutboundAgent } from '#infrastructure/http/outbound.js'
 import { IcsSubscription, type IcsFeed } from '../IcsSubscription.js'
 
 const logger = createLogger('Subscription')
 
-/** A mis-typed URL must not be read into memory unbounded. */
-const maxFeedBytes = 20 * 1024 * 1024
 const fetchTimeoutMs = 30_000
 
 /**
@@ -19,6 +20,13 @@ const fetchTimeoutMs = 30_000
  * and maps components to entries using {@link CalDAV.applyComponent}.
  */
 export class IcsSyncEngine implements SourceSyncEngine {
+	private readonly agent: OutboundAgent
+
+	/** A mis-typed URL must not be read into memory unbounded: 20 MB as sent, before decompression. */
+	constructor(privateNetwork = environment.privateNetwork) {
+		this.agent = new OutboundAgent({ privateNetwork, maxResponseSize: 20 * 1024 * 1024 })
+	}
+
 	private fetchFeed(integration: IcsSubscription, validators?: { etag?: string, lastModified?: string }): Promise<IcsFeed> {
 		return integration.feed ??= this.get(integration, validators)
 	}
@@ -41,26 +49,19 @@ export class IcsSyncEngine implements SourceSyncEngine {
 			headers['if-modified-since'] = validators.lastModified
 		}
 
-		const response = await fetch(url, { headers, redirect: 'follow', signal: AbortSignal.timeout(fetchTimeoutMs) })
+		const response = await fetch(url, { headers, dispatcher: this.agent, signal: AbortSignal.timeout(fetchTimeoutMs) }).catch(IcsSyncEngine.failed)
 
 		if (response.status === 304) {
 			return { text: '', notModified: true, etag: validators?.etag, lastModified: validators?.lastModified }
 		}
 		if (!response.ok) {
-			const status = [response.status, response.statusText].filter(Boolean).join(' ')
 			throw new Error(response.status === 401 || response.status === 403
 				? 'The calendar requires a username and password'
 				: response.status === 404
 					? 'No calendar was found at that address'
-					: `The calendar could not be fetched (${status})`)
+					: `The calendar could not be fetched (${[response.status, response.statusText].filter(Boolean).join(' ')})`)
 		}
-		if (Number(response.headers.get('content-length')) > maxFeedBytes) {
-			throw new Error('The calendar is too large to subscribe to')
-		}
-		const text = await response.text()
-		if (text.length > maxFeedBytes) {
-			throw new Error('The calendar is too large to subscribe to')
-		}
+		const text = await response.text().catch(IcsSyncEngine.failed)
 		if (!/BEGIN:VCALENDAR/i.test(text)) {
 			throw new Error('The address did not return a calendar')
 		}
@@ -70,6 +71,12 @@ export class IcsSyncEngine implements SourceSyncEngine {
 			etag: response.headers.get('etag') ?? undefined,
 			lastModified: response.headers.get('last-modified') ?? undefined,
 		}
+	}
+
+	/** undici wraps why a request failed, such as a refused address or a body past its size, in a `TypeError` of its own. */
+	private static failed(error: unknown): never {
+		const reason = error instanceof TypeError && error.cause instanceof Error ? error.cause : error
+		throw (reason as { code?: string }).code === 'UND_ERR_RES_EXCEEDED_MAX_SIZE' ? new Error('The calendar is too large to subscribe to') : reason
 	}
 
 	/** Discovers the calendar from the feed, extracting name, color, and supported types. */

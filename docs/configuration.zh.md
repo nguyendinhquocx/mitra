@@ -136,6 +136,7 @@ environment:
 | `MITRA_OIDC_CLIENT_ID` | *（未设置）* | 在提供方处注册的客户端 ID。 |
 | `MITRA_OIDC_CLIENT_SECRET` | *（未设置）* | 客户端密钥。公共客户端不需要设置；Mitra 始终使用 PKCE。 |
 | `MITRA_OIDC_SCOPES` | `openid profile email` | Mitra 请求的权限范围（scope），以空格分隔。`openid` 是必需的；`profile` 和 `email` 让 Mitra 获取每个人的姓名和电子邮件地址。 |
+| `MITRA_BLOCK_PRIVATE_NETWORK` | *(关闭)* | 如果你不认识的人也能登录你的服务器，请设为 `true`。这样 CalDAV 服务器和订阅的日历必须位于公网并使用标准端口，登录的人就无法借你的服务器访问同一网络中的其他机器（比如 `192.168.…` 上的 Nextcloud），或云服务商的元数据地址。Mitra 的公开演示始终会阻止它们。 |
 
 ### 由构建设置
 

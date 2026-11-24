@@ -45,6 +45,8 @@ Mitra vraagt om de scopes `openid profile email`. `openid` is verplicht, en de a
 
 Iedereen die je provider doorlaat, krijgt een Mitra-account zodra hij voor het eerst inlogt. In Mitra is er geen gebruikerslijst om te beheren. Bepaal dus bij je provider wie mag inloggen, via groepen, app-toewijzing of hoe die provider toegang ook regelt. De naam en het e-mailadres van elke persoon worden bij elke keer inloggen bijgewerkt vanuit de provider.
 
+Mitra maakt verbinding met CalDAV-servers en agenda-abonnementen waar hun adres ook naar wijst, ook in het eigen netwerk van je server en op andere poorten. Kunnen mensen die je niet kent inloggen, zet dan [`MITRA_BLOCK_PRIVATE_NETWORK`](configuration.md#single-sign-on) op `true`, zodat niemand die inlogt via je server de machines ernaast kan bereiken.
+
 ## Hoe inloggen werkt
 
 Het inloggen zelf gebeurt op de server (de authorization code flow met PKCE). Je browser krijgt alleen een cookie, en er worden geen tokens in de opslag van de browser bewaard. Een kwaadaardig script op de pagina heeft dus niets om te stelen.

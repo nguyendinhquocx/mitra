@@ -429,6 +429,7 @@
 	"How to connect": "Как подключить",
 	"Address": "Адрес",
 	"Copy the address": "Скопировать адрес",
+	"Copy the code": "Скопировать код",
 	"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": "В этом экземпляре Mitra вход не используется, поэтому коннекторам не нужен токен. Этим адресом может пользоваться любой, у кого есть к нему доступ.",
 	"Access tokens": "Токены доступа",
 	"One for each connection, so you can revoke each on its own": "По одному на каждое подключение, чтобы их можно было отзывать по отдельности",

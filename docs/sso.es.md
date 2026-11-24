@@ -45,6 +45,8 @@ Mitra pide los scopes `openid profile email`. `openid` es obligatorio, y los otr
 
 Cualquiera a quien tu proveedor deje pasar obtiene una cuenta de Mitra la primera vez que inicia sesión. No hay lista de usuarios que gestionar en Mitra, así que decide quién puede iniciar sesión en tu proveedor, por grupo, asignación de aplicación o como gestione el acceso. El nombre y el correo de cada persona se actualizan desde el proveedor cada vez que inicia sesión.
 
+Mitra se conecta a servidores CalDAV y suscripciones de calendario dondequiera que apunte su dirección, incluida la red propia de tu servidor y otros puertos. Si puede iniciar sesión gente que no conoces, pon [`MITRA_BLOCK_PRIVATE_NETWORK`](configuration.md#single-sign-on) en `true`, para que nadie que inicie sesión pueda usar tu servidor para llegar a los equipos de su alrededor.
+
 ## Cómo funciona el inicio de sesión
 
 El inicio de sesión en sí ocurre en el servidor (el flujo de código de autorización con PKCE). Tu navegador solo recibe una cookie, y no se guarda ningún token en su almacenamiento, así que un script malicioso en la página no tiene nada que robar.

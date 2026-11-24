@@ -136,6 +136,7 @@ Wenn du `MITRA_OIDC_ISSUER` setzt, schaltet das die [Anmeldung](sso.md) ein. Feh
 | `MITRA_OIDC_CLIENT_ID` | *(nicht gesetzt)* | Die bei deinem Anbieter registrierte Client-ID. |
 | `MITRA_OIDC_CLIENT_SECRET` | *(nicht gesetzt)* | Das Client-Secret. Lass es für einen öffentlichen Client weg; Mitra nutzt immer PKCE. |
 | `MITRA_OIDC_SCOPES` | `openid profile email` | Die Scopes, die Mitra anfordert, durch Leerzeichen getrennt. `openid` ist erforderlich; `profile` und `email` geben Mitra Namen und E-Mail-Adresse jeder Person. |
+| `MITRA_BLOCK_PRIVATE_NETWORK` | *(aus)* | Setz sie auf `true` auf einem Server, an dem sich Leute anmelden können, die du nicht kennst. Dann müssen CalDAV-Server und abonnierte Kalender im öffentlichen Web und auf dem üblichen Port liegen, damit niemand, der sich anmeldet, über deinen Server dessen Nachbarn erreicht, etwa eine Nextcloud unter `192.168.…`, oder die Metadatenadresse eines Cloud-Anbieters. Die öffentliche Demo von Mitra sperrt sie immer. |
 
 ### Vom Build gesetzt
 

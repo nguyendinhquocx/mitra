@@ -45,6 +45,8 @@ Mitra yêu cầu các scope `openid profile email`. `openid` là bắt buộc, v
 
 Bất kỳ ai nhà cung cấp của bạn cho qua đều có tài khoản Mitra vào lần đăng nhập đầu tiên. Mitra không có danh sách người dùng để quản lý, nên hãy quyết định ai được đăng nhập tại nhà cung cấp, theo nhóm, theo ứng dụng được gán hoặc cách nó xử lý quyền truy cập. Tên và email của mỗi người được cập nhật từ nhà cung cấp mỗi lần họ đăng nhập.
 
+Mitra kết nối tới máy chủ CalDAV và lịch đăng ký ở bất cứ đâu địa chỉ của chúng trỏ tới, kể cả chính mạng của máy chủ và các cổng khác. Nếu những người bạn không quen biết có thể đăng nhập, hãy đặt [`MITRA_BLOCK_PRIVATE_NETWORK`](configuration.md#single-sign-on) thành `true`, để không ai đăng nhập có thể dùng máy chủ của bạn tiếp cận các máy bên cạnh nó.
+
 ## Đăng nhập hoạt động thế nào
 
 Việc đăng nhập diễn ra trên máy chủ (luồng authorization code với PKCE). Trình duyệt của bạn chỉ nhận một cookie, và không có mã nào được giữ trong bộ nhớ của nó, nên một đoạn script độc hại trên trang không có gì để đánh cắp.

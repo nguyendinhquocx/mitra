@@ -45,6 +45,8 @@ Mitra richiede gli scope `openid profile email`. `openid` è obbligatorio, e gli
 
 Chiunque il tuo provider lasci passare ottiene un account Mitra la prima volta che accede. In Mitra non c'è nessun elenco di utenti da gestire, quindi decidi chi può accedere presso il tuo provider, per gruppo, assegnazione all'app o come preferisce gestire gli accessi. Nome ed email di ciascuno vengono aggiornati dal provider a ogni accesso.
 
+Mitra si collega a server CalDAV e abbonamenti a calendari ovunque punti il loro indirizzo, anche nella rete del tuo server e su altre porte. Se possono accedere persone che non conosci, imposta [`MITRA_BLOCK_PRIVATE_NETWORK`](configuration.md#single-sign-on) a `true`, così nessuno che accede può usare il tuo server per raggiungere le macchine accanto.
+
 ## Come funziona l'accesso
 
 L'accesso vero e proprio avviene sul server (l'authorization code flow con PKCE). Il tuo browser riceve solo un cookie, e nel suo storage non viene conservato nessun token, quindi uno script malevolo nella pagina non ha nulla da rubare.

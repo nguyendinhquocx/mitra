@@ -3,6 +3,14 @@ title: De meilleures sous-tâches, TickTick, un regroupement personnalisé des c
 ---
 Mitra 0.9 est encore en préparation. Il rassemble les plus grands travaux et montre ce qui peut être fait ensuite, laisse la barre latérale suivre votre façon de penser et écrit les dates comme vous les lisez.
 
+## Éditeur Markdown en direct
+La description d'une entrée est désormais un seul éditeur : les titres, les listes, les liens, les encadrés et les tableaux apparaissent mis en forme pendant que vous écrivez, et seule la ligne où vous êtes montre son Markdown. Cochez un élément d'une liste de contrôle là où il se trouve, et mettez du texte en gras ou en italique avec Ctrl+B et Ctrl+I (⌘B et ⌘I sur Mac).
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="markdown-description-dark.webp">
+	<img src="markdown-description-light.webp" alt="La description d'une tâche avec un titre, une liste de contrôle, un encadré et un tableau, une ligne montrant son Markdown">
+</picture>
+
 ## De meilleures sous-tâches
 Les sous-tâches d'une entrée partagent une même ligne dans les vues mois et année, si bien qu'un projet se lit comme un seul trait, ses courtes sous-tâches repliées dedans. Le tableau range les sous-tâches sous leur parent, et la vue année peut les masquer. La progression d'une tâche pondère chaque sous-tâche selon sa taille, si bien qu'un long travail compte davantage qu'un travail rapide, et un événement affiche la progression des tâches qui en dépendent. Une sous-tâche sans date d'échéance propre prend celle de son parent.
 

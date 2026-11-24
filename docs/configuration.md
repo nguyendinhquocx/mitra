@@ -136,6 +136,7 @@ Setting `MITRA_OIDC_ISSUER` turns on [sign-in](sso.md). If the variables it need
 | `MITRA_OIDC_CLIENT_ID` | *(unset)* | The client ID registered at your provider. |
 | `MITRA_OIDC_CLIENT_SECRET` | *(unset)* | The client secret. Leave it out for a public client; Mitra always uses PKCE. |
 | `MITRA_OIDC_SCOPES` | `openid profile email` | The scopes Mitra asks for, separated by spaces. `openid` is required; `profile` and `email` give Mitra each person's name and email. |
+| `MITRA_BLOCK_PRIVATE_NETWORK` | *(off)* | Set it to `true` on a server people you don't know can sign in to. Then CalDAV servers and subscribed calendars must be on the public web and the standard port, so nobody who signs in can use your server to reach its neighbors, such as a Nextcloud at `192.168.…`, or a cloud provider's metadata address. Mitra's public demo always blocks them. |
 
 ### Set by the build
 

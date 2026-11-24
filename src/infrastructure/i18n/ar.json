@@ -469,6 +469,7 @@
 	"How to connect": "طريقة الربط",
 	"Address": "العنوان",
 	"Copy the address": "نسخ العنوان",
+	"Copy the code": "نسخ الشيفرة",
 	"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": "لا يسجّل أحد الدخول إلى نسخة Mitra هذه، لذا لا تحتاج الموصلات إلى رمز. ويمكن لأي شخص يصل إلى هذا العنوان استخدامه.",
 	"Access tokens": "رموز الوصول",
 	"One for each connection, so you can revoke each on its own": "رمز لكل اتصال، لتتمكن من إلغاء كل منها على حدة",

@@ -136,6 +136,7 @@ environment:
 | `MITRA_OIDC_CLIENT_ID` | *(설정 안 됨)* | 공급자에 등록한 클라이언트 ID입니다. |
 | `MITRA_OIDC_CLIENT_SECRET` | *(설정 안 됨)* | 클라이언트 보안 비밀입니다. 공개 클라이언트라면 생략하세요. Mitra는 항상 PKCE를 씁니다. |
 | `MITRA_OIDC_SCOPES` | `openid profile email` | Mitra가 요청하는 범위(scope)로, 공백으로 구분합니다. `openid`는 필수이고, `profile`과 `email`은 Mitra에 각 사용자의 이름과 이메일을 알려 줍니다. |
+| `MITRA_BLOCK_PRIVATE_NETWORK` | *(꺼짐)* | 모르는 사람도 로그인할 수 있는 서버라면 `true`로 설정하세요. 그러면 CalDAV 서버와 구독 캘린더는 표준 포트의 공개 주소여야 하므로, 로그인한 누구도 서버를 통해 이웃 기기(예: `192.168.…`의 Nextcloud)나 클라우드 제공업체의 메타데이터 주소에 접근할 수 없습니다. Mitra 공개 데모는 항상 막습니다. |
 
 ### 빌드에서 설정
 

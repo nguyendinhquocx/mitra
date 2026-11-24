@@ -54,3 +54,4 @@ Mitra는 누가 Mitra를 열어 두었는지와 상관없이 구독마다 15분�
 - Mitra에 "No calendar was found at that address"라고 나오면 링크에 오타가 없는지 확인하세요. 비공개 주소는 소유자가 재설정해도 더 이상 작동하지 않습니다.
 - Mitra에 "The address did not return a calendar"라고 나오면 링크가 피드가 아닌 웹 페이지로 연결되는 것입니다. iCal, ICS 또는 구독이라고 표시된 링크를 찾으세요.
 - Mitra에 "The calendar is too large to subscribe to"라고 나오면 피드가 20MB보다 커서 Mitra가 읽지 않는 것입니다.
+- Mitra에 "only reaches public addresses on the standard web ports"라고 나오면 운영자가 [`MITRA_BLOCK_PRIVATE_NETWORK`](../configuration.md#single-sign-on)를 설정했거나 Mitra 공개 데모인 것입니다. 이때 Mitra는 자신의 네트워크나 다른 포트에 있는 피드를 읽지 않습니다.

@@ -290,6 +290,7 @@
 	"How to connect": "Como ligar",
 	"Address": "Endereço",
 	"Copy the address": "Copiar o endereço",
+	"Copy the code": "Copiar o código",
 	"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": "Ninguém inicia sessão neste Mitra, por isso os conectores não precisam de token. Qualquer pessoa que chegue a este endereço pode usá-lo.",
 	"Access tokens": "Tokens de acesso",
 	"One for each connection, so you can revoke each on its own": "Um por cada ligação, para que possa revogar cada um à parte",

@@ -3,6 +3,14 @@ title: Bessere Teilaufgaben, TickTick, eigene Kalendergruppen und ein erweiterte
 ---
 Mitra 0.9 ist noch in Planung. Es bringt größere Vorhaben zusammen und zeigt, was sich als Nächstes erledigen lässt, lässt die Seitenleiste deiner Denkweise folgen und schreibt Daten so, wie du sie liest.
 
+## Live-Markdown-Editor
+Die Beschreibung eines Eintrags ist jetzt ein einziger Editor: Überschriften, Listen, Links, Hinweisboxen und Tabellen sehen schon beim Schreiben formatiert aus, und nur die Zeile, in der du gerade bist, zeigt ihr Markdown. Hake einen Punkt der Checkliste direkt dort ab, wo er steht, und setze Text mit Strg+B und Strg+I fett oder kursiv (⌘B und ⌘I auf dem Mac).
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="markdown-description-dark.webp">
+	<img src="markdown-description-light.webp" alt="Die Beschreibung einer Aufgabe mit Überschrift, Checkliste, Hinweisbox und Tabelle, eine Zeile zeigt ihr Markdown">
+</picture>
+
 ## Bessere Teilaufgaben
 Die Teilaufgaben eines Eintrags teilen sich in der Monats- und Jahresansicht eine Spur, sodass sich ein Vorhaben als eine Linie liest, in die seine kurzen Teilaufgaben eingeklappt sind. Die Tabelle ordnet Teilaufgaben unter ihrem übergeordneten Eintrag ein, und die Jahresansicht kann sie ausblenden. Der Fortschritt einer Aufgabe gewichtet jede Teilaufgabe nach ihrem Umfang, sodass ein großes Stück Arbeit mehr zählt als ein schnelles, und ein Termin zeigt den Fortschritt der Aufgaben unter ihm. Eine Teilaufgabe ohne eigenes Fälligkeitsdatum übernimmt das ihres übergeordneten Eintrags.
 

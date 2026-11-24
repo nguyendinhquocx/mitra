@@ -330,6 +330,7 @@
 	"How to connect": "如何连接",
 	"Address": "地址",
 	"Copy the address": "复制地址",
+	"Copy the code": "复制代码",
 	"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": "此 Mitra 无需登录，因此连接器无需令牌。任何能访问此地址的人都可以使用它。",
 	"Access tokens": "访问令牌",
 	"One for each connection, so you can revoke each on its own": "每个连接一个，便于单独撤销",

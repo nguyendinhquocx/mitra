@@ -329,6 +329,7 @@
 	"How to connect": "Jak się połączyć",
 	"Address": "Adres",
 	"Copy the address": "Kopiuj adres",
+	"Copy the code": "Kopiuj kod",
 	"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": "Na tym serwerze Mitra nikt się nie loguje, więc konektory nie potrzebują tokenu. Każdy, kto ma dostęp do tego adresu, może z niego korzystać.",
 	"Access tokens": "Tokeny dostępu",
 	"One for each connection, so you can revoke each on its own": "Osobny dla każdego połączenia, aby każdy można było unieważnić niezależnie",

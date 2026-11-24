@@ -330,6 +330,7 @@
 	"How to connect": "연결 방법",
 	"Address": "주소",
 	"Copy the address": "주소 복사",
+	"Copy the code": "코드 복사",
 	"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": "이 Mitra에는 로그인하지 않으므로 커넥터에 토큰이 필요 없습니다. 이 주소에 접근할 수 있는 사람은 누구나 사용할 수 있습니다.",
 	"Access tokens": "액세스 토큰",
 	"One for each connection, so you can revoke each on its own": "연결마다 하나씩 만들면 각각 따로 해지할 수 있습니다",

@@ -54,3 +54,4 @@ description: 订阅公开发布的日历链接（例如 webcal:// 地址或 .ics
 - 如果 Mitra 提示“No calendar was found at that address”，请检查链接是否有拼写错误。另外，私密地址被所有者重置后也会失效。
 - 如果 Mitra 提示“The address did not return a calendar”，说明链接指向的是网页，而不是订阅源。请在网页上找标为 iCal、ICS 或“订阅”的链接。
 - 如果 Mitra 提示“The calendar is too large to subscribe to”，说明订阅源超过了 20 MB，Mitra 无法读取。
+- 如果 Mitra 提示“only reaches public addresses on the standard web ports”，说明运行 Mitra 的人设置了 [`MITRA_BLOCK_PRIVATE_NETWORK`](../configuration.md#single-sign-on)，或者这是 Mitra 的公开演示，此时 Mitra 不会读取它自身网络中或使用其他端口的订阅源。

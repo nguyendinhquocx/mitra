@@ -45,6 +45,8 @@ Mitra demande les scopes `openid profile email`. `openid` est obligatoire, et le
 
 Toute personne que votre fournisseur laisse passer obtient un compte Mitra à sa première connexion. Il n'y a pas de liste d'utilisateurs à gérer dans Mitra : décidez donc qui peut se connecter chez votre fournisseur, par groupe, attribution d'application ou selon la manière dont il gère les accès. Le nom et l'e-mail de chacun sont mis à jour depuis le fournisseur à chaque connexion.
 
+Mitra se connecte aux serveurs CalDAV et aux abonnements de calendrier où que pointe leur adresse, y compris le réseau de votre serveur et d'autres ports. Si des personnes que vous ne connaissez pas peuvent se connecter, mettez [`MITRA_BLOCK_PRIVATE_NETWORK`](configuration.md#single-sign-on) à `true`, pour que personne qui se connecte ne puisse se servir de votre serveur pour atteindre les machines voisines.
+
 ## Comment fonctionne la connexion
 
 La connexion elle-même se déroule sur le serveur (le flux de code d'autorisation avec PKCE). Votre navigateur ne reçoit qu'un cookie, et aucun jeton n'est conservé dans son stockage : un script malveillant sur la page n'a donc rien à voler.

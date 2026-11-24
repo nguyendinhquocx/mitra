@@ -329,6 +329,7 @@
 	"How to connect": "Zo maak je verbinding",
 	"Address": "Adres",
 	"Copy the address": "Adres kopiëren",
+	"Copy the code": "Code kopiëren",
 	"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": "Bij deze Mitra meldt niemand zich aan, dus connectors hebben geen token nodig. Iedereen die dit adres kan bereiken, kan het gebruiken.",
 	"Access tokens": "Toegangstokens",
 	"One for each connection, so you can revoke each on its own": "Eén per verbinding, zodat je ze elk afzonderlijk kunt intrekken",

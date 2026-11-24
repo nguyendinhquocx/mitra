@@ -45,6 +45,8 @@ O Mitra solicita os escopos `openid profile email`. O `openid` é obrigatório, 
 
 Qualquer pessoa que o seu provedor deixar passar ganha uma conta no Mitra na primeira vez que entra. Não há lista de usuários para gerenciar no Mitra, então decida quem pode entrar no seu provedor, por grupo, atribuição de aplicativo ou como ele tratar o acesso. O nome e o e-mail de cada pessoa são atualizados a partir do provedor a cada login.
 
+O Mitra se conecta a servidores CalDAV e assinaturas de calendário aonde quer que o endereço deles aponte, inclusive a própria rede do seu servidor e outras portas. Se pessoas que você não conhece podem entrar, defina [`MITRA_BLOCK_PRIVATE_NETWORK`](configuration.md#single-sign-on) como `true`, para que ninguém que entre possa usar o seu servidor para alcançar as máquinas ao redor.
+
 ## Como o login funciona
 
 O login em si acontece no servidor (o fluxo de código de autorização com PKCE). Seu navegador só recebe um cookie, e nenhum token é guardado no armazenamento dele, então um script malicioso na página não tem nada para roubar.

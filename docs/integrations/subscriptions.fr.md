@@ -54,3 +54,4 @@ Si le calendrier semble faux, **Réimporter les entrées** dans son menu **⋯**
 - Si Mitra affiche « No calendar was found at that address », vérifiez que le lien ne comporte pas de faute de frappe. Une adresse secrète cesse aussi de fonctionner quand son propriétaire la réinitialise.
 - Si Mitra affiche « The address did not return a calendar », le lien mène à une page web plutôt qu'au flux. Cherchez un lien intitulé iCal, ICS ou S'abonner.
 - Si Mitra affiche « The calendar is too large to subscribe to », le flux dépasse 20 Mo, ce que Mitra ne lit pas.
+- Si Mitra affiche « only reaches public addresses on the standard web ports », la personne qui l'administre a activé [`MITRA_BLOCK_PRIVATE_NETWORK`](../configuration.md#single-sign-on), ou il s'agit de la démo publique de Mitra, et Mitra ne lit alors pas les flux de son propre réseau ni sur d'autres ports.

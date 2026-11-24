@@ -85,4 +85,5 @@ Google 日历和 iCloud 也支持 CalDAV，但不接受你的普通密码：Goog
 - 如果某个日历不见了，说明它被关闭了。连接时你关闭的日历，以及之后在服务器上新建的日历（Mitra 添加时默认关闭）都是这种情况。在账号的 **⋯ → 编辑**中启用它，然后点击**保存**。那里的**刷新**会列出自上次同步以来在服务器上新建的日历。
 - 如果 Mitra 提示“This account is already connected”，说明这个账号已经在你的侧边栏中了。请改为通过它的 **⋯ → 编辑**进行修改，比如输入新密码。
 - 如果连接失败，请检查服务器 URL 是否以 `https://` 开头，并且指向 CalDAV 地址，而不是你登录用的网页。要查看 Mitra 向服务器发出的每个请求，请把[日志级别](../logging.md)设为 `debug`。
+- 如果 Mitra 提示“only reaches public addresses on the standard web ports”，说明运行 Mitra 的人设置了 [`MITRA_BLOCK_PRIVATE_NETWORK`](../configuration.md#single-sign-on)，或者这是 Mitra 的公开演示，此时 Mitra 不会连接它自身网络中或使用其他端口的服务器。
 - 如果更新 Mitra 后某个日历显示不正常，请使用它 **⋯** 菜单中的**重新导入条目**。同步只会获取服务器上发生变化的内容，没有变化的条目不会再次读取；重新导入则会全部重新读取。详见[重新导入日历](../calendars.md#re-import-a-calendar)。

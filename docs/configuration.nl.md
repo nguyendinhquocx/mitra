@@ -136,6 +136,7 @@ Met `MITRA_OIDC_ISSUER` schakel je [inloggen](sso.md) in. Ontbreken de variabele
 | `MITRA_OIDC_CLIENT_ID` | *(niet ingesteld)* | De client-ID die bij je provider is geregistreerd. |
 | `MITRA_OIDC_CLIENT_SECRET` | *(niet ingesteld)* | Het clientgeheim. Laat het weg voor een openbare client; Mitra gebruikt altijd PKCE. |
 | `MITRA_OIDC_SCOPES` | `openid profile email` | De scopes die Mitra aanvraagt, gescheiden door spaties. `openid` is verplicht; met `profile` en `email` krijgt Mitra de naam en het e-mailadres van elke gebruiker. |
+| `MITRA_BLOCK_PRIVATE_NETWORK` | *(uit)* | Zet op `true` op een server waar mensen die je niet kent kunnen inloggen. Dan moeten CalDAV-servers en geabonneerde agenda's op het openbare web en op de gebruikelijke poort staan, zodat niemand die inlogt via je server bij zijn buren komt, zoals een Nextcloud op `192.168.…`, of bij het metadata-adres van een cloudprovider. De openbare demo van Mitra blokkeert ze altijd. |
 
 ### Ingesteld door de build
 

@@ -136,6 +136,7 @@ Définir `MITRA_OIDC_ISSUER` active la [connexion](sso.md). Si les variables né
 | `MITRA_OIDC_CLIENT_ID` | *(non définie)* | L'ID client enregistré auprès de votre fournisseur. |
 | `MITRA_OIDC_CLIENT_SECRET` | *(non définie)* | Le secret client. Omettez-le pour un client public ; Mitra utilise toujours PKCE. |
 | `MITRA_OIDC_SCOPES` | `openid profile email` | Les scopes que Mitra demande, séparés par des espaces. `openid` est obligatoire ; `profile` et `email` donnent à Mitra le nom et l'e-mail de chacun. |
+| `MITRA_BLOCK_PRIVATE_NETWORK` | *(désactivée)* | Mettez-la à `true` sur un serveur où des personnes que vous ne connaissez pas peuvent se connecter. Les serveurs CalDAV et les calendriers abonnés doivent alors se trouver sur le web public et sur le port habituel, pour que personne qui se connecte ne se serve de votre serveur pour atteindre ses voisins, comme un Nextcloud à `192.168.…`, ou l'adresse de métadonnées d'un fournisseur cloud. La démo publique de Mitra les bloque toujours. |
 
 ### Définies par la construction
 

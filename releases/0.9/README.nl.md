@@ -3,6 +3,14 @@ title: Betere subtaken, TickTick, eigen agendagroepen en een uitgebreide landins
 ---
 Mitra 0.9 wordt nog gepland. Het brengt grotere klussen samen en laat zien wat er nu kan, laat de zijbalk je eigen manier van denken volgen en schrijft datums zoals jij ze leest.
 
+## Live Markdown-editor
+De beschrijving van een item is nu één editor: koppen, lijsten, links, kaders en tabellen zien er opgemaakt uit terwijl je schrijft, en alleen de regel waarop je staat toont zijn Markdown. Vink een punt van een checklist af waar het staat, en maak tekst vet of cursief met Ctrl+B en Ctrl+I (⌘B en ⌘I op een Mac).
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="markdown-description-dark.webp">
+	<img src="markdown-description-light.webp" alt="De beschrijving van een taak met een kop, een checklist, een kader en een tabel, één regel toont zijn Markdown">
+</picture>
+
 ## Betere subtaken
 De subtaken van een item delen in de maand- en jaarweergave één rij, zodat een project als één lijn te lezen is, met de korte subtaken erin opgenomen. De tabel toont subtaken onder hun bovenliggende taak, en de jaarweergave kan ze verbergen. De voortgang van een taak houdt rekening met hoe groot elke subtaak is, zodat een lange klus zwaarder weegt dan een snelle, en een afspraak toont de voortgang van de taken eronder. Een subtaak zonder eigen vervaldatum neemt die van de bovenliggende taak over.
 

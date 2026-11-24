@@ -211,6 +211,7 @@ declare global {
 		"Copy instead": unknown
 		"Copy participants' emails": unknown
 		"Copy the address": unknown
+		"Copy the code": unknown
 		"Copy the token": unknown
 		"Copy this token now: it is shown only once.": unknown
 		"Copy to ${name}": unknown

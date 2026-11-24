@@ -54,3 +54,4 @@ Nếu lịch trông có vẻ sai, **Nhập lại các mục** trong menu **⋯**
 - Nếu Mitra báo “No calendar was found at that address”, hãy kiểm tra lỗi gõ trong liên kết. Địa chỉ bí mật cũng ngừng hoạt động khi chủ sở hữu đặt lại nó.
 - Nếu Mitra báo “The address did not return a calendar”, liên kết dẫn đến một trang web chứ không phải nguồn cấp. Hãy tìm liên kết có nhãn iCal, ICS hoặc Subscribe.
 - Nếu Mitra báo “The calendar is too large to subscribe to”, nguồn cấp lớn hơn 20 MB, mức Mitra không đọc.
+- Nếu Mitra báo “only reaches public addresses on the standard web ports”, người vận hành đã đặt [`MITRA_BLOCK_PRIVATE_NETWORK`](../configuration.md#single-sign-on), hoặc đây là bản demo công khai của Mitra, và khi đó Mitra không đọc nguồn cấp trong chính mạng của nó hay trên các cổng khác.

@@ -136,6 +136,7 @@ environment:
 | `MITRA_OIDC_CLIENT_ID` | *(未設定)* | プロバイダーに登録したクライアント ID。 |
 | `MITRA_OIDC_CLIENT_SECRET` | *(未設定)* | クライアントシークレット。パブリッククライアントでは省略してください。Mitra は常に PKCE を使います。 |
 | `MITRA_OIDC_SCOPES` | `openid profile email` | Mitra が要求するスコープ。スペース区切りです。`openid` は必須。`profile` と `email` で各利用者の名前とメールアドレスを取得します。 |
+| `MITRA_BLOCK_PRIVATE_NETWORK` | *(オフ)* | 知らない人がサインインできるサーバーでは `true` に設定します。すると CalDAV サーバーや購読カレンダーは標準ポート上の公開アドレスに限られ、サインインした誰も、サーバーを使って隣のマシン (`192.168.…` の Nextcloud など) やクラウド事業者のメタデータアドレスに到達できなくなります。Mitra の公開デモでは常にブロックされます。 |
 
 ### ビルドが設定する変数
 

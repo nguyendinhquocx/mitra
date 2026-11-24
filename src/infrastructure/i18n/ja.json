@@ -330,6 +330,7 @@
 	"How to connect": "接続方法",
 	"Address": "アドレス",
 	"Copy the address": "アドレスをコピー",
+	"Copy the code": "コードをコピー",
 	"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": "このMitraはサインインなしで使われるため、コネクタにトークンは不要です。このアドレスに到達できる人は誰でも利用できます。",
 	"Access tokens": "アクセストークン",
 	"One for each connection, so you can revoke each on its own": "接続ごとに1つずつ発行され、個別に取り消せます",

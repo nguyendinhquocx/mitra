@@ -54,3 +54,4 @@ description: مشترک یک پیوند تقویم منتشرشده، مثل ن�
 - اگر میترا می‌گوید "No calendar was found at that address"، پیوند را از نظر غلط تایپی بررسی کنید. نشانی محرمانه هم وقتی صاحبش بازنشانی‌اش کند از کار می‌افتد.
 - اگر میترا می‌گوید "The address did not return a calendar"، پیوند به یک صفحه وب می‌رسد، نه به فید. دنبال پیوندی با برچسب iCal، ICS یا Subscribe بگردید.
 - اگر میترا می‌گوید "The calendar is too large to subscribe to"، فید از ۲۰ مگابایت بزرگ‌تر است و میترا آن را نمی‌خواند.
+- اگر میترا می‌گوید "only reaches public addresses on the standard web ports"، کسی که میترا را اداره می‌کند [`MITRA_BLOCK_PRIVATE_NETWORK`](../configuration.md#single-sign-on) را تنظیم کرده یا این نسخهٔ نمایشی عمومی میتراست، و در این حالت میترا فیدهای شبکهٔ خودش یا روی پورت‌های دیگر را نمی‌خواند.

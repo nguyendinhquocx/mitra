@@ -1,27 +1,12 @@
-import { Component, component, css, event, html, property } from '@a11d/lit'
+import { Component, component, css, html, property } from '@a11d/lit'
 import { Renderer, type Tokens } from 'marked'
-import { Checkbox } from './Checkbox.js'
+import './Checkbox.js'
 import { MarkdownLinks } from './MarkdownLinks.js'
+import { MarkdownCallout } from './MarkdownCallout.js'
+import { MarkdownCode } from './MarkdownCode.js'
+import { MarkdownTable, type MarkdownTableAlignment } from './MarkdownTable.js'
 
 export class MarkdownRenderer extends Renderer {
-	/** Whether task-list checkboxes are interactive. */
-	interactive = false
-
-	/** Document-order checkbox counter for Checklist alignment. */
-	private checkboxes = 0
-
-	private static readonly calloutIcons = new Map<string, string>([
-		['note', 'info'],
-		['info', 'info'],
-		['tip', 'lightbulb'],
-		['success', 'circle-check'],
-		['important', 'message-square-warning'],
-		['warning', 'triangle-alert'],
-		['caution', 'octagon-alert'],
-		['danger', 'octagon-alert'],
-		['error', 'octagon-alert'],
-	])
-
 	override heading(token: Tokens.Heading) {
 		return super.heading({ ...token, depth: Math.min(token.depth + 1, 6) })
 	}
@@ -36,11 +21,7 @@ export class MarkdownRenderer extends Renderer {
 	}
 
 	override checkbox({ checked }: Tokens.Checkbox) {
-		const index = this.checkboxes++
-		const state = checked ? ' checked' : ''
-		return this.interactive
-			? `<mitra-checkbox${state} data-checkbox="${index}"></mitra-checkbox>`
-			: `<mitra-checkbox${state} disabled></mitra-checkbox>`
+		return `<mitra-checkbox${checked ? ' checked' : ''} disabled></mitra-checkbox>`
 	}
 
 	/**
@@ -58,32 +39,51 @@ export class MarkdownRenderer extends Renderer {
 	}
 
 	override blockquote(token: Tokens.Blockquote) {
-		const quote = this.parser.parse(token.tokens)
-		const match = quote.match(/<p>\s*\[!(\w+)\]([^\n<]*)/i)
-		if (!match) {
+		const [head = '', ...body] = token.text.split('\n')
+		const callout = MarkdownCallout.of(head)
+		if (!callout) {
 			return super.blockquote(token)
 		}
-		const type = match[1]!.toLowerCase()
-		const title = match[2]!.trim() || type.charAt(0).toUpperCase() + type.slice(1)
-		const icon = MarkdownRenderer.calloutIcons.get(type) ?? 'info'
-		const body = quote.replace(/(<p>\s*)\[!\w+\][^\n<]*\n?/i, '$1')
+		const title = callout.written ? this.parser.parseInline(MarkdownLinks.marked.Lexer.lexInline(callout.title)) : callout.title
 		return `
-			<mitra-markdown-callout data-type="${type}">
-				<div class="callout-title">
-					<mitra-icon icon="${icon}"></mitra-icon>
-					${title}
-				</div>
-				${body}
+			<mitra-markdown-callout data-type="${callout.type}">
+				<div class="callout-title"><mitra-icon icon="${callout.icon}"></mitra-icon>${title}</div>
+				${this.parser.parse(MarkdownLinks.marked.lexer(body.join('\n')))}
 			</mitra-markdown-callout>
 		`
 	}
 
+	override table(token: Tokens.Table) {
+		const alignments: Record<string, MarkdownTableAlignment> = { left: 'start', center: 'center', right: 'end' }
+		const row = (cells: Array<Tokens.TableCell>, role: string) => `<div class="row" role="row">${cells.map((cell, index) => `
+			<div class="cell" role="${role}" style="${MarkdownTable.cellStyle(MarkdownTable.column(index), cell.align ? alignments[cell.align] : undefined)}">${this.parser.parseInline(cell.tokens)}</div>
+		`).join('')}</div>`
+		return `
+			<mitra-markdown-table role="table" style="${MarkdownTable.tableStyle(token.header.length)}">
+				${row(token.header, 'columnheader')}
+				${token.rows.map(cells => row(cells, 'cell')).join('')}
+			</mitra-markdown-table>
+		`
+	}
+
+	override code(token: Tokens.Code) {
+		const language = MarkdownRenderer.escape(token.lang?.match(/^\S*/)?.[0] ?? '')
+		const head = token.codeBlockStyle === 'indented' ? '' : `
+			<div class="head">${language}<mitra-icon-button class="copy" size="small" icon="copy" label="${MarkdownRenderer.escape(MarkdownCode.copyLabel())}"></mitra-icon-button></div>
+		`
+		return `<mitra-markdown-code${language ? ` data-language="${language}"` : ''}>${head}${super.code(token).trim()}</mitra-markdown-code>`
+	}
+
+	private static escape(text: string) {
+		return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
+	}
+
 	render(markdown: string) {
-		this.checkboxes = 0
-		// Raw HTML is renamed into inert tags; an autolink (`<scheme:…>`, `<name@host>`) is Markdown, not a tag.
+		// Raw HTML is renamed into inert tags, under a prefix none of the description's own elements takes; an autolink
+		// (`<scheme:…>`, `<name@host>`) is Markdown, not a tag.
 		markdown = markdown
-			.replaceAll(/<(?!\/|[a-zA-Z][a-zA-Z0-9+.-]{1,31}:[^\s<>]*>|[^\s<>@]+@[^\s<>]+>)(.)([^>]+)>/g, '<mitra-markdown-$1$2>')
-			.replaceAll(/<\/(.*)>/g, '</mitra-markdown-$1>')
+			.replaceAll(/<(?!\/|[a-zA-Z][a-zA-Z0-9+.-]{1,31}:[^\s<>]*>|[^\s<>@]+@[^\s<>]+>)(.)([^>]+)>/g, '<mitra-raw-$1$2>')
+			.replaceAll(/<\/(.*)>/g, '</mitra-raw-$1>')
 		return MarkdownLinks.marked.parse(markdown, { renderer: this, async: false })
 	}
 }
@@ -92,32 +92,14 @@ export class MarkdownRenderer extends Renderer {
 export class Markdown extends Component {
 	@property() value = ''
 
-	/** Enables interactive checkbox toggling. */
-	@property({ type: Boolean }) interactive = false
-
-	/** Dispatches checkbox index and target state on toggle. */
-	@event() readonly check!: EventDispatcher<{ index: number, checked: boolean }>
-
 	protected readonly renderer = new MarkdownRenderer()
 
 	protected override createRenderRoot() { return this }
 
-	// A checkbox's own `change` doesn't bubble, so it is caught on its way down.
-	private readonly handleChange = {
-		capture: true,
-		handleEvent: (e: Event) => {
-			const box = e.target
-			const index = box instanceof Checkbox ? Number(box.dataset.checkbox) : NaN
-			if (box instanceof Checkbox && !Number.isNaN(index)) {
-				e.stopPropagation()
-				this.check.dispatch({ index, checked: box.checked })
-			}
-		},
-	}
-
 	static override get styles() {
+		// The prose of both the rendered and the edited description: the editor wraps its text in the same elements.
 		return css`
-			mitra-markdown {
+			:is(mitra-markdown, mitra-markdown-editor) {
 				display: block;
 				color: var(--color-text);
 				line-height: 1.6;
@@ -159,6 +141,10 @@ export class Markdown extends Component {
 
 				li {
 					margin: 0.2em 0;
+
+					&::marker {
+						color: var(--color-text-muted);
+					}
 				}
 
 				li.task {
@@ -215,19 +201,6 @@ export class Markdown extends Component {
 					border-radius: var(--border-radius);
 				}
 
-				pre {
-					margin: 0.8em 0;
-					padding: 0.8em 1em;
-					background: color-mix(in srgb, var(--color-text) 6%, transparent);
-					border-radius: calc(var(--border-radius) * 2);
-					overflow-x: auto;
-
-					code {
-						padding: 0;
-						background: none;
-					}
-				}
-
 				hr {
 					margin: 1.4em 0;
 					border: 0;
@@ -239,66 +212,12 @@ export class Markdown extends Component {
 					max-width: 100%;
 					border-radius: calc(var(--border-radius) * 2);
 				}
-
-				table {
-					width: 100%;
-					border-collapse: collapse;
-					margin: 0.8em 0;
-					font-size: 0.95em;
-				}
-
-				th, td {
-					padding: 0.4em 0.7em;
-					text-align: start;
-					border-block-end: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
-				}
-
-				th {
-					font-weight: 600;
-					background: color-mix(in srgb, var(--color-text) 6%, transparent);
-				}
-
-				tbody tr:last-child td {
-					border-block-end: none;
-				}
-
-				/* GitHub/Obsidian callouts (emitted by the blockquote renderer). */
-				mitra-markdown-callout {
-					--callout-color: var(--color-accent);
-					display: block;
-					margin: 0.8em 0;
-					padding: 0.5em 0.85em;
-					border-inline-start: 3px solid var(--callout-color);
-					border-radius: calc(var(--border-radius) * 1.5);
-					background: color-mix(in srgb, var(--callout-color) 9%, transparent);
-					/* The text around it tinted toward the callout, as muted text is to the title: readable on either theme. */
-					color: color-mix(in srgb, var(--callout-color) 40%, currentColor);
-
-					&[data-type=note], &[data-type=info] { --callout-color: #4c91f0; }
-					&[data-type=tip], &[data-type=success] { --callout-color: #41b658; }
-					&[data-type=important] { --callout-color: #9a6df0; }
-					&[data-type=warning] { --callout-color: #e0992b; }
-					&[data-type=caution], &[data-type=danger], &[data-type=error] { --callout-color: #e5534b; }
-
-					> * { margin-block: 0.35em; }
-					> :first-child { margin-block-start: 0; }
-					> :last-child { margin-block-end: 0; }
-
-					.callout-title {
-						display: flex;
-						align-items: center;
-						gap: 0.4em;
-						color: var(--callout-color);
-						font-weight: 600;
-					}
-				}
 			}
 		`
 	}
 
 	protected override get template() {
-		this.renderer.interactive = this.interactive
-		return html`<main @change=${this.handleChange} .innerHTML=${this.renderer.render(this.value)}></main>`
+		return html`<main .innerHTML=${this.renderer.render(this.value)}></main>`
 	}
 }
 

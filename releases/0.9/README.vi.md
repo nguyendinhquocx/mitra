@@ -3,6 +3,14 @@ title: Công việc con tốt hơn, TickTick, nhóm lịch tùy chỉnh và trì
 ---
 Mitra 0.9 vẫn đang được lên kế hoạch. Phiên bản này ghép những phần việc lớn hơn lại với nhau và cho thấy việc gì có thể làm tiếp theo, để thanh bên đi theo cách bạn suy nghĩ, và viết ngày tháng theo cách bạn đọc.
 
+## Trình soạn thảo Markdown trực tiếp
+Mô tả của một mục giờ là một trình soạn thảo duy nhất: tiêu đề, danh sách, liên kết, hộp chú thích và bảng hiện ra đã định dạng ngay khi bạn viết, và chỉ dòng bạn đang ở mới hiện Markdown của nó. Đánh dấu một mục trong danh sách kiểm tra ngay tại chỗ, và in đậm hoặc in nghiêng chữ bằng Ctrl+B và Ctrl+I (⌘B và ⌘I trên Mac).
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="markdown-description-dark.webp">
+	<img src="markdown-description-light.webp" alt="Mô tả của một công việc có tiêu đề, danh sách kiểm tra, hộp chú thích và bảng, một dòng đang hiện Markdown của nó">
+</picture>
+
 ## Công việc con tốt hơn
 Các công việc con của một mục dùng chung một làn trong chế độ xem tháng và năm, nên một dự án hiện ra như một đường, với các công việc con ngắn được gộp vào. Bảng lồng các công việc con dưới công việc cha, và chế độ xem năm có thể ẩn chúng. Tiến độ của một công việc tính từng công việc con theo kích thước của nó, nên một việc dài có trọng số lớn hơn một việc nhanh, và một sự kiện cho thấy tiến độ của các công việc bên dưới nó. Một công việc con không có hạn riêng sẽ lấy hạn của công việc cha.
 

@@ -3,6 +3,14 @@ title: Lepsze podzadania, TickTick, własne grupowanie kalendarzy i zaawansowany
 ---
 Mitra 0.9 jest wciąż planowana. Łączy większe przedsięwzięcia i pokazuje, co można zrobić dalej, pozwala pasku bocznemu podążać za twoim sposobem myślenia i zapisuje daty tak, jak je czytasz.
 
+## Edytor Markdown na żywo
+Opis wpisu to teraz jeden edytor: nagłówki, listy, linki, ramki i tabele wyglądają na sformatowane już w trakcie pisania, a tylko wiersz, w którym jesteś, pokazuje swój Markdown. Odhacz punkt listy kontrolnej tam, gdzie stoi, a tekst pogrub lub pochyl skrótami Ctrl+B i Ctrl+I (⌘B i ⌘I na Macu).
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="markdown-description-dark.webp">
+	<img src="markdown-description-light.webp" alt="Opis zadania z nagłówkiem, listą kontrolną, ramką i tabelą, jeden wiersz pokazuje swój Markdown">
+</picture>
+
 ## Lepsze podzadania
 W widokach miesiąca i roku podzadania dzielą jeden pas ze swoim wpisem, więc projekt widać jako jedną linię, w którą wpisują się jego krótkie podzadania. Tabela zagnieżdża podzadania pod zadaniem nadrzędnym, a widok roku potrafi je ukryć. Postęp zadania uwzględnia wielkość każdego podzadania, więc długie podzadanie liczy się bardziej niż szybkie, a wydarzenie pokazuje postęp zadań pod nim. Podzadanie bez własnego terminu przejmuje termin zadania nadrzędnego.
 

@@ -136,6 +136,7 @@ Ustawienie `MITRA_OIDC_ISSUER` włącza [logowanie](sso.md). Jeśli brakuje zmie
 | `MITRA_OIDC_CLIENT_ID` | *(nieustawiona)* | Identyfikator klienta zarejestrowanego u dostawcy. |
 | `MITRA_OIDC_CLIENT_SECRET` | *(nieustawiona)* | Tajny klucz klienta. Pomiń go w przypadku klienta publicznego; Mitra zawsze używa PKCE. |
 | `MITRA_OIDC_SCOPES` | `openid profile email` | Zakresy, o które prosi Mitra, rozdzielone spacjami. `openid` jest wymagany; `profile` i `email` przekazują aplikacji Mitra imię i nazwisko oraz adres e-mail każdego użytkownika. |
+| `MITRA_BLOCK_PRIVATE_NETWORK` | *(wyłączona)* | Ustaw na `true` na serwerze, na którym mogą się logować osoby, których nie znasz. Wtedy serwery CalDAV i subskrybowane kalendarze muszą być w publicznej sieci i na standardowym porcie, aby nikt, kto się loguje, nie dotarł przez twój serwer do jego sąsiadów, na przykład Nextcloud pod `192.168.…`, ani do adresu metadanych dostawcy chmury. Publiczne demo Mitry zawsze je blokuje. |
 
 ### Ustawiane przy budowaniu
 

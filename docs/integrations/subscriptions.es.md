@@ -54,3 +54,4 @@ Si alguna vez el calendario se ve mal, **Re-importar entradas** en su menú **�
 - Si Mitra dice «No calendar was found at that address», revisa el enlace por si tiene errores. Una dirección secreta también deja de funcionar cuando su propietario la restablece.
 - Si Mitra dice «The address did not return a calendar», el enlace lleva a una página web y no al feed. Busca un enlace llamado iCal, ICS o Suscribirse.
 - Si Mitra dice «The calendar is too large to subscribe to», el feed pesa más de 20 MB, que Mitra no lee.
+- Si Mitra dice que «only reaches public addresses on the standard web ports», quien lo administra ha activado [`MITRA_BLOCK_PRIVATE_NETWORK`](../configuration.md#single-sign-on), o es la demo pública de Mitra, y entonces Mitra no lee feeds de su propia red ni en otros puertos.

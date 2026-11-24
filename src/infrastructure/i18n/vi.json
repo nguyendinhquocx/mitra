@@ -330,6 +330,7 @@
 	"How to connect": "Cách kết nối",
 	"Address": "Địa chỉ",
 	"Copy the address": "Sao chép địa chỉ",
+	"Copy the code": "Sao chép mã",
 	"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": "Không ai đăng nhập vào Mitra này, nên trình kết nối không cần mã truy cập. Bất kỳ ai truy cập được địa chỉ này đều có thể dùng nó.",
 	"Access tokens": "Mã truy cập",
 	"One for each connection, so you can revoke each on its own": "Mỗi kết nối một mã, để bạn có thể thu hồi riêng từng mã",

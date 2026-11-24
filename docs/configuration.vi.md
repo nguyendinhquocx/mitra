@@ -136,6 +136,7 @@ Nhấp vào tên sẽ mở hộp thoại **Giới thiệu**, hiện phiên bản
 | `MITRA_OIDC_CLIENT_ID` | *(chưa đặt)* | ID máy khách đã đăng ký tại nhà cung cấp của bạn. |
 | `MITRA_OIDC_CLIENT_SECRET` | *(chưa đặt)* | Bí mật máy khách. Bỏ qua với máy khách công khai; Mitra luôn dùng PKCE. |
 | `MITRA_OIDC_SCOPES` | `openid profile email` | Các scope Mitra yêu cầu, phân tách bằng dấu cách. `openid` là bắt buộc; `profile` và `email` cho Mitra biết tên và email của mỗi người. |
+| `MITRA_BLOCK_PRIVATE_NETWORK` | *(tắt)* | Đặt thành `true` trên máy chủ mà những người bạn không quen biết có thể đăng nhập. Khi đó máy chủ CalDAV và lịch đăng ký phải nằm trên web công khai và cổng chuẩn, để không ai đăng nhập có thể dùng máy chủ của bạn tiếp cận các máy lân cận, như Nextcloud ở `192.168.…`, hay địa chỉ siêu dữ liệu của nhà cung cấp đám mây. Bản demo công khai của Mitra luôn chặn chúng. |
 
 ### Do bản dựng đặt
 

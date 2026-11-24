@@ -1,8 +1,9 @@
-import { component, css, eventListener } from '@a11d/lit'
+import { component, css, eventListener, unsafeCSS } from '@a11d/lit'
 import { Application, application, DialogCancelledError } from '@a11d/lit-application'
 import { Localizer } from '@3mo/localization'
-import { themeStyles, focusRingStyles, kbdStyles, Choices, Choice, windowDragStyles, Markdown } from '#design'
+import { themeStyles, focusRingStyles, kbdStyles, Choices, Choice, windowDragStyles, Markdown, MarkdownCallout, MarkdownCode, MarkdownEditor, MarkdownTable } from '#design'
 import { Calendars } from '#features/sources/client/Calendars.js'
+import { Color } from '#features/sources/Color.js'
 import { Weeks } from '#features/calendar/client/Weeks.js'
 import { Months } from '#features/calendar/client/Months.js'
 import { Days } from '#features/calendar/client/Days.js'
@@ -220,6 +221,15 @@ export class Mitra extends Application {
 
 			${themeStyles}
 
+			/* The calendar palette, for the design library, which knows no calendars, to draw in the colors entries do. */
+			:root {
+				--color-palette-red: ${unsafeCSS(Color.Red.value)};
+				--color-palette-yellow: ${unsafeCSS(Color.Yellow.value)};
+				--color-palette-green: ${unsafeCSS(Color.Green.value)};
+				--color-palette-blue: ${unsafeCSS(Color.Blue.value)};
+				--color-palette-purple: ${unsafeCSS(Color.Purple.value)};
+			}
+
 			:root {
 				user-select: none;
 				-webkit-user-select: none;
@@ -245,6 +255,10 @@ export class Mitra extends Application {
 			${Choices.styles}
 			${Choice.styles}
 			${Markdown.styles}
+			${MarkdownCallout.styles}
+			${MarkdownCode.styles}
+			${MarkdownTable.styles}
+			${MarkdownEditor.styles}
 			${PageCalendar.styles}
 			${CommandPalette.styles}
 			${Sidebar.styles}

@@ -45,6 +45,8 @@ Mitra asks for the scopes `openid profile email`. `openid` is required, and the 
 
 Anyone your provider lets through gets a Mitra account the first time they sign in. There's no user list to manage in Mitra, so decide who may sign in at your provider, by group, app assignment or however it handles access. Each person's name and email are updated from the provider every time they sign in.
 
+Mitra connects to CalDAV servers and calendar subscriptions wherever their address points, including your server's own network and other ports. If people you don't know can sign in, set [`MITRA_BLOCK_PRIVATE_NETWORK`](configuration.md#single-sign-on) to `true`, so nobody who signs in can use your server to reach the machines beside it.
+
 ## How sign-in works
 
 The sign-in itself happens on the server (the authorization code flow with PKCE). Your browser only gets a cookie, and no tokens are kept in its storage, so a malicious script on the page has nothing to steal.

@@ -1,4 +1,4 @@
-import { component, html, join, property, state, Component, css, eventListener, event, Binder, query } from '@a11d/lit'
+import { component, html, join, property, Component, css, eventListener, event, Binder, query } from '@a11d/lit'
 import { fileDrop } from '@3mo/file-upload'
 import { centered, type Popover, startedInField, scrollbar } from '#design'
 import { type Source, Color } from '#features/sources'
@@ -44,7 +44,6 @@ export class EntryDetailsComponent extends Component {
 	/** Its popover, which is anchored at the segment, centered where it has no room, and a sheet on a phone. */
 	@query('mitra-popover') private readonly popoverElement?: Popover
 	@query('.title') private readonly titleInput?: HTMLInputElement
-	@query('.description textarea') private readonly descriptionTextarea?: HTMLTextAreaElement
 	@query('mitra-attachments-field') private readonly attachmentsField?: AttachmentsField
 
 	private readonly handleOpenChange = async (e: CustomEvent<boolean>) => {
@@ -236,8 +235,9 @@ export class EntryDetailsComponent extends Component {
 						animation: mitra-editor-arrived 0s 0.2s both;
 
 						@container style(--mitra-editor-arrived: true) {
-							/* Never the description's lists: a ticked box renders it anew, which grew every item from nothing. */
-							li:not(mitra-markdown li) {
+							/* Never the description's lists, rendered or edited: they come anew with every edit, and CodeMirror
+							   measures its lines against items still growing from nothing. */
+							li:not(:is(mitra-markdown, mitra-markdown-editor) li) {
 								transition: block-size 0.2s cubic-bezier(0.2, 0, 0, 1), min-block-size 0.2s cubic-bezier(0.2, 0, 0, 1);
 								overflow-block: clip;
 								overflow-clip-margin: 2px;
@@ -429,18 +429,18 @@ export class EntryDetailsComponent extends Component {
 							}
 
 							&.description {
-								> textarea, > .rendered {
+								> mitra-markdown-editor, > .rendered {
 									grid-column: 2 / -1;
 									width: 100%;
+									padding-block: calc((var(--control-height) - 2px - 1lh) / 2);
 								}
 
-								> .rendered {
+								> mitra-markdown-editor {
 									cursor: text;
-									padding-block: calc((var(--control-height) - 2px - 1lh) / 2);
+								}
 
-									mitra-markdown {
-										line-height: inherit;
-									}
+								mitra-markdown, mitra-markdown-editor {
+									line-height: inherit;
 								}
 							}
 
@@ -652,7 +652,7 @@ export class EntryDetailsComponent extends Component {
 	/**
 	 * The description's links, gathered above it: a reading of the text, so a link is added and removed where
 	 * it is written. The row is always there, hidden while the description holds none: a row inserted before
-	 * the description would make lit rebuild the textarea being typed in.
+	 * the description would make lit rebuild the editor being typed in.
 	 */
 	private get hyperlinksTemplate() {
 		return !this.segment!.entry.holds('description') ? html.nothing : html`
@@ -730,44 +730,19 @@ export class EntryDetailsComponent extends Component {
 		`
 	}
 
-	@state() private editingDescription = false
-
-	private readonly handleChecklistToggle = (e: CustomEvent<{ index: number, checked: boolean }>) => {
-		const entry = this.segment!.entry
-		entry.description = entry.checklist.toggle(e.detail.index, e.detail.checked)
-		this.handleInPlaceEdit()
-	}
-
 	private get descriptionTemplate() {
-		const editDescription = (e: Event) => {
-			if (!this.segment!.entry.editable || e.composedPath().some(node => node instanceof HTMLAnchorElement || node instanceof HTMLInputElement)) {
-				return
-			}
-			this.editingDescription = true
-			this.updateComplete.then(() => {
-				const textarea = this.descriptionTextarea
-				textarea?.focus()
-				textarea?.setSelectionRange(textarea.value.length, textarea.value.length)
-			})
-		}
 		return !this.segment!.entry.holds('description') ? html.nothing : html`
 			<li class="description field">
 				<mitra-icon icon="align-left"></mitra-icon>
-				${this.editingDescription ? html`
-					<textarea rows="1" placeholder=${t('Description')}
-						${this.bind('entry.description', 'input')}
+				${this.segment!.entry.editable ? html`
+					<mitra-markdown-editor placeholder=${t('Description')}
+						${this.bind('entry.description', 'edit')}
 						@change=${this.handleChange}
-						@blur=${() => this.editingDescription = false}
-					></textarea>
+					></mitra-markdown-editor>
 				` : html`
-					<div class="rendered" tabindex=${this.segment!.entry.editable ? '0' : '-1'} @focus=${editDescription} @click=${editDescription}>
-						${!this.segment!.entry.description ? html`
-							<div class="placeholder">${t('Description')}</div>
-							` : html`
-								<mitra-markdown .value=${this.segment!.entry.description}
-									?interactive=${this.segment!.entry.editable}
-									@check=${this.handleChecklistToggle}
-								></mitra-markdown>
+					<div class="rendered">
+						${!this.segment!.entry.description ? html`<div class="placeholder">${t('Description')}</div>` : html`
+							<mitra-markdown .value=${this.segment!.entry.description}></mitra-markdown>
 						`}
 					</div>
 				`}

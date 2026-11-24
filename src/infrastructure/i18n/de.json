@@ -344,6 +344,7 @@
 	"How to connect": "So verbindest du dich",
 	"Address": "Adresse",
 	"Copy the address": "Adresse kopieren",
+	"Copy the code": "Code kopieren",
 	"People do not sign in to this Mitra, so connectors need no token. Anyone who can reach this address can use it.": "Bei diesem Mitra meldet sich niemand an, also brauchen Konnektoren kein Token. Wer diese Adresse erreicht, kann sie nutzen.",
 	"Access tokens": "Zugriffstoken",
 	"One for each connection, so you can revoke each on its own": "Eines für jede Verbindung, damit du jedes einzeln widerrufen kannst",

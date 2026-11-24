@@ -54,3 +54,4 @@ Mitra は各購読を 15 分ごとに同期します。誰かが Mitra を開い
 - Mitra が「No calendar was found at that address」と表示する場合、リンクに入力ミスがないか確認してください。シークレットアドレスは、所有者がリセットすると使えなくなります。
 - Mitra が「The address did not return a calendar」と表示する場合、そのリンクはフィードではなく Web ページにつながっています。iCal、ICS、Subscribe と記載されたリンクを探してください。
 - Mitra が「The calendar is too large to subscribe to」と表示する場合、フィードが 20 MB を超えており、Mitra は読み込みません。
+- Mitra が「only reaches public addresses on the standard web ports」と表示する場合、運用者が [`MITRA_BLOCK_PRIVATE_NETWORK`](../configuration.md#single-sign-on) を設定しているか、Mitra の公開デモです。その場合 Mitra は自身のネットワーク上や他のポートのフィードを読み込みません。

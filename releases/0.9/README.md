@@ -3,6 +3,14 @@ title: Better subtasks, TickTick, custom calendar grouping and an advanced local
 ---
 Mitra 0.9 is still being planned. It brings bigger pieces of work together and shows what can be done next, lets the sidebar follow the way you think, and writes dates the way you read them.
 
+## Live Markdown Editor
+An entry's description is one editor now: headings, lists, links, callouts and tables look formatted as you write, and only the line you're on shows its Markdown. Tick a checklist item right where it is, and make text bold or italic with Ctrl+B and Ctrl+I (⌘B and ⌘I on a Mac).
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="markdown-description-dark.webp">
+	<img src="markdown-description-light.webp" alt="A task's description with a heading, a checklist, a callout and a table, one line showing its Markdown">
+</picture>
+
 ## Better subtasks
 An entry's subtasks share a lane in the month and year views, so a project reads as one line, with its short subtasks folded into it. The table nests subtasks under their parent, and the year view can hide them. A task's progress weighs each subtask by its size, so a long piece of work counts for more than a quick one, and an event shows the progress of the tasks under it. A subtask without a due date of its own takes its parent's.
 

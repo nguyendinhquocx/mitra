@@ -9,6 +9,9 @@ import { EntryRelations } from '#features/relations'
 import type { Integration, SourceSyncEngine } from '#integrations'
 import { createLogger } from '#infrastructure/logging/Logger.js'
 import { instanceOrigin } from '#infrastructure/http/instanceUrl.js'
+import { environment } from '#infrastructure/server/Environment.js'
+import { fetch as undiciFetch } from 'undici'
+import { OutboundAgent } from '#infrastructure/http/outbound.js'
 import { CalDAV } from '../CalDAV.js'
 import { CalDAVAvailability } from './CalDAVAvailability.js'
 import { CalDAVConnectError, CalDAVRefusal } from './CalDAVConnectError.js'
@@ -17,6 +20,15 @@ const logger = createLogger('CalDAV')
 
 /** CalDAV sync and network CRUD engine supporting CalDAV, Apple Calendar, and Google Calendar. */
 export class CalDAVSyncEngine implements SourceSyncEngine {
+	private readonly fetch: typeof fetch
+
+	/** The cap stops a server that never ends its answer, far above any calendar a multiget returns. */
+	constructor(privateNetwork = environment.privateNetwork) {
+		const dispatcher = new OutboundAgent({ privateNetwork, maxResponseSize: 100 * 1024 * 1024 })
+		// undici's own `fetch`, as the dispatcher is undici's: its request and response are the platform's in all but type.
+		this.fetch = (input, init) => undiciFetch(input as any, { ...init as any, dispatcher }) as unknown as Promise<Response>
+	}
+
 	private getClient(integration: CalDAV): ReturnType<typeof createDAVClient> {
 		// A failed connection is forgotten, so the next attempt connects again rather than failing as the first did.
 		return integration.client ??= this.connect(integration).catch(error => {
@@ -30,7 +42,7 @@ export class CalDAVSyncEngine implements SourceSyncEngine {
 		const parameters = integration.clientParameters
 		let refusals: Array<CalDAVRefusal> | undefined = []
 		const keepingRefusals: typeof fetch = async (input, init) => {
-			const response = await fetch(input, init)
+			const response = await this.fetch(input, init)
 			if (refusals && response.status >= 400) {
 				refusals.push(await CalDAVRefusal.of(init?.method ?? 'GET', input instanceof Request ? input.url : String(input), response))
 			}

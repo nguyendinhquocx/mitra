@@ -54,3 +54,4 @@ Jeśli kalendarz zacznie kiedyś wyglądać nieprawidłowo, polecenie **Importuj
 - Jeśli Mitra wyświetla komunikat „No calendar was found at that address”, sprawdź, czy w linku nie ma literówek. Adres tajny przestaje też działać, gdy właściciel go zresetuje.
 - Jeśli Mitra wyświetla komunikat „The address did not return a calendar”, link prowadzi do strony internetowej, a nie do kanału. Poszukaj linku z napisem iCal, ICS lub „Subskrybuj”.
 - Jeśli Mitra wyświetla komunikat „The calendar is too large to subscribe to”, kanał jest większy niż 20 MB, a Mitra nie odczytuje tak dużych kanałów.
+- Jeśli Mitra wyświetla komunikat „only reaches public addresses on the standard web ports”, osoba zarządzająca aplikacją Mitra ustawiła zmienną [`MITRA_BLOCK_PRIVATE_NETWORK`](../configuration.md#single-sign-on) albo to publiczne demo Mitry, a wtedy Mitra nie czyta kanałów we własnej sieci ani na innych portach.

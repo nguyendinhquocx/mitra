@@ -45,6 +45,8 @@ Mitra fordert die Scopes `openid profile email` an. `openid` ist erforderlich, u
 
 Wen dein Anbieter durchlässt, bekommt beim ersten Anmelden ein Mitra-Konto. In Mitra gibt es keine Benutzerliste zu pflegen. Entscheide also bei deinem Anbieter, wer sich anmelden darf, per Gruppe, App-Zuweisung oder wie er den Zugriff sonst regelt. Name und E-Mail-Adresse jeder Person werden bei jeder Anmeldung vom Anbieter aktualisiert.
 
+Mitra verbindet sich mit CalDAV-Servern und Kalenderabonnements, wohin ihre Adresse auch zeigt, auch ins eigene Netzwerk deines Servers und auf andere Ports. Wenn sich Leute anmelden können, die du nicht kennst, setz [`MITRA_BLOCK_PRIVATE_NETWORK`](configuration.md#single-sign-on) auf `true`, damit niemand, der sich anmeldet, über deinen Server die Rechner daneben erreicht.
+
 ## Wie die Anmeldung funktioniert
 
 Die Anmeldung selbst läuft auf dem Server ab (der Authorization-Code-Flow mit PKCE). Dein Browser bekommt nur ein Cookie, und in seinem Speicher werden keine Tokens abgelegt, sodass ein bösartiges Skript auf der Seite nichts zu stehlen hat.

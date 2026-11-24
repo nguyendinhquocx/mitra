@@ -1,5 +1,6 @@
-import { describe, it, before, after, beforeEach, afterEach } from 'node:test'
+import { describe, it, before, after, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
+import http from 'node:http'
 import { MikroORM, UnderscoreNamingStrategy, type EntityManager } from '@mikro-orm/sqlite'
 import { children } from '#infrastructure/model'
 import { Entry, EntryStatus, EntryType } from '#features/entries'
@@ -19,7 +20,6 @@ import { MitraCalendar } from '#integrations/mitra/MitraCalendar.js'
 import { IcsSubscription } from '../IcsSubscription.js'
 import { IcsSyncEngine } from './IcsSyncEngine.js'
 
-const FEED_URL = 'https://example.com/calendar.ics'
 const BERLIN = 'Europe/Berlin'
 
 async function inMemoryOrm() {
@@ -158,22 +158,25 @@ interface Served {
 	headers?: Record<string, string>
 }
 
+/** A feed server on the loopback, which only an engine allowed the server's own network may reach. */
+const feedServer = http.createServer((request, response) => {
+	served.requests.push({ url: new URL(request.url!, FEED_URL).href, headers: request.headers })
+	const reply = served.responses[Math.min(served.requests.length - 1, served.responses.length - 1)] ?? {}
+	const status = reply.status ?? 200
+	response.writeHead(status, reply.headers ?? { etag: '"v1"' })
+	response.end(status === 304 || status === 204 ? undefined : reply.body ?? FULL_FEED)
+})
+await new Promise<void>(resolve => feedServer.listen(0, '127.0.0.1', resolve))
+after(() => feedServer.close())
+const FEED_URL = `http://127.0.0.1:${(feedServer.address() as { port: number }).port}/calendar.ics`
+
+let served = { responses: new Array<Served>(), requests: new Array<{ url: string, headers: http.IncomingHttpHeaders }>() }
+
 function serveFeed(...responses: Array<Served>) {
-	const requests = new Array<{ url: string, headers: Record<string, string> }>()
-	let index = 0
-	const original = globalThis.fetch
-	globalThis.fetch = ((input: string | URL, init?: RequestInit) => {
-		const headers = Object.fromEntries(Object.entries((init?.headers ?? {}) as Record<string, string>))
-		requests.push({ url: String(input), headers })
-		const served = responses[Math.min(index++, responses.length - 1)] ?? {}
-		const status = served.status ?? 200
-		const body = status === 304 || status === 204 ? null : served.body ?? FULL_FEED
-		return Promise.resolve(new Response(body, { status, headers: served.headers ?? { etag: '"v1"' } }))
-	}) as typeof globalThis.fetch
-	return { requests, restore: () => { globalThis.fetch = original } }
+	served = { responses, requests: [] }
 }
 
-const engine = new IcsSyncEngine()
+const engine = new IcsSyncEngine(true)
 registerEngine('ics', engine)
 
 async function seed(em: EntityManager, init?: Partial<IcsSubscription['credentials']>) {
@@ -196,11 +199,9 @@ async function poll(em: EntityManager, integration: IcsSubscription) {
 
 describe('Calendar subscription discovery', () => {
 	let orm: MikroORM
-	let served: ReturnType<typeof serveFeed>
 	before(async () => { orm = await inMemoryOrm() })
 	after(async () => { await orm.close(true) })
-	beforeEach(() => { served = serveFeed() })
-	afterEach(() => served.restore())
+	beforeEach(() => serveFeed())
 
 	it('names the calendar and the account from the feed itself', async () => {
 		const em = orm.em.fork()
@@ -217,11 +218,10 @@ describe('Calendar subscription discovery', () => {
 	})
 
 	it('falls back to the file name when the calendar never says what it is called', async () => {
-		served.restore()
-		served = serveFeed({ body: feed(ZONED, { name: '', color: '' }) })
+		serveFeed({ body: feed(ZONED, { name: '', color: '' }) })
 		const em = orm.em.fork()
 		const integration = await seed(em)
-		integration.uri = 'https://example.com/feeds/Public%20Holidays.ics'
+		integration.uri = new URL('/feeds/Public%20Holidays.ics', FEED_URL).href
 		const sources = await engine.fetchSources(integration)
 
 		assert.equal(sources[0]!.name, 'Public Holidays')
@@ -231,11 +231,11 @@ describe('Calendar subscription discovery', () => {
 	it('rewrites a pasted webcal link before the duplicate check reads it as the account identity', async () => {
 		const em = orm.em.fork()
 		const integration = await seed(em)
-		integration.uri = 'webcal://example.com/calendar.ics'
-		await engine.fetchSources(integration)
+		integration.uri = FEED_URL.replace(/^http:/, 'webcal:')
+		// The loopback feed speaks plain http, so the upgraded fetch fails; the identity was rewritten before it.
+		await engine.fetchSources(integration).catch(() => undefined)
 
-		assert.equal(integration.uri, FEED_URL)
-		assert.equal(served.requests[0]!.url, FEED_URL)
+		assert.equal(integration.uri, FEED_URL.replace(/^http:/, 'https:'))
 	})
 
 	it('sends Basic auth only for a feed that was given credentials', async () => {
@@ -249,21 +249,38 @@ describe('Calendar subscription discovery', () => {
 	})
 
 	it('explains a locked feed rather than reporting a bare status', async () => {
-		served.restore()
-		served = serveFeed({ status: 401 })
+		serveFeed({ status: 401 })
 		await assert.rejects(() => engine.fetchSources(transient()), /username and password/)
 	})
 
 	it('says plainly that nothing is there, rather than echoing a bare status', async () => {
-		served.restore()
-		served = serveFeed({ status: 404 })
+		serveFeed({ status: 404 })
 		await assert.rejects(() => engine.fetchSources(transient()), /No calendar was found at that address/)
 	})
 
 	it('refuses an address that answers with something other than a calendar', async () => {
-		served.restore()
-		served = serveFeed({ body: '<!doctype html><title>Not a calendar</title>' })
+		serveFeed({ body: '<!doctype html><title>Not a calendar</title>' })
 		await assert.rejects(() => engine.fetchSources(transient()), /did not return a calendar/)
+	})
+
+	it('keeps a feed on the server\'s own network out of reach unless the operator allows it', async () => {
+		await assert.rejects(() => new IcsSyncEngine(false).fetchSources(transient()), /public addresses/)
+		assert.equal(served.requests.length, 0)
+	})
+
+	it('refuses a feed past its size', async () => {
+		serveFeed({ body: 'x'.repeat(21 * 1024 * 1024) })
+		await assert.rejects(() => engine.fetchSources(transient()), /too large/)
+	})
+
+	it('keeps a feed\'s password from the host a redirect leads to', async () => {
+		const elsewhere = new URL(FEED_URL)
+		elsewhere.hostname = 'localhost'
+		serveFeed({ status: 302, headers: { location: elsewhere.href } }, {})
+		const em = orm.em.fork()
+		await engine.fetchSources(await seed(em, { authUsername: 'reader', password: 'secret' }))
+
+		assert.deepEqual(served.requests.map(request => [request.headers.host, !!request.headers.authorization]), [[new URL(FEED_URL).host, true], [elsewhere.host, false]])
 	})
 
 	it('refuses a link it could never fetch, before any request goes out', async () => {
@@ -278,13 +295,11 @@ function transient(uri = FEED_URL) {
 
 describe('Calendar subscription sync', () => {
 	let orm: MikroORM
-	let served: ReturnType<typeof serveFeed>
 	before(async () => { orm = await inMemoryOrm() })
 	after(async () => { await orm.close(true) })
-	afterEach(() => served?.restore())
 
 	it('imports every component it models and skips the ones it does not', async () => {
-		served = serveFeed()
+		serveFeed()
 		const em = orm.em.fork()
 		const integration = await seed(em)
 		const { entries, changed } = await poll(em, integration)
@@ -316,7 +331,7 @@ describe('Calendar subscription sync', () => {
 	})
 
 	it('resolves a Microsoft zone name through the feed\'s own VTIMEZONE, storing no zone it could not expand', async () => {
-		served = serveFeed()
+		serveFeed()
 		const em = orm.em.fork()
 		const { entries } = await poll(em, await seed(em))
 
@@ -326,7 +341,7 @@ describe('Calendar subscription sync', () => {
 	})
 
 	it('links a single edited occurrence back to its series master', async () => {
-		served = serveFeed()
+		serveFeed()
 		const em = orm.em.fork()
 		const { entries } = await poll(em, await seed(em))
 
@@ -338,7 +353,7 @@ describe('Calendar subscription sync', () => {
 	})
 
 	it('asks the next poll conditionally and reports nothing when the server answers 304', async () => {
-		served = serveFeed({ headers: { etag: '"v1"', 'last-modified': 'Mon, 10 Aug 2026 06:00:00 GMT' } }, { status: 304 })
+		serveFeed({ headers: { etag: '"v1"', 'last-modified': 'Mon, 10 Aug 2026 06:00:00 GMT' } }, { status: 304 })
 		const em = orm.em.fork()
 		const integration = await seed(em)
 		const first = await poll(em, integration)
@@ -352,7 +367,7 @@ describe('Calendar subscription sync', () => {
 	})
 
 	it('stays silent when a server without validators re-serves an identical body', async () => {
-		served = serveFeed({ headers: {} })
+		serveFeed({ headers: {} })
 		const em = orm.em.fork()
 		const integration = await seed(em)
 		assert.equal((await poll(em, integration)).changed, true)
@@ -361,7 +376,7 @@ describe('Calendar subscription sync', () => {
 
 	it('reports an edit to one entity without touching the rest', async () => {
 		const edited = FULL_FEED.replace('SUMMARY:Zoned standup', 'SUMMARY:Zoned standup (renamed)')
-		served = serveFeed({ headers: {} }, { body: edited, headers: {} })
+		serveFeed({ headers: {} }, { body: edited, headers: {} })
 		const em = orm.em.fork()
 		const integration = await seed(em)
 		const first = await poll(em, integration)
@@ -375,7 +390,7 @@ describe('Calendar subscription sync', () => {
 
 	it('removes what the feed no longer carries', async () => {
 		const without = feed([ALL_DAY, FLOATING, WINDOWS_ZONED, SERIES, SERIES_OVERRIDE, TASK].join('\r\n'))
-		served = serveFeed({ headers: {} }, { body: without, headers: {} })
+		serveFeed({ headers: {} }, { body: without, headers: {} })
 		const em = orm.em.fork()
 		const integration = await seed(em)
 		await poll(em, integration)
@@ -388,7 +403,7 @@ describe('Calendar subscription sync', () => {
 
 	it('drops an override whose occurrence was reverted to the series, keeping the master', async () => {
 		const reverted = feed([ZONED, ALL_DAY, FLOATING, WINDOWS_ZONED, SERIES, TASK].join('\r\n'))
-		served = serveFeed({ headers: {} }, { body: reverted, headers: {} })
+		serveFeed({ headers: {} }, { body: reverted, headers: {} })
 		const em = orm.em.fork()
 		const integration = await seed(em)
 		await poll(em, integration)
@@ -406,7 +421,7 @@ SUMMARY:Broken but real
 DTSTART;TZID=Europe/Berlin:20260810T090000
 DTEND;TZID=Europe/Berlin:20260810T093000
 END:VEVENT`)
-		served = serveFeed({ body: uidless, headers: {} })
+		serveFeed({ body: uidless, headers: {} })
 		const em = orm.em.fork()
 		const integration = await seed(em)
 		const first = await poll(em, integration)
@@ -419,7 +434,7 @@ END:VEVENT`)
 	})
 
 	it('rebuilds the calendar from scratch on a re-import', async () => {
-		served = serveFeed({ headers: {} })
+		serveFeed({ headers: {} })
 		const em = orm.em.fork()
 		const integration = await seed(em)
 		const { source, entries } = await poll(em, integration)

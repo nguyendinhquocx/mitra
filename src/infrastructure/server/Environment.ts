@@ -32,6 +32,11 @@ export class Environment {
 	readonly oidc?: { readonly issuer: string, readonly clientId: string, readonly clientSecret?: string, readonly scope: string }
 	/** The OAuth client Google Calendar connects with (`MITRA_GOOGLE_CLIENT_ID`, `MITRA_GOOGLE_CLIENT_SECRET`). */
 	readonly google?: { readonly clientId: string, readonly clientSecret: string }
+	/**
+	 * Whether the addresses users enter may be on the server's own network or any port: the operator answers for who signs
+	 * in, so only a public demo, or an operator who blocks it (`MITRA_BLOCK_PRIVATE_NETWORK`), keeps them to the public web.
+	 */
+	readonly privateNetwork: boolean
 
 	constructor(variables: Variables) {
 		this.port = Number(variables.MITRA_PORT) || 3000
@@ -47,6 +52,7 @@ export class Environment {
 		this.files = { maxSize: Environment.bytesOf(variables.MITRA_FILE_MAX_SIZE), quota: Environment.bytesOf(variables.MITRA_FILE_QUOTA) }
 		this.oidc = this.demo ? undefined : this.oidcOf(variables)
 		this.google = Environment.googleOf(variables)
+		this.privateNetwork = !this.demo && variables.MITRA_BLOCK_PRIVATE_NETWORK !== 'true'
 	}
 
 	/** Whether people sign in, so an agent needs an access token. */
